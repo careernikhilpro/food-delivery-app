@@ -47,9 +47,9 @@ export const geocode = async (address: string) => {
       if (response.data.results.length === 0) throw new Error('No results found');
       const r = response.data.results[0];
       
-      const cityObj = r.address_components.find(c => c.types.includes('locality'));
-      const stateObj = r.address_components.find(c => c.types.includes('administrative_area_level_1'));
-      const pinObj = r.address_components.find(c => c.types.includes('postal_code'));
+      const cityObj = r.address_components.find(c => c.types.includes('locality' as any));
+      const stateObj = r.address_components.find(c => c.types.includes('administrative_area_level_1' as any));
+      const pinObj = r.address_components.find(c => c.types.includes('postal_code' as any));
 
       return {
         lat: r.geometry.location.lat,
@@ -93,9 +93,9 @@ export const reverseGeocode = async (lat: number, lng: number) => {
       if (response.data.results.length === 0) throw new Error('No results found');
       const r = response.data.results[0];
 
-      const cityObj = r.address_components.find(c => c.types.includes('locality'));
-      const stateObj = r.address_components.find(c => c.types.includes('administrative_area_level_1'));
-      const pinObj = r.address_components.find(c => c.types.includes('postal_code'));
+      const cityObj = r.address_components.find(c => c.types.includes('locality' as any));
+      const stateObj = r.address_components.find(c => c.types.includes('administrative_area_level_1' as any));
+      const pinObj = r.address_components.find(c => c.types.includes('postal_code' as any));
 
       return {
         lat,
