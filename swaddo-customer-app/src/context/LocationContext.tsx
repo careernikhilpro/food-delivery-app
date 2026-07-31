@@ -1,0 +1,189 @@
+"use client";
+
+import { createContext, useContext, useState, useEffect } from "react";
+
+type LocationContextType = {
+  currentLocation: string;
+  setCurrentLocation: (loc: string) => void;
+  latitude: number | null;
+  longitude: number | null;
+  setCoordinates: (lat: number, lng: number, saveToStorage?: boolean) => void;
+  hasSetLocation: boolean;
+  isLocationLoading: boolean;
+  resetToLiveLocation: () => void;
+  liveLatitude: number | null;
+  liveLongitude: number | null;
+};
+
+const LocationContext = createContext<LocationContextType | undefined>(undefined);
+
+export function LocationProvider({ children }: { children: React.ReactNode }) {
+  const [currentLocation, setCurrentLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [liveLatitude, setLiveLatitude] = useState<number | null>(null);
+  const [liveLongitude, setLiveLongitude] = useState<number | null>(null);
+  const [hasSetLocation, setHasSetLocation] = useState(false);
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+
+  useEffect(() => {
+
+    // Try to load from localStorage first
+    const savedLoc = localStorage.getItem("swaddo_location");
+    const savedLat = localStorage.getItem("swaddo_lat");
+    const savedLng = localStorage.getItem("swaddo_lng");
+    const savedLiveLat = localStorage.getItem("swaddo_live_lat");
+    const savedLiveLng = localStorage.getItem("swaddo_live_lng");
+    const locationType = localStorage.getItem("swaddo_location_type");
+    
+    if (savedLiveLat) setLiveLatitude(parseFloat(savedLiveLat));
+    if (savedLiveLng) setLiveLongitude(parseFloat(savedLiveLng));
+
+    // Show cached location immediately to prevent UI flicker
+    if (savedLoc && savedLoc !== "Locating..." && savedLat && savedLng) {
+      setCurrentLocation(savedLoc);
+      setHasSetLocation(true);
+      setLatitude(parseFloat(savedLat));
+      setLongitude(parseFloat(savedLng));
+      setIsLocationLoading(false);
+    }
+
+    // Auto-fetch live GPS if they haven't set a manual address, or if nothing is saved
+    if (!savedLoc || savedLoc === "Locating..." || locationType !== "manual") {
+      if ("geolocation" in navigator) {
+        if (!savedLoc || savedLoc === "Locating...") setIsLocationLoading(true);
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              setCoordinates(latitude, longitude, true);
+              setLiveLatitude(latitude);
+              setLiveLongitude(longitude);
+              localStorage.setItem("swaddo_live_lat", latitude.toString());
+              localStorage.setItem("swaddo_live_lng", longitude.toString());
+              
+              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
+              const res = await fetch(`${baseUrl}/location/reverse-geocode`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat: latitude, lng: longitude })
+              });
+              const data = await res.json();
+              
+              if (data && data.data) {
+                let locationName = data.data.city || "Location found";
+                if (data.data.address) {
+                  const parts = data.data.address.split(',').map((s: string) => s.trim()).filter((s: string) => !s.includes('+') && !s.match(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}/));
+                  if (parts.length > 0) {
+                    locationName = parts[0];
+                  }
+                }
+                setCurrentLocation(locationName);
+                localStorage.setItem("swaddo_location", locationName);
+                setHasSetLocation(true);
+                localStorage.setItem("swaddo_location_type", "live");
+              } else {
+                if (!savedLoc || savedLoc === "Locating...") setCurrentLocation("");
+              }
+            } catch (err) {
+              console.error("Geocoding failed", err);
+              if (!savedLoc || savedLoc === "Locating...") setCurrentLocation("");
+            } finally {
+              setIsLocationLoading(false);
+            }
+          },
+          (error) => {
+            console.error("Geolocation error", error);
+            if (!savedLoc || savedLoc === "Locating...") setCurrentLocation("");
+            setIsLocationLoading(false);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      } else {
+        if (!savedLoc || savedLoc === "Locating...") setCurrentLocation("");
+        setIsLocationLoading(false);
+      }
+    }
+  }, []);
+
+  const setCoordinates = (lat: number, lng: number, saveToStorage = true) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    if (saveToStorage) {
+      localStorage.setItem("swaddo_lat", lat.toString());
+      localStorage.setItem("swaddo_lng", lng.toString());
+    }
+  };
+
+  const handleSetLocation = (loc: string) => {
+    setCurrentLocation(loc);
+    setHasSetLocation(true);
+    localStorage.setItem("swaddo_location", loc);
+  };
+
+  const resetToLiveLocation = () => {
+    localStorage.removeItem("swaddo_location_type");
+    setIsLocationLoading(true);
+    
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            setCoordinates(latitude, longitude, true);
+            setLiveLatitude(latitude);
+            setLiveLongitude(longitude);
+            localStorage.setItem("swaddo_live_lat", latitude.toString());
+            localStorage.setItem("swaddo_live_lng", longitude.toString());
+            
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
+            const res = await fetch(`${baseUrl}/location/reverse-geocode`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lat: latitude, lng: longitude })
+            });
+            const data = await res.json();
+            
+            if (data && data.data) {
+              let locationName = data.data.city || "Location found";
+              if (data.data.address) {
+                const parts = data.data.address.split(',').map((s: string) => s.trim()).filter((s: string) => !s.includes('+') && !s.match(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}/));
+                if (parts.length > 0) {
+                  locationName = parts[0];
+                }
+              }
+              setCurrentLocation(locationName);
+              localStorage.setItem("swaddo_location", locationName);
+              setHasSetLocation(true);
+              localStorage.setItem("swaddo_location_type", "live");
+            }
+          } catch (err) {
+            console.error("Geocoding failed during reset", err);
+          } finally {
+            setIsLocationLoading(false);
+          }
+        },
+        (error) => {
+          console.error("Geolocation error during reset", error);
+          setIsLocationLoading(false);
+        }
+      );
+    } else {
+      setIsLocationLoading(false);
+    }
+  };
+
+  return (
+    <LocationContext.Provider value={{ currentLocation, setCurrentLocation: handleSetLocation, latitude, longitude, setCoordinates, hasSetLocation, isLocationLoading, resetToLiveLocation, liveLatitude, liveLongitude }}>
+      {children}
+    </LocationContext.Provider>
+  );
+}
+
+export function useLocation() {
+  const context = useContext(LocationContext);
+  if (context === undefined) {
+    throw new Error("useLocation must be used within a LocationProvider");
+  }
+  return context;
+}
