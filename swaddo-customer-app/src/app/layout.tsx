@@ -50,8 +50,8 @@ export default function RootLayout({
             
             <div className="relative z-10 flex flex-col items-center">
               {/* Logo Box */}
-              <div className="w-24 h-24 bg-primary rounded-[28px] flex items-center justify-center shadow-2xl shadow-primary/40 mb-8 animate-[bounce_3s_ease-in-out_infinite]">
-                <img src="/icons/icon-192x192.png" alt="Swaddo Logo" className="w-16 h-16 object-contain" />
+              <div className="w-24 h-24 rounded-[24px] shadow-2xl shadow-primary/40 mb-8 animate-[bounce_3s_ease-in-out_infinite] overflow-hidden border-2 border-white/20">
+                <img src="/icons/icon-192x192.png" alt="Swaddo Logo" className="w-full h-full object-cover" />
               </div>
               
               <h1 className="text-4xl md:text-5xl font-black text-text-primary mb-4 tracking-tight">
