@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   },
 };
 
+const IS_COMING_SOON = true;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,41 +42,72 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${poppins.variable}`}>
-        <SWRProvider>
-          <LocationProvider>
-            <CartProvider>
-              {/* Top Nav for Desktop */}
-              <TopNav />
+        {IS_COMING_SOON ? (
+          <div className="min-h-screen bg-bg-main flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+            {/* Background design elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-400/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
             
-            {/* Main Content Area */}
-            <main className="app-scroll-container pb-24 xl:pb-0 xl:pt-20 relative">
-              <AppInit />
-              <PageTransitionWrapper>
-                {children}
-              </PageTransitionWrapper>
-            </main>
-            {/* Background Handlers */}
-            <NotificationListener />
-            <PWARegister />
-            <Toaster position="top-center" toastOptions={{
-              duration: 5000,
-              style: {
-                background: '#333',
-                color: '#fff',
-                borderRadius: '12px',
-                padding: '16px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              },
-            }} />
+            <div className="relative z-10 flex flex-col items-center">
+              {/* Logo Box */}
+              <div className="w-24 h-24 bg-primary rounded-[28px] flex items-center justify-center shadow-2xl shadow-primary/40 mb-8 animate-[bounce_3s_ease-in-out_infinite]">
+                <img src="/icons/icon-192x192.png" alt="Swaddo Logo" className="w-16 h-16 object-contain" />
+              </div>
+              
+              <h1 className="text-4xl md:text-5xl font-black text-text-primary mb-4 tracking-tight">
+                We are coming <span className="text-primary">very soon...</span>
+              </h1>
+              
+              <p className="text-text-muted text-lg md:text-xl max-w-md mb-12">
+                Get ready to experience the fastest local street food delivery right to your doorstep.
+              </p>
+              
+              {/* Loading dots */}
+              <div className="flex gap-3">
+                <div className="w-3 h-3 rounded-full bg-primary animate-bounce"></div>
+                <div className="w-3 h-3 rounded-full bg-primary animate-bounce [animation-delay:150ms]"></div>
+                <div className="w-3 h-3 rounded-full bg-primary animate-bounce [animation-delay:300ms]"></div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <SWRProvider>
+            <LocationProvider>
+              <CartProvider>
+                {/* Top Nav for Desktop */}
+                <TopNav />
+              
+                {/* Main Content Area */}
+                <main className="app-scroll-container pb-24 xl:pb-0 xl:pt-20 relative">
+                  <AppInit />
+                  <PageTransitionWrapper>
+                    {children}
+                  </PageTransitionWrapper>
+                </main>
+                
+                {/* Background Handlers */}
+                <NotificationListener />
+                <PWARegister />
+                <Toaster position="top-center" toastOptions={{
+                  duration: 5000,
+                  style: {
+                    background: '#333',
+                    color: '#fff',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  },
+                }} />
 
-            {/* Bottom Nav for Mobile */}
-            <BottomNav />
-            <OfflineOverlay />
-            <FloatingCart />
-            <ActiveOrderBanner />
-          </CartProvider>
-        </LocationProvider>
-        </SWRProvider>
+                {/* Bottom Nav for Mobile */}
+                <BottomNav />
+                <OfflineOverlay />
+                <FloatingCart />
+                <ActiveOrderBanner />
+              </CartProvider>
+            </LocationProvider>
+          </SWRProvider>
+        )}
       </body>
     </html>
   );
