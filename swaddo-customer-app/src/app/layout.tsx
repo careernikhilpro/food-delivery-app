@@ -27,7 +27,6 @@ export const metadata: Metadata = {
   description: "Live tracking for your local street food orders.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icons/icon-192x192.png",
     apple: "/icons/icon-192x192.png",
   },
 };
