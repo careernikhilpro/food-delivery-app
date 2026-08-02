@@ -1,1 +1,24 @@
-"use client";`n`nimport Script from "next/script";`n`nexport default function MSG91Provider() {`n  return (`n    <Script`n      id="msg91-init"`n      src="https://verify.msg91.com/otp-provider.js"`n      strategy="lazyOnload"`n      onLoad={() => {`n        if (typeof window.initSendOTP === `"function`") {`n          window.initSendOTP({`n            widgetId: process.env.NEXT_PUBLIC_MSG91_WIDGET_ID || `"`",`n            tokenAuth: process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH || `"`",`n            exposeMethods: true,`n            success: (data: any) => console.log(`"MSG91 success:`", data),`n            failure: (error: any) => console.log(`"MSG91 failure:`", error),`n          });`n        }`n      }}`n    />`n  );`n}
+"use client";
+
+import Script from "next/script";
+
+export default function MSG91Provider() {
+  return (
+    <Script
+      id="msg91-init"
+      src="https://verify.msg91.com/otp-provider.js"
+      strategy="lazyOnload"
+      onLoad={() => {
+        if (typeof window.initSendOTP === "function") {
+          window.initSendOTP({
+            widgetId: process.env.NEXT_PUBLIC_MSG91_WIDGET_ID || "",
+            tokenAuth: process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH || "",
+            exposeMethods: true,
+            success: (data: any) => console.log("MSG91 success:", data),
+            failure: (error: any) => console.log("MSG91 failure:", error),
+          });
+        }
+      }}
+    />
+  );
+}
