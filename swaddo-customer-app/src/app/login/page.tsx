@@ -39,7 +39,8 @@ export default function Login() {
         setLoading(false);
       },
       (error: any) => {
-        setError(error.message || "Failed to request OTP from MSG91.");
+        const errMsg = typeof error === 'string' ? error : (error?.message || JSON.stringify(error) || "Failed to request OTP from MSG91.");
+        setError(errMsg);
         setLoading(false);
       }
     );
