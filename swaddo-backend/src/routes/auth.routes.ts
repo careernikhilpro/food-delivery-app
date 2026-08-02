@@ -59,9 +59,37 @@ router.post('/request-otp', authLimiter, (req: Request, res: Response) => {
 });
 
 router.post('/verify-otp', async (req: Request, res: Response) => {
-  const { phone, otp, role = 'customer' } = req.body;
+  const { phone, otp, role = 'customer', msg91Token } = req.body;
   
-  if (otp !== '1234') {
+  if (msg91Token && msg91Token !== "verified_placeholder") {
+    // Verify MSG91 Token
+    const url = new URL('https://control.msg91.com/api/v5/widget/verifyAccessToken');
+    const authkey = process.env.MSG91_AUTH_KEY || "545853AHQt9sYJRu586a6fbcd6P1";
+    
+    try {
+      const verifyRes = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          "authkey": authkey,
+          "access-token": msg91Token
+        })
+      });
+      const verifyData = await verifyRes.json();
+      
+      // MSG91 returns type: "success" on success or type: "error" on failure
+      if (verifyData.type === 'error' || verifyData.message === 'Token missing or invalid') {
+        return res.status(401).json({ message: 'Invalid OTP (MSG91 Verification Failed)', details: verifyData });
+      }
+    } catch (e) {
+      logger.error('Error verifying MSG91 token', e);
+      return res.status(500).json({ message: 'Error verifying OTP with MSG91' });
+    }
+  } else if (otp !== '1234') {
+    // Fallback to mock OTP for local dev when MSG91 is not triggered
     return res.status(401).json({ message: 'Invalid OTP' });
   }
 
