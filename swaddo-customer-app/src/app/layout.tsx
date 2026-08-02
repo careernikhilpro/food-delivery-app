@@ -14,6 +14,7 @@ import { Toaster } from "react-hot-toast";
 import OfflineOverlay from "@/components/OfflineOverlay";
 import FloatingCart from "@/components/FloatingCart";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
 const poppins = Poppins({ 
@@ -108,6 +109,23 @@ export default function RootLayout({
             </LocationProvider>
           </SWRProvider>
         )}
+        
+        <Script
+          id="msg91-init"
+          src="https://verify.msg91.com/otp-provider.js"
+          strategy="lazyOnload"
+          onLoad={() => {
+            if (typeof window.initSendOTP === 'function') {
+              window.initSendOTP({
+                widgetId: process.env.NEXT_PUBLIC_MSG91_WIDGET_ID || "",
+                tokenAuth: process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH || "",
+                exposeMethods: true,
+                success: (data: any) => console.log('MSG91 success:', data),
+                failure: (error: any) => console.log('MSG91 failure:', error),
+              });
+            }
+          }}
+        />
       </body>
     </html>
   );

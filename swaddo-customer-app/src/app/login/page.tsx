@@ -25,14 +25,24 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    try {
-      await api.post("/auth/request-otp", { phone, role: "customer" });
-      setStep(2);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to request OTP.");
-    } finally {
+    if (typeof window.sendOtp !== 'function') {
+      setError("OTP service is still loading. Please try again in a few seconds.");
       setLoading(false);
+      return;
     }
+
+    // MSG91 requires country code without '+', so we prepend '91'
+    window.sendOtp(
+      '91' + phone,
+      (data: any) => {
+        setStep(2);
+        setLoading(false);
+      },
+      (error: any) => {
+        setError(error.message || "Failed to request OTP from MSG91.");
+        setLoading(false);
+      }
+    );
   };
 
   const verifyOtp = async (e: React.FormEvent) => {
@@ -44,32 +54,51 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    try {
-      const res = await api.post("/auth/verify-otp", { phone, otp, role: "customer" });
-      const token = res.data.token;
-
-      localStorage.setItem("swaddo_customer_token", token);
-      localStorage.setItem("swaddo_customer_phone", phone);
-      
-      try {
-        const fcmToken = await requestNotificationPermission();
-        if (fcmToken) {
-          await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        }
-      } catch (e) {
-        console.warn("Failed to register FCM token", e);
-      }
-      
-      const redirectTo = localStorage.getItem("swaddo_redirect_to") || "/";
-      localStorage.removeItem("swaddo_redirect_to");
-      router.push(redirectTo);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid OTP");
-    } finally {
+    if (typeof window.verifyOtp !== 'function') {
+      setError("OTP service is still loading.");
       setLoading(false);
+      return;
     }
+
+    window.verifyOtp(
+      otp,
+      async (msg91Data: any) => {
+        // MSG91 verification successful!
+        try {
+          // Send the verified msg91Token to our backend to get the internal JWT token
+          // The backend will need to be updated to accept msg91Token instead of checking the OTP itself.
+          const msg91Token = msg91Data?.message || "verified_placeholder";
+          const res = await api.post("/auth/verify-otp", { phone, otp, role: "customer", msg91Token });
+          const token = res.data.token;
+
+          localStorage.setItem("swaddo_customer_token", token);
+          localStorage.setItem("swaddo_customer_phone", phone);
+          
+          try {
+            const fcmToken = await requestNotificationPermission();
+            if (fcmToken) {
+              await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+            }
+          } catch (e) {
+            console.warn("Failed to register FCM token", e);
+          }
+          
+          const redirectTo = localStorage.getItem("swaddo_redirect_to") || "/";
+          localStorage.removeItem("swaddo_redirect_to");
+          router.push(redirectTo);
+        } catch (err: any) {
+          setError(err.response?.data?.message || "Backend login failed after MSG91 verification.");
+          setLoading(false);
+        }
+      },
+      (error: any) => {
+        // MSG91 verification failed
+        setError(error.message || "Invalid OTP");
+        setLoading(false);
+      }
+    );
   };
 
   return (
