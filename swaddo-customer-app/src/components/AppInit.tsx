@@ -5,7 +5,6 @@ import SplashScreen from "./SplashScreen";
 import Onboarding from "./Onboarding";
 
 export default function AppInit() {
-  const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -19,18 +18,13 @@ export default function AppInit() {
     }
   }, []);
 
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-  };
-
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
   };
 
   return (
     <>
-      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
-      {!showSplash && showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
     </>
   );
 }
