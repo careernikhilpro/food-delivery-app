@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
 };
 
-const IS_COMING_SOON = true;
+const IS_COMING_SOON = false;
 
 export default function RootLayout({
   children,
