@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LocationPickerMap } from "@/components/maps/LocationPickerMap";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/context/LocationContext";
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 
 const libraries: ("places" | "geometry")[] = ["places", "geometry"];
 

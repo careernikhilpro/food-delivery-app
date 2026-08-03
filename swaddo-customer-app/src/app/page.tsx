@@ -799,12 +799,12 @@ function RestaurantCard({ data }: { data: any }) {
                    {quantity > 0 ? (
                       <div className="absolute bottom-2 right-2 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image_url: item.image }, -1); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, -1); }}
                           className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
                         ><Minus size={14} /></button>
                         <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{quantity}</span>
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image_url: item.image }, 1); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, 1); }}
                           className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
                         ><Plus size={14} /></button>
                       </div>
@@ -813,7 +813,7 @@ function RestaurantCard({ data }: { data: any }) {
                        onClick={(e) => { 
                          e.preventDefault(); 
                          e.stopPropagation(); 
-                         updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image_url: item.image }, 1); 
+                         updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, 1); 
                        }}
                        className="absolute bottom-2 right-2 w-[28px] h-[28px] bg-white rounded-full border border-pink-100 shadow-md flex items-center justify-center z-10"
                      >
