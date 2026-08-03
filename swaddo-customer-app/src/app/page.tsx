@@ -52,7 +52,6 @@ export default function Home() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   const [stalls, setStalls] = useState<any[]>([]);
-  const [variantModal, setVariantModal] = useState<{isOpen: boolean, stallId: string, stallName: string, item: any}>({ isOpen: false, stallId: '', stallName: '', item: null });
 
   const [bannerRefreshKey, setBannerRefreshKey] = useState(0);
   const [scrollY, setScrollY] = useState(0);
@@ -634,7 +633,7 @@ export default function Home() {
         {/* Restaurant Cards List */}
         <div className="flex flex-col gap-5">
           {stalls.map((restaurant, idx) => (
-             <RestaurantCard key={idx} data={restaurant} setVariantModal={setVariantModal} />
+            <RestaurantCard key={idx} data={restaurant} />
           ))}
         </div>
       </div>
@@ -727,7 +726,7 @@ export default function Home() {
   );
 }
 
-function RestaurantCard({ data, setVariantModal }: { data: any, setVariantModal: any }) {
+function RestaurantCard({ data }: { data: any }) {
   const { updateQuantity, cart } = useCart();
   const [items, setItems] = useState<any[]>(data.items || []);
 
@@ -744,8 +743,6 @@ function RestaurantCard({ data, setVariantModal }: { data: any, setVariantModal:
             isPopular: true,
             lowerPriceApp: true,
             lowerPriceText: "Our app: 20% lower",
-            has_variants: item.has_variants,
-            variants: item.variants,
           }));
           setItems(menuItems);
         }
@@ -786,26 +783,8 @@ function RestaurantCard({ data, setVariantModal }: { data: any, setVariantModal:
          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-1 pt-1 snap-x w-full">
             {items.map((item: any, idx: number) => {
               const parsedPrice = Number((item.newPrice || "0").replace(/[^0-9]/g, ''));
-              let quantity = 0;
-              if (cart.stallId === data.id) {
-                if (item.has_variants) {
-                  const prefix = String(item.id || idx) + '_';
-                  quantity = cart.items.filter(i => String(i.id).startsWith(prefix)).reduce((sum, i) => sum + i.quantity, 0);
-                } else {
-                  const isAdded = cart.items.find(i => String(i.id) === String(item.id || idx));
-                  quantity = isAdded ? isAdded.quantity : 0;
-                }
-              }
-
-              const handleAddClick = (e: React.MouseEvent, delta: number = 1) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (item.has_variants) {
-                  setVariantModal({ isOpen: true, stallId: data.id, stallName: data.name, item });
-                } else {
-                  updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, delta);
-                }
-              };
+              const isAdded = cart.stallId === data.id && cart.items.find(i => String(i.id) === String(item.id || idx));
+              const quantity = isAdded ? isAdded.quantity : 0;
               
               return (
               <div key={idx} className="flex flex-col shrink-0 w-[140px] snap-start">
@@ -817,39 +796,31 @@ function RestaurantCard({ data, setVariantModal }: { data: any, setVariantModal:
                        <span className="text-[#00A14F] font-bold text-[10px]">Popular</span>
                      </div>
                    )}
-                   {quantity > 0 && !item.has_variants ? (
+                   {quantity > 0 ? (
                       <div className="absolute bottom-2 right-2 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
-                          onClick={(e) => handleAddClick(e, -1)}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, -1); }}
                           className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
                         ><Minus size={14} /></button>
                         <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{quantity}</span>
                         <button 
-                          onClick={(e) => handleAddClick(e, 1)}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, 1); }}
                           className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
                         ><Plus size={14} /></button>
                       </div>
                    ) : (
                      <button 
-                       onClick={(e) => handleAddClick(e, 1)}
-                       className={`absolute bottom-2 right-2 ${item.has_variants ? 'px-2' : 'w-[28px]'} h-[28px] bg-white rounded-full border border-pink-100 shadow-md flex items-center justify-center z-10`}
+                       onClick={(e) => { 
+                         e.preventDefault(); 
+                         e.stopPropagation(); 
+                         updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, 1); 
+                       }}
+                       className="absolute bottom-2 right-2 w-[28px] h-[28px] bg-white rounded-full border border-pink-100 shadow-md flex items-center justify-center z-10"
                      >
-                        {item.has_variants ? (
-                          <span className="text-[#FF007F] text-[10px] font-bold">ADD +</span>
-                        ) : (
-                          <span className="text-[#FF007F] text-[20px] leading-none mb-[2px] font-medium">+</span>
-                        )}
-                        {item.has_variants && quantity > 0 && (
-                          <div className="absolute -top-1 -right-1 bg-[#FF007F] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                            {quantity}
-                          </div>
-                        )}
+                        <span className="text-[#FF007F] text-[20px] leading-none mb-[2px] font-medium">+</span>
                      </button>
                    )}
                  </div>
-                 {item.has_variants && (
-                    <div className="text-[9px] text-gray-400 mt-0.5 text-center leading-none">Customizable</div>
-                 )}
                  <div className="flex flex-col gap-1">
                     <div className="flex items-start gap-1">
                        <div className="mt-[3px] shrink-0 w-[11px] h-[11px] border border-[#00A14F] flex items-center justify-center rounded-[2px]">
@@ -888,16 +859,6 @@ function RestaurantCard({ data, setVariantModal }: { data: any, setVariantModal:
          )}
 
       </div>
-
-      {/* Variant Selection Modal */}
-      {variantModal.isOpen && variantModal.item && (
-        <VariantModalComponent 
-          modalState={variantModal} 
-          setModalState={setVariantModal} 
-          updateQuantity={updateQuantity}
-        />
-      )}
-
     </div>
   );
 }
@@ -907,99 +868,6 @@ function ChevronRight({ size, className, strokeWidth = 2 }: { size: number, clas
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="m9 18 6-6-6-6"/>
     </svg>
-  );
-}
-
-function VariantModalComponent({ modalState, setModalState, updateQuantity }: any) {
-  const { item, stallId, stallName } = modalState;
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [modalQty, setModalQty] = useState(1);
-
-  const variantsList = item.variants || [];
-  const selectedVariant = variantsList[selectedIndex];
-  const variantId = `${item.id}_${selectedVariant?.name}`;
-  
-  const handleAdd = () => {
-    updateQuantity(stallId, stallName, { 
-      id: variantId, 
-      name: `${item.name} (${selectedVariant.name})`, 
-      price: Number(selectedVariant.price), 
-      image: item.image 
-    }, modalQty);
-    setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
-  };
-
-  return (
-    <>
-      <div className="fixed inset-0 bg-black/60 z-50 transition-opacity" onClick={() => setModalState({ isOpen: false, stallId: '', stallName: '', item: null })} />
-      
-      {/* Floating Close Button */}
-      <div className="fixed top-[10%] left-1/2 -translate-x-1/2 w-10 h-10 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white cursor-pointer z-[60]" onClick={() => setModalState({ isOpen: false, stallId: '', stallName: '', item: null })}>
-        <X size={20} />
-      </div>
-
-      <div className="fixed bottom-0 left-0 w-full bg-[#f3f4f6] rounded-t-3xl z-50 overflow-hidden flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="bg-white p-4 rounded-t-3xl flex items-center gap-3 shadow-sm z-10 shrink-0">
-          <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100 relative bg-gray-50">
-            <Image src={item.image} alt={item.name} fill className="object-cover" />
-          </div>
-          <h3 className="font-extrabold text-[17px] text-gray-900 leading-tight">{item.name}</h3>
-        </div>
-        
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 hide-scrollbar pb-28">
-          <h4 className="font-extrabold text-[15px] text-gray-900">Size</h4>
-          <p className="text-[12px] text-gray-500 mb-3 font-medium">Select any 1</p>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {variantsList.map((v: any, i: number) => (
-              <div 
-                key={i} 
-                onClick={() => setSelectedIndex(i)}
-                className={`flex justify-between items-center p-4 cursor-pointer transition-colors ${i !== variantsList.length - 1 ? 'border-b border-gray-100' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`mt-[2px] shrink-0 w-[14px] h-[14px] border flex items-center justify-center rounded-[3px] ${item.is_veg ? 'border-green-600' : 'border-[#8B3A1A]'}`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${item.is_veg ? 'bg-green-600' : 'bg-[#8B3A1A]'}`}></div>
-                  </div>
-                  <span className="font-bold text-[14px] text-gray-800">{v.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium text-[13px] text-gray-600">₹{v.price}</span>
-                  <div className={`w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center ${selectedIndex === i ? 'border-[#00A14F]' : 'border-gray-300'}`}>
-                    {selectedIndex === i && <div className="w-2.5 h-2.5 bg-[#00A14F] rounded-full"></div>}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Bottom Fixed Bar */}
-        <div className="absolute bottom-0 left-0 w-full bg-white p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] flex items-center gap-4 z-20">
-          <div className="h-[46px] w-[110px] rounded-xl flex items-center justify-between border border-[#FF007F]/30 px-2 bg-pink-50/30">
-            <button 
-              onClick={() => setModalQty(Math.max(1, modalQty - 1))}
-              className="w-8 h-full flex justify-center items-center text-[#FF007F]"
-            ><Minus size={18} strokeWidth={2.5} /></button>
-            <span className="text-[16px] font-black text-[#FF007F] w-4 text-center">{modalQty}</span>
-            <button 
-              onClick={() => setModalQty(modalQty + 1)}
-              className="w-8 h-full flex justify-center items-center text-[#FF007F]"
-            ><Plus size={18} strokeWidth={2.5} /></button>
-          </div>
-          
-          <button 
-            onClick={handleAdd}
-            className="flex-1 h-[46px] bg-[#00A14F] text-white font-black rounded-xl text-[15px] shadow-lg shadow-green-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-          >
-            Add item | ₹{selectedVariant?.price * modalQty}
-          </button>
-        </div>
-
-      </div>
-    </>
   );
 }
 
