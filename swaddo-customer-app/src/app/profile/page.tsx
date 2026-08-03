@@ -41,6 +41,11 @@ export default function ProfilePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { clearCart, updateQuantity } = useCart();
 
+  const handleLogout = () => {
+    localStorage.removeItem("swaddo_customer_token");
+    router.push("/login");
+  };
+
   const fetcher = (url: string) => api.get(url).then(res => res.data);
   const { data: ordersRes, isLoading, mutate: mutateOrders } = useSWR('/orders', fetcher, { revalidateOnFocus: false, dedupingInterval: 60000, keepPreviousData: true });
   const rawOrders = ordersRes?.data || [];
@@ -203,7 +208,7 @@ export default function ProfilePage() {
                         <Settings size={16} className="text-gray-400" />
                         Settings
                       </button>
-                      <button className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors">
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors">
                         <LogOut size={16} className="text-red-400" />
                         Log out
                       </button>
