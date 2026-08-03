@@ -16,6 +16,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [mockOtpState, setMockOtpState] = useState<string | null>(null);
+
   const requestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 10) {
@@ -25,25 +27,15 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    if (typeof window.sendOtp !== 'function') {
-      setError("OTP service is still loading. Please try again in a few seconds.");
-      setLoading(false);
-      return;
-    }
-
-    // MSG91 requires country code without '+', so we prepend '91'
-    window.sendOtp(
-      '91' + phone,
-      (data: any) => {
-        setStep(2);
-        setLoading(false);
-      },
-      (error: any) => {
-        const errMsg = typeof error === 'string' ? error : (error?.message || JSON.stringify(error) || "Failed to request OTP from MSG91.");
-        setError(errMsg);
-        setLoading(false);
-      }
-    );
+    // DEV BYPASS: Generate random OTP
+    const generated = Math.floor(1000 + Math.random() * 9000).toString();
+    setMockOtpState(generated);
+    
+    // Show OTP on screen
+    alert(`[DEV MODE] Your OTP for ${phone} is: ${generated}`);
+    
+    setStep(2);
+    setLoading(false);
   };
 
   const verifyOtp = async (e: React.FormEvent) => {
@@ -55,51 +47,39 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    if (typeof window.verifyOtp !== 'function') {
-      setError("OTP service is still loading.");
+    // DEV BYPASS: Verify against generated OTP
+    if (otp !== mockOtpState) {
+      setError("Invalid OTP entered. Please check the popup.");
       setLoading(false);
       return;
     }
 
-    window.verifyOtp(
-      otp,
-      async (msg91Data: any) => {
-        // MSG91 verification successful!
-        try {
-          // Send the verified msg91Token to our backend to get the internal JWT token
-          // The backend will need to be updated to accept msg91Token instead of checking the OTP itself.
-          const msg91Token = msg91Data?.message || "verified_placeholder";
-          const res = await api.post("/auth/verify-otp", { phone, otp, role: "customer", msg91Token });
-          const token = res.data.token;
+    try {
+      // Send the dev_bypass token to our backend
+      const res = await api.post("/auth/verify-otp", { phone, otp, role: "customer", msg91Token: "dev_bypass" });
+      const token = res.data.token;
 
-          localStorage.setItem("swaddo_customer_token", token);
-          localStorage.setItem("swaddo_customer_phone", phone);
-          
-          try {
-            const fcmToken = await requestNotificationPermission();
-            if (fcmToken) {
-              await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-            }
-          } catch (e) {
-            console.warn("Failed to register FCM token", e);
-          }
-          
-          const redirectTo = localStorage.getItem("swaddo_redirect_to") || "/";
-          localStorage.removeItem("swaddo_redirect_to");
-          router.push(redirectTo);
-        } catch (err: any) {
-          setError(err.response?.data?.message || "Backend login failed after MSG91 verification.");
-          setLoading(false);
+      localStorage.setItem("swaddo_customer_token", token);
+      localStorage.setItem("swaddo_customer_phone", phone);
+      
+      try {
+        const fcmToken = await requestNotificationPermission();
+        if (fcmToken) {
+          await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
         }
-      },
-      (error: any) => {
-        // MSG91 verification failed
-        setError(error.message || "Invalid OTP");
-        setLoading(false);
+      } catch (e) {
+        console.warn("Failed to register FCM token", e);
       }
-    );
+      
+      const redirectTo = localStorage.getItem("swaddo_redirect_to") || "/";
+      localStorage.removeItem("swaddo_redirect_to");
+      router.push(redirectTo);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Backend login failed.");
+      setLoading(false);
+    }
   };
 
   return (
