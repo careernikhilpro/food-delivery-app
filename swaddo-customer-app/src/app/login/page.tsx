@@ -4,82 +4,102 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/firebase";
-import { motion } from "framer-motion";
-import { Phone, ArrowRight, Loader2, ShieldCheck, Zap, Shield, ChevronDown, CheckCircle2, Lock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Phone, ArrowRight, Loader2, ShieldCheck, Lock, ChevronDown, UserPlus, KeyRound } from "lucide-react";
 import Image from "next/image";
 
 export default function Login() {
   const router = useRouter();
+  
+  // 1 = Enter Phone, 2 = Enter PIN (Login), 3 = Create PIN (Register)
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [mockOtpState, setMockOtpState] = useState<string | null>(null);
-
-  const requestOtp = async (e: React.FormEvent) => {
+  const checkUserExists = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 10) {
-      setError("Please enter a valid phone number");
+      setError("Please enter a valid 10-digit phone number");
       return;
     }
     setError("");
     setLoading(true);
-
-    // DEV BYPASS: Generate random OTP
-    const generated = Math.floor(1000 + Math.random() * 9000).toString();
-    setMockOtpState(generated);
-    
-    // Show OTP on screen
-    // alert(`[DEV MODE] Your OTP for ${phone} is: ${generated}`); // removed native alert
-    
-    setStep(2);
-    setLoading(false);
-  };
-
-  const verifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.length < 4) {
-      setError("Please enter a valid OTP");
-      return;
-    }
-    setError("");
-    setLoading(true);
-
-    // DEV BYPASS: Verify against generated OTP
-    if (otp !== mockOtpState) {
-      setError("Invalid OTP entered. Please check the popup.");
-      setLoading(false);
-      return;
-    }
 
     try {
-      // Send the dev_bypass token to our backend
-      const res = await api.post("/auth/verify-otp", { phone, otp, role: "customer", msg91Token: "dev_bypass" });
-      const token = res.data.token;
-
-      localStorage.setItem("swaddo_customer_token", token);
-      localStorage.setItem("swaddo_customer_phone", phone);
-      
-      try {
-        const fcmToken = await requestNotificationPermission();
-        if (fcmToken) {
-          await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        }
-      } catch (e) {
-        console.warn("Failed to register FCM token", e);
+      const res = await api.get(`/auth/check-user?identifier=${phone}`);
+      if (res.data.user_found) {
+        setStep(2); // Existing user -> Login
+      } else {
+        setStep(3); // New user -> Register
       }
-      
-      const redirectTo = localStorage.getItem("swaddo_redirect_to") || "/";
-      localStorage.removeItem("swaddo_redirect_to");
-      router.push(redirectTo);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Backend login failed.");
+      setError("Failed to check user. Please try again.");
+    } finally {
       setLoading(false);
     }
+  };
+
+  const loginWithPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length < 4) {
+      setError("PIN must be 4 digits");
+      return;
+    }
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await api.post("/auth/login-pin", { phone, pin, role: "customer" });
+      await handleSuccessfulAuth(res.data.token, phone);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Invalid PIN. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const registerWithPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length < 4) {
+      setError("PIN must be 4 digits");
+      return;
+    }
+    if (pin !== confirmPin) {
+      setError("PINs do not match. Please try again.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await api.post("/auth/register-pin", { phone, pin, role: "customer" });
+      await handleSuccessfulAuth(res.data.token, phone);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const handleSuccessfulAuth = async (token: string, userPhone: string) => {
+    localStorage.setItem("swaddo_customer_token", token);
+    localStorage.setItem("swaddo_customer_phone", userPhone);
+    
+    try {
+      const fcmToken = await requestNotificationPermission();
+      if (fcmToken) {
+        await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to register FCM token", e);
+    }
+    
+    const redirectTo = localStorage.getItem("swaddo_redirect_to") || "/";
+    localStorage.removeItem("swaddo_redirect_to");
+    router.push(redirectTo);
   };
 
   return (
@@ -87,16 +107,12 @@ export default function Login() {
       
       {/* Top Image & Branding Section */}
       <div className="w-full h-[45%] relative shrink-0">
-        
-        {/* Brand Text - Positioned top left */}
         <div className="absolute top-12 left-6 z-20 flex flex-col gap-0 shrink-0">
           <div className="flex items-center gap-2 mb-2 ml-4">
             <div className="relative">
-              {/* Fake Map Pin for the Logo */}
               <div className="w-12 h-12 rounded-full bg-[#FF5722] rounded-bl-none -rotate-45 flex items-center justify-center shadow-sm">
                 <span className="text-white font-bold text-[28px] rotate-45 block leading-none font-body">S</span>
               </div>
-              {/* Three little speed lines */}
               <div className="absolute -left-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 items-end">
                 <div className="w-3 h-[3px] bg-[#FF5722] rounded-full mr-1"></div>
                 <div className="w-5 h-[3px] bg-[#FF5722] rounded-full"></div>
@@ -108,7 +124,6 @@ export default function Login() {
           <p className="text-gray-600 font-bold text-[11px] mt-2 drop-shadow-sm uppercase tracking-widest">Food. Delivered. Yours.</p>
         </div>
         
-        {/* Scaled & Shifted Image - Positioned right and slightly lower */}
         <div className="absolute -right-4 top-28 bottom-0 w-[95%] z-10 mix-blend-multiply">
           <Image 
             src="/onboarding/food_bag.png" 
@@ -120,7 +135,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Main Login Card - Stretches to fill the rest */}
+      {/* Main Login Card */}
       <motion.div 
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
@@ -130,103 +145,136 @@ export default function Login() {
         <div className="max-w-md w-full mx-auto flex flex-col h-full justify-between">
           
           <div className="flex flex-col">
-            <h2 className="text-[28px] font-heading font-black text-gray-900 mb-2 tracking-tight">Welcome to Swaddo</h2>
-            <p className="text-gray-500 font-medium text-[15px] mb-8">Sign in to order your favorite food</p>
+            <h2 className="text-[28px] font-heading font-black text-gray-900 mb-2 tracking-tight">
+              {step === 1 ? "Welcome to Swaddo" : step === 2 ? "Welcome Back!" : "Create an Account"}
+            </h2>
+            <p className="text-gray-500 font-medium text-[15px] mb-8">
+              {step === 1 ? "Enter your phone number to continue" : step === 2 ? "Enter your 4-digit PIN to login" : "Set a secure 4-digit PIN for your account"}
+            </p>
 
             {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-6 font-semibold text-center border border-red-100">
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-6 font-semibold text-center border border-red-100">
                 {error}
-              </div>
+              </motion.div>
             )}
 
-            {step === 1 ? (
-              <form onSubmit={requestOtp} className="flex flex-col gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-gray-900 mb-2">Mobile Number</label>
-                  <div className="relative flex items-center rounded-[18px] bg-[#F8F9FA] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#FF5722] transition-all overflow-hidden border border-gray-100 p-1">
-                    <div className="flex items-center gap-2 px-3 py-3 bg-transparent shrink-0">
-                      <span className="text-base rounded-sm overflow-hidden block w-6 h-4 bg-cover bg-center" style={{ backgroundImage: 'url("https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg")' }}></span>
-                      <span className="font-bold text-gray-900 text-sm">+91</span>
-                      <ChevronDown size={14} className="text-gray-400" />
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <motion.form key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} onSubmit={checkUserExists} className="flex flex-col gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 mb-2">Mobile Number</label>
+                    <div className="relative flex items-center rounded-[18px] bg-[#F8F9FA] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#FF5722] transition-all overflow-hidden border border-gray-100 p-1">
+                      <div className="flex items-center gap-2 px-3 py-3 bg-transparent shrink-0">
+                        <span className="text-base rounded-sm overflow-hidden block w-6 h-4 bg-cover bg-center" style={{ backgroundImage: 'url("https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg")' }}></span>
+                        <span className="font-bold text-gray-900 text-sm">+91</span>
+                        <ChevronDown size={14} className="text-gray-400" />
+                      </div>
+                      <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                      <div className="flex items-center flex-1 relative px-2">
+                        <Phone className="absolute left-2 text-gray-400" size={16} />
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Enter your mobile number"
+                          className="w-full bg-transparent py-3 pl-8 pr-2 outline-none font-medium text-gray-900 text-sm placeholder:text-gray-400"
+                          maxLength={10}
+                        />
+                      </div>
                     </div>
-                    <div className="h-6 w-px bg-gray-200 mx-1"></div>
-                    <div className="flex items-center flex-1 relative px-2">
-                      <Phone className="absolute left-2 text-gray-400" size={16} />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || phone.length < 10}
+                    className={`w-full text-white font-bold py-4 rounded-[18px] transition-all flex items-center justify-center gap-2 active:scale-95 ${phone.length >= 10 && !loading ? 'bg-[#FF5722] shadow-[0_4px_14px_rgba(255,87,34,0.3)]' : 'bg-[#FFB09C] shadow-none'}`}
+                  >
+                    {loading ? <Loader2 size={20} className="animate-spin" /> : "Continue"}
+                    {!loading && <ArrowRight size={18} />}
+                  </button>
+                </motion.form>
+              )}
+
+              {step === 2 && (
+                <motion.form key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onSubmit={loginWithPin} className="flex flex-col gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 mb-2">Enter PIN</label>
+                    <div className="relative flex items-center">
+                      <Lock className="absolute left-4 text-gray-400" size={20} />
                       <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter your mobile number"
-                        className="w-full bg-transparent py-3 pl-8 pr-2 outline-none font-medium text-gray-900 text-sm placeholder:text-gray-400"
-                        maxLength={10}
+                        type="password"
+                        inputMode="numeric"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        className="w-full bg-[#F8F9FA] border border-gray-100 rounded-[18px] py-4 pl-12 pr-4 outline-none focus:ring-1 focus:ring-[#FF5722] focus:bg-white transition-colors font-bold text-gray-900 text-2xl tracking-[0.5em]"
+                        maxLength={4}
+                        autoFocus
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3 text-center font-medium">
+                      Logging in as +91 {phone}. <button type="button" onClick={() => { setStep(1); setPin(""); setConfirmPin(""); }} className="text-[#FF5722] font-bold">Change</button>
+                    </p>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || pin.length < 4}
+                    className={`w-full text-white font-bold py-4 rounded-[18px] transition-all flex items-center justify-center gap-2 active:scale-95 ${pin.length >= 4 && !loading ? 'bg-[#FF5722] shadow-[0_4px_14px_rgba(255,87,34,0.3)]' : 'bg-[#FFB09C] shadow-none'}`}
+                  >
+                    {loading ? <Loader2 size={20} className="animate-spin" /> : "Secure Login"}
+                  </button>
+                </motion.form>
+              )}
+
+              {step === 3 && (
+                <motion.form key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onSubmit={registerWithPin} className="flex flex-col gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 mb-2">Create a 4-Digit PIN</label>
+                    <div className="relative flex items-center">
+                      <KeyRound className="absolute left-4 text-gray-400" size={18} />
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        className="w-full bg-[#F8F9FA] border border-gray-100 rounded-[18px] py-3 pl-12 pr-4 outline-none focus:ring-1 focus:ring-[#FF5722] focus:bg-white transition-colors font-bold text-gray-900 text-xl tracking-[0.5em]"
+                        maxLength={4}
+                        autoFocus
                       />
                     </div>
                   </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading || phone.length < 10}
-                  className={`w-full text-white font-bold py-4 rounded-[18px] transition-all flex items-center justify-center gap-2 active:scale-95 ${phone.length >= 10 && !loading ? 'bg-[#FF5722] shadow-[0_4px_14px_rgba(255,87,34,0.3)]' : 'bg-[#FFB09C] shadow-none'}`}
-                >
-                  {loading ? <Loader2 size={20} className="animate-spin" /> : "Send OTP"}
-                  {!loading && <ArrowRight size={18} />}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={verifyOtp} className="flex flex-col gap-6">
-                
-                {/* DEV MODE OTP DISPLAY */}
-                {mockOtpState && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }} 
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-green-50 border border-green-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm"
-                  >
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1 text-green-700 font-bold text-[10px] uppercase tracking-wide">
-                        <ShieldCheck size={12} />
-                        <span>Dev Mode OTP</span>
-                      </div>
-                      <p className="text-[8px] text-green-600/70 font-semibold uppercase mt-0.5 tracking-wider">
-                        Don't share with anyone
-                      </p>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 mb-2">Confirm PIN</label>
+                    <div className="relative flex items-center">
+                      <ShieldCheck className="absolute left-4 text-gray-400" size={18} />
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        value={confirmPin}
+                        onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        className="w-full bg-[#F8F9FA] border border-gray-100 rounded-[18px] py-3 pl-12 pr-4 outline-none focus:ring-1 focus:ring-[#FF5722] focus:bg-white transition-colors font-bold text-gray-900 text-xl tracking-[0.5em]"
+                        maxLength={4}
+                      />
                     </div>
-                    <div className="text-lg font-black text-green-600 tracking-[0.2em] bg-white px-3 py-1 rounded-lg border border-green-100 shadow-sm">
-                      {mockOtpState}
-                    </div>
-                  </motion.div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-900 mb-2">Enter OTP</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      placeholder="4-digit OTP"
-                      className="w-full bg-[#F8F9FA] border border-gray-100 rounded-[18px] py-4 text-center outline-none focus:ring-1 focus:ring-[#FF5722] focus:bg-white transition-colors font-bold text-gray-900 text-2xl tracking-[0.5em]"
-                      maxLength={4}
-                      autoFocus
-                    />
                   </div>
-                  <p className="text-xs text-gray-500 mt-3 text-center font-medium">
-                    OTP sent to +91 {phone}. <button type="button" onClick={() => setStep(1)} className="text-[#FF5722] font-bold">Edit</button>
+                  <p className="text-[11px] text-gray-500 mt-1 text-center font-medium">
+                    Registering +91 {phone}. <button type="button" onClick={() => { setStep(1); setPin(""); setConfirmPin(""); }} className="text-[#FF5722] font-bold">Change</button>
                   </p>
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading || otp.length < 4}
-                  className={`w-full text-white font-bold py-4 rounded-[18px] transition-all flex items-center justify-center gap-2 active:scale-95 ${otp.length >= 4 && !loading ? 'bg-[#FF5722] shadow-[0_4px_14px_rgba(255,87,34,0.3)]' : 'bg-[#FFB09C] shadow-none'}`}
-                >
-                  {loading ? <Loader2 size={20} className="animate-spin" /> : "Verify & Login"}
-                </button>
-              </form>
-            )}
+                  <button
+                    type="submit"
+                    disabled={loading || pin.length < 4 || confirmPin.length < 4}
+                    className={`w-full text-white font-bold py-4 mt-2 rounded-[18px] transition-all flex items-center justify-center gap-2 active:scale-95 ${(pin.length >= 4 && confirmPin.length >= 4) && !loading ? 'bg-[#FF5722] shadow-[0_4px_14px_rgba(255,87,34,0.3)]' : 'bg-[#FFB09C] shadow-none'}`}
+                  >
+                    {loading ? <Loader2 size={20} className="animate-spin" /> : "Create Account & Login"}
+                    {!loading && <UserPlus size={18} />}
+                  </button>
+                </motion.form>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex flex-col mt-auto pt-6">
-            {/* Footer Terms */}
             <p className="text-center text-[10px] text-gray-400 font-bold">
               By continuing, you agree to our <span className="text-[#FF5722] cursor-pointer hover:underline">Terms of Service</span> and <span className="text-[#FF5722] cursor-pointer hover:underline">Privacy Policy</span>
             </p>
