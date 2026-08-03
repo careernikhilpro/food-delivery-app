@@ -736,7 +736,7 @@ function RestaurantCard({ data }: { data: any }) {
       api.get(`/stalls/${data.id}/menu`).then(res => {
         if (Array.isArray(res.data)) {
           const menuItems = res.data.slice(0, 3).map((item: any) => ({
-            id: item.id.toString(),
+            id: item.id?.toString() || Math.random().toString(),
             name: item.name,
             image: item.image_url || "/categories/burger.png",
             newPrice: "₹" + Math.round(item.price),
@@ -744,6 +744,8 @@ function RestaurantCard({ data }: { data: any }) {
             isPopular: true,
             lowerPriceApp: true,
             lowerPriceText: "Our app: 20% lower",
+            has_variants: item.has_variants,
+            variants: item.variants,
           }));
           setItems(menuItems);
         }

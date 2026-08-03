@@ -233,13 +233,13 @@ export default function ProfilePage() {
                       transition={{ duration: 0.15 }}
                       className="absolute right-0 top-12 w-40 bg-[#0a0b10] rounded-2xl shadow-xl z-[999] overflow-hidden"
                     >
-                      <button onClick={openEditProfile} className="w-full text-left px-4 py-2.5 text-white hover:bg-white/5 text-[13px] font-medium transition-colors border-b border-white/10">
+                      <button onClick={() => { openEditProfile(); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-white hover:bg-white/5 text-[12px] font-medium transition-colors border-b border-white/10">
                         Edit Profile
                       </button>
-                      <button className="w-full text-left px-4 py-2.5 text-white hover:bg-white/5 text-[13px] font-medium transition-colors border-b border-white/10">
+                      <button className="w-full text-left px-3 py-2 text-white hover:bg-white/5 text-[12px] font-medium transition-colors border-b border-white/10">
                         Settings
                       </button>
-                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2.5 text-white hover:bg-white/5 text-[13px] font-medium transition-colors">
+                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-white bg-black hover:bg-gray-900 text-[12px] font-bold transition-colors">
                         Log out
                       </button>
                     </motion.div>

@@ -171,7 +171,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const client = await pool.connect();
-    const result = await client.query('SELECT id, name, phone, email, role, created_at FROM users WHERE id = $1', [userId]);
+    const result = await client.query('SELECT id, phone, name, email, role, created_at FROM users WHERE id = $1', [userId]);
     client.release();
     
     if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
@@ -197,6 +197,9 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
         return res.status(400).json({ message: 'Phone number already in use' });
       }
     }
+    
+    // Auto-add email column if missing
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
     
     const result = await client.query(
       'UPDATE users SET name = COALESCE($1, name), phone = COALESCE($2, phone), email = COALESCE($3, email) WHERE id = $4 RETURNING id, name, phone, email, role',
