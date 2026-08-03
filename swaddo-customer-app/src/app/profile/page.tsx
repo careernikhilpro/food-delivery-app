@@ -592,8 +592,11 @@ export default function ProfilePage() {
                   <input type="text" value={editProfileData.name} onChange={(e) => setEditProfileData({...editProfileData, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-gray-400" placeholder="Enter your name" />
                 </div>
                 <div>
-                  <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Phone Number</label>
-                  <input type="tel" value={editProfileData.phone} onChange={(e) => setEditProfileData({...editProfileData, phone: e.target.value.replace(/\D/g, '')})} maxLength={10} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-gray-400" placeholder="10-digit number" />
+                  <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1 block flex justify-between">
+                    Phone Number
+                    <span className="text-[10px] text-gray-400 normal-case flex items-center">Verified ✓</span>
+                  </label>
+                  <input type="tel" disabled value={editProfileData.phone} className="w-full bg-gray-100/70 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-500 cursor-not-allowed transition-all" />
                 </div>
                 <div>
                   <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Email (Optional)</label>
