@@ -45,93 +45,48 @@ router.get('/check-user', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/request-otp', authLimiter, (req: Request, res: Response) => {
-  const { phone } = req.body;
-  if (!phone) {
-    return res.status(400).json({ message: 'Phone number is required' });
-  }
-  
-  // Mock OTP logic
-  const mockOtp = '1234';
-  logger.info(`[MOCK SMS] Sending OTP ${mockOtp} to ${phone}`);
-  
-  res.json({ message: 'OTP sent successfully' });
-});
+import bcrypt from 'bcrypt';
 
-router.post('/verify-otp', async (req: Request, res: Response) => {
-  const { phone, otp, role = 'customer', msg91Token } = req.body;
-  
-  if (msg91Token && msg91Token !== "verified_placeholder") {
-    // Verify MSG91 Token
-    const url = new URL('https://control.msg91.com/api/v5/widget/verifyAccessToken');
-    const authkey = process.env.MSG91_AUTH_KEY || "545853AHQt9sYJRu586a6fbcd6P1";
-    
-    try {
-      const verifyRes = await fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          "authkey": authkey,
-          "access-token": msg91Token
-        })
-      });
-      const verifyData = await verifyRes.json();
-      
-      // MSG91 returns type: "success" on success or type: "error" on failure
-      if (verifyData.type === 'error' || verifyData.message === 'Token missing or invalid') {
-        return res.status(401).json({ message: 'Invalid OTP (MSG91 Verification Failed)', details: verifyData });
-      }
-    } catch (e) {
-      logger.error('Error verifying MSG91 token', e);
-      return res.status(500).json({ message: 'Error verifying OTP with MSG91' });
-    }
-  } else if (msg91Token === 'dev_bypass') {
-    // Allow any OTP passed from frontend mock flow during development
-    logger.info(`[DEV BYPASS] Accepted mock OTP ${otp} for phone ${phone}`);
-  } else if (otp !== '1234') {
-    // Fallback to mock OTP for local dev when MSG91 is not triggered
-    return res.status(401).json({ message: 'Invalid OTP' });
-  }
+router.post('/login-pin', async (req: Request, res: Response) => {
+  const { phone, pin, role = 'customer' } = req.body;
+  if (!phone || !pin) return res.status(400).json({ message: 'Phone and PIN are required' });
 
   let client;
   try {
     client = await pool.connect();
-    await client.query('BEGIN');
-    
-    // 1. Get or Create User
-    // Use an upsert or check. Since phone is unique across roles? Wait, phone is UNIQUE in users table!
-    // If a customer tries to login as vendor with same phone, it might clash if role is different.
-    // For local dev, let's just fetch by phone.
-    let userRes = await client.query('SELECT * FROM users WHERE phone = $1', [phone]);
-    let user;
+    const userRes = await client.query('SELECT * FROM users WHERE phone = $1', [phone]);
     if (userRes.rows.length === 0) {
-      userRes = await client.query('INSERT INTO users (phone, name, role) VALUES ($1, $2, $3) RETURNING *', [phone, `New ${role}`, role]);
-      user = userRes.rows[0];
-    } else {
-      user = userRes.rows[0];
-      // If role mismatch, update the role to what they are trying to login as, or just accept it.
-      // Usually phone numbers are tied to 1 identity.
-      if (user.role !== role) {
-        await client.query('UPDATE users SET role = $1 WHERE id = $2', [role, user.id]);
-        user.role = role;
-      }
+      return res.status(404).json({ message: 'User not found. Please register.' });
     }
 
-    // 2. Role-specific DB entries
+    const user = userRes.rows[0];
+    
+    // Check if user has a PIN set
+    if (!user.pin_hash) {
+      return res.status(400).json({ message: 'No PIN set for this account. Please register again to set a PIN.' });
+    }
+
+    // Verify PIN
+    const isValid = await bcrypt.compare(pin, user.pin_hash);
+    if (!isValid) {
+      return res.status(401).json({ message: 'Invalid PIN' });
+    }
+
+    // Handle role (same as before)
+    if (user.role !== role) {
+      await client.query('UPDATE users SET role = $1 WHERE id = $2', [role, user.id]);
+      user.role = role;
+    }
+
+    // Role-specific DB entries
     if (role === 'vendor') {
       let vendorRes = await client.query('SELECT * FROM vendors WHERE user_id = $1', [user.id]);
       if (vendorRes.rows.length === 0) {
         vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
         const newVendorId = vendorRes.rows[0].id;
-        // Auto-create a stall for this vendor so the app doesn't 404
         await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
       }
       const vendor = vendorRes.rows[0];
-      
-      // Auto-approve existing pending vendors for development
       if (vendor.status === 'pending_approval') {
         await client.query("UPDATE vendors SET status = 'active' WHERE id = $1", [vendor.id]);
         vendor.status = 'active';
@@ -143,14 +98,59 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
       }
     }
 
-    await client.query('COMMIT');
+    const token = jwt.sign({ id: user.id, role }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: user.id, phone, role, name: user.name } });
+  } catch (error: any) {
+    logger.error('Login error', error);
+    res.status(500).json({ message: 'Server error' });
+  } finally {
+    if (client) client.release();
+  }
+});
 
+router.post('/register-pin', async (req: Request, res: Response) => {
+  const { phone, pin, name, role = 'customer' } = req.body;
+  if (!phone || !pin) return res.status(400).json({ message: 'Phone and PIN are required' });
+  if (pin.length < 4) return res.status(400).json({ message: 'PIN must be at least 4 digits' });
+
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // Check if user already exists
+    const existingRes = await client.query('SELECT * FROM users WHERE phone = $1', [phone]);
+    if (existingRes.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'User already exists. Please login.' });
+    }
+
+    const pinHash = await bcrypt.hash(pin, 10);
+    const userName = name || `New ${role}`;
+
+    const insertRes = await client.query(
+      'INSERT INTO users (phone, name, role, pin_hash) VALUES ($1, $2, $3, $4) RETURNING *',
+      [phone, userName, role, pinHash]
+    );
+    const user = insertRes.rows[0];
+
+    // Role-specific DB entries
+    if (role === 'vendor') {
+      const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
+      const newVendorId = vendorRes.rows[0].id;
+      await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
+    } else if (role === 'delivery') {
+      await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+    }
+
+    await client.query('COMMIT');
+    
     const token = jwt.sign({ id: user.id, role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user.id, phone, role, name: user.name } });
   } catch (error: any) {
     if (client) await client.query('ROLLBACK');
-    logger.error('Login error', error);
-    res.status(500).json({ message: 'Server error: ' + (error.message || 'unknown error'), stack: error.stack, fullError: String(error) });
+    logger.error('Registration error', error);
+    res.status(500).json({ message: 'Server error' });
   } finally {
     if (client) client.release();
   }

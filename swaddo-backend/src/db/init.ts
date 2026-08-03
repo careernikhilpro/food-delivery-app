@@ -22,6 +22,7 @@ const runSchema = async () => {
         profile_picture TEXT,
         email VARCHAR(150),
         role user_role DEFAULT 'customer',
+        pin_hash VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -29,6 +30,9 @@ const runSchema = async () => {
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE users ADD COLUMN fcm_token TEXT;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE users ADD COLUMN pin_hash VARCHAR(255);
       EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 
