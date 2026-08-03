@@ -15,6 +15,7 @@ const authLimiter = rateLimit({
 
 router.get('/check-user', async (req: Request, res: Response) => {
   const identifier = req.query.identifier as string;
+  const role = (req.query.role as string) || 'customer';
   
   if (!identifier) {
     return res.status(400).json({ message: 'Identifier is required' });
@@ -27,9 +28,13 @@ router.get('/check-user', async (req: Request, res: Response) => {
 
     if (userRes.rows.length > 0) {
       const user = userRes.rows[0];
+      const pinColumn = role === 'vendor' ? 'vendor_pin_hash' : role === 'delivery' ? 'delivery_pin_hash' : 'customer_pin_hash';
+      const hasSpecificPin = !!user[pinColumn];
+      // Fallback: If they have a global pin_hash but no specific one, we'll consider it set for now and migrate it on login
+      
       return res.status(200).json({
         user_found: true,
-        pin_set: !!user.pin_hash,
+        pin_set: hasSpecificPin || !!user.pin_hash,
         identifier: identifier
       });
     } else {
@@ -61,22 +66,24 @@ router.post('/login-pin', async (req: Request, res: Response) => {
     }
 
     const user = userRes.rows[0];
+    const pinColumn = role === 'vendor' ? 'vendor_pin_hash' : role === 'delivery' ? 'delivery_pin_hash' : 'customer_pin_hash';
+    let targetPinHash = user[pinColumn];
     
-    // Check if user has a PIN set
-    if (!user.pin_hash) {
+    // Check if user has a specific PIN set (fallback to global pin_hash if it exists)
+    if (!targetPinHash && user.pin_hash) {
+       targetPinHash = user.pin_hash;
+       // Auto-migrate the PIN
+       await client.query(`UPDATE users SET ${pinColumn} = $1 WHERE id = $2`, [targetPinHash, user.id]);
+    }
+
+    if (!targetPinHash) {
       return res.status(400).json({ message: 'No PIN set for this account. Please register again to set a PIN.' });
     }
 
     // Verify PIN
-    const isValid = await bcrypt.compare(pin, user.pin_hash);
+    const isValid = await bcrypt.compare(pin, targetPinHash);
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid PIN' });
-    }
-
-    // Handle role (same as before)
-    if (user.role !== role) {
-      await client.query('UPDATE users SET role = $1 WHERE id = $2', [role, user.id]);
-      user.role = role;
     }
 
     // Role-specific DB entries
@@ -125,20 +132,22 @@ router.post('/register-pin', async (req: Request, res: Response) => {
 
     // Check if user already exists
     const existingRes = await client.query('SELECT * FROM users WHERE phone = $1', [phone]);
+    const pinColumn = role === 'vendor' ? 'vendor_pin_hash' : role === 'delivery' ? 'delivery_pin_hash' : 'customer_pin_hash';
+
     if (existingRes.rows.length > 0) {
       user = existingRes.rows[0];
-      if (user.pin_hash) {
+      if (user[pinColumn]) {
         await client.query('ROLLBACK');
-        return res.status(400).json({ message: 'User already exists. Please login.' });
+        return res.status(400).json({ message: 'User already has a PIN for this role. Please login.' });
       } else {
-        // User exists but has no PIN. Update the user with the new PIN!
-        const updateRes = await client.query('UPDATE users SET pin_hash = $1 WHERE id = $2 RETURNING *', [pinHash, user.id]);
+        // User exists but has no PIN for this specific role. Update the specific PIN hash!
+        const updateRes = await client.query(`UPDATE users SET ${pinColumn} = $1 WHERE id = $2 RETURNING *`, [pinHash, user.id]);
         user = updateRes.rows[0];
       }
     } else {
       const insertRes = await client.query(
-        'INSERT INTO users (phone, name, role, pin_hash) VALUES ($1, $2, $3, $4) RETURNING *',
-        [phone, userName, role, pinHash]
+        `INSERT INTO users (phone, name, role, pin_hash, ${pinColumn}) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [phone, userName, role, pinHash, pinHash]
       );
       user = insertRes.rows[0];
 

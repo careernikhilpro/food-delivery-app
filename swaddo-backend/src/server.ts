@@ -86,6 +86,15 @@ const migrateDB = async () => {
     
     // Add PIN hash and email columns for new authentication system
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(255);`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS customer_pin_hash VARCHAR(255);`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS vendor_pin_hash VARCHAR(255);`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_pin_hash VARCHAR(255);`);
+    
+    // Migrate existing pin_hash based on current role
+    await client.query(`UPDATE users SET customer_pin_hash = pin_hash WHERE role = 'customer' AND customer_pin_hash IS NULL AND pin_hash IS NOT NULL;`);
+    await client.query(`UPDATE users SET vendor_pin_hash = pin_hash WHERE role = 'vendor' AND vendor_pin_hash IS NULL AND pin_hash IS NOT NULL;`);
+    await client.query(`UPDATE users SET delivery_pin_hash = pin_hash WHERE role = 'delivery' AND delivery_pin_hash IS NULL AND pin_hash IS NOT NULL;`);
+    
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);`);
     
     // Create notifications table for history

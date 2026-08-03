@@ -28,7 +28,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await api.get(`/auth/check-user?identifier=${phone}`);
+      const res = await api.get(`/auth/check-user?identifier=${phone}&role=vendor`);
       if (res.data.user_found && res.data.pin_set) {
         setStep(2); // Existing user with PIN -> Login
       } else {
