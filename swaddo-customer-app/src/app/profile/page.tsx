@@ -559,9 +559,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-    </div>
-
-
       {/* Logout Confirmation Modal */}
       <AnimatePresence>
         {isLogoutModalOpen && (
