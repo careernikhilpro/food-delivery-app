@@ -231,9 +231,9 @@ export default function ProfilePage() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+                      className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-[999]"
                     >
-                      <button onClick={openEditProfile} className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 text-[14px] font-medium flex items-center gap-3 transition-colors border-b border-gray-100">
+                      <button onClick={openEditProfile} className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 text-[14px] font-medium flex items-center gap-3 transition-colors border-b border-gray-100 rounded-t-xl">
                         <Edit2 size={16} className="text-gray-400" />
                         Edit profile
                       </button>
@@ -241,7 +241,7 @@ export default function ProfilePage() {
                         <Settings size={16} className="text-gray-400" />
                         Settings
                       </button>
-                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors">
+                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors rounded-b-xl">
                         <LogOut size={16} className="text-red-400" />
                         Log out
                       </button>
