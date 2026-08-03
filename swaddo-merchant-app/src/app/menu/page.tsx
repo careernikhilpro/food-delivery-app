@@ -111,8 +111,9 @@ export default function MenuPage() {
           has_variants: hasVariants,
           variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
         };
-        console.log("PUT Payload:", payload);
+        console.log("PUT Payload sent to backend:", payload);
         const res = await api.put(`/stalls/${stallId}/menu/${editingItemFullId}`, payload);
+        console.log("PUT Response from backend:", res.data);
         setItems(items.map(i => i.id.toString() === editingItemFullId ? res.data : i));
       } else {
         const payload = {
@@ -125,8 +126,9 @@ export default function MenuPage() {
           has_variants: hasVariants,
           variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
         };
-        console.log("POST Payload:", payload);
+        console.log("POST Payload sent to backend:", payload);
         const res = await api.post(`/stalls/${stallId}/menu`, payload);
+        console.log("POST Response from backend:", res.data);
         setItems([res.data, ...items]);
       }
       setIsAdding(false);
