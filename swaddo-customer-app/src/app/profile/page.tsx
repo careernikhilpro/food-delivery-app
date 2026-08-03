@@ -41,12 +41,16 @@ export default function ProfilePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { clearCart, updateQuantity } = useCart();
 
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  
   const handleLogout = () => {
     localStorage.removeItem("swaddo_customer_token");
     router.push("/login");
   };
 
   const fetcher = (url: string) => api.get(url).then(res => res.data);
+  const { data: userProfile, mutate: mutateProfile } = useSWR('/auth/me', fetcher);
+
   const { data: ordersRes, isLoading, mutate: mutateOrders } = useSWR('/orders', fetcher, { revalidateOnFocus: false, dedupingInterval: 60000, keepPreviousData: true });
   const rawOrders = ordersRes?.data || [];
   
@@ -83,6 +87,35 @@ export default function ProfilePage() {
     restaurant: { score: 0, timestamp: null },
     rider: { score: 0, timestamp: null }
   });
+
+  // Edit Profile States
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editProfileData, setEditProfileData] = useState({ name: '', phone: '', email: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const openEditProfile = () => {
+    setEditProfileData({
+      name: userProfile?.name?.replace('New customer', '') || '',
+      phone: userProfile?.phone || '',
+      email: userProfile?.email || ''
+    });
+    setIsEditProfileOpen(true);
+    setIsMenuOpen(false);
+  };
+
+  const saveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      await api.put('/auth/profile', editProfileData);
+      await mutateProfile();
+      setIsEditProfileOpen(false);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const activeOrders = useMemo(() => orders.filter(o => !['delivered', 'cancelled', 'declined'].includes(o.status)), [orders]);
   const pastOrders = useMemo(() => orders.filter(o => ['delivered', 'cancelled', 'declined'].includes(o.status)), [orders]);
@@ -200,7 +233,7 @@ export default function ProfilePage() {
                       transition={{ duration: 0.15 }}
                       className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
                     >
-                      <button className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 text-[14px] font-medium flex items-center gap-3 transition-colors border-b border-gray-100">
+                      <button onClick={openEditProfile} className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 text-[14px] font-medium flex items-center gap-3 transition-colors border-b border-gray-100">
                         <Edit2 size={16} className="text-gray-400" />
                         Edit profile
                       </button>
@@ -208,7 +241,7 @@ export default function ProfilePage() {
                         <Settings size={16} className="text-gray-400" />
                         Settings
                       </button>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors">
+                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors">
                         <LogOut size={16} className="text-red-400" />
                         Log out
                       </button>
@@ -222,9 +255,9 @@ export default function ProfilePage() {
 
         {/* User Info */}
         <div className="px-2">
-          <h1 className="text-2xl font-black mb-1">Yatharth Sinha</h1>
-          <p className="text-[13px] text-white/90 font-medium tracking-wide mb-1">+91 - 9082998752</p>
-          <p className="text-[13px] text-white/90 font-medium tracking-wide">nikhil.kumar709198@gmail.com</p>
+          <h1 className="text-2xl font-black mb-1">{userProfile?.name?.replace('New customer', 'Swaddo User') || 'Swaddo User'}</h1>
+          <p className="text-[13px] text-white/90 font-medium tracking-wide mb-1">+91 - {userProfile?.phone || ''}</p>
+          {userProfile?.email && <p className="text-[13px] text-white/90 font-medium tracking-wide">{userProfile.email}</p>}
         </div>
       </div>
 
@@ -526,6 +559,66 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+    </div>
+
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {isLogoutModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsLogoutModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+              <h3 className="text-xl font-black text-gray-900 mb-2">Log out</h3>
+              <p className="text-[14px] text-gray-600 mb-6">
+                Please remember your 4-digit PIN for return login. Are you sure you want to log out?
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setIsLogoutModalOpen(false)} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handleLogout} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all">
+                  Yes, Log out
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Profile Modal */}
+      <AnimatePresence>
+        {isEditProfileOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsEditProfileOpen(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+              <h3 className="text-xl font-black text-gray-900 mb-4">Edit Profile</h3>
+              <form onSubmit={saveProfile} className="space-y-4">
+                <div>
+                  <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Full Name</label>
+                  <input type="text" value={editProfileData.name} onChange={(e) => setEditProfileData({...editProfileData, name: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-gray-400" placeholder="Enter your name" />
+                </div>
+                <div>
+                  <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Phone Number</label>
+                  <input type="tel" value={editProfileData.phone} onChange={(e) => setEditProfileData({...editProfileData, phone: e.target.value.replace(/\D/g, '')})} maxLength={10} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-gray-400" placeholder="10-digit number" />
+                </div>
+                <div>
+                  <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Email (Optional)</label>
+                  <input type="email" value={editProfileData.email} onChange={(e) => setEditProfileData({...editProfileData, email: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-gray-400" placeholder="you@example.com" />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => setIsEditProfileOpen(false)} className="flex-1 py-3.5 rounded-xl text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isSavingProfile || editProfileData.phone.length < 10} className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSavingProfile ? <Loader2 className="w-5 h-5 mx-auto animate-spin" /> : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
