@@ -2,6 +2,19 @@ import { Router, Request, Response } from 'express';
 import { pool } from '../db';
 import { authenticate, requireAdmin } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { assignmentManager } from '../services/assignment';
+import bcrypt from 'bcrypt';
+
+// Simple haversine formula for distance
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
 const router = Router();
 
@@ -237,6 +250,18 @@ router.post('/orders/:id/assign', async (req: Request, res: Response) => {
     }
 
     await client.query('COMMIT');
+    
+    // Notify the rider via socket if they are online
+    const dpRes = await pool.query('SELECT user_id FROM delivery_partners WHERE id = $1', [rider_id]);
+    if (dpRes.rows.length > 0) {
+      const riderUserId = dpRes.rows[0].user_id.toString();
+      const onlineRider = assignmentManager.getOnlineRider(riderUserId);
+      
+      if (onlineRider) {
+        onlineRider.isBusy = true; // mark them busy so system doesn't assign other orders
+      }
+    }
+
     res.json({ message: 'Rider assigned successfully' });
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -244,6 +269,65 @@ router.post('/orders/:id/assign', async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message || 'Error assigning rider' });
   } finally {
     client.release();
+  }
+});
+
+router.get('/orders/:id/available-riders', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get order and stall location
+    const orderRes = await pool.query(`
+      SELECT o.id, s.latitude, s.longitude 
+      FROM orders o 
+      JOIN stalls s ON o.stall_id = s.id 
+      WHERE o.id = $1
+    `, [id]);
+    
+    if (orderRes.rows.length === 0) return res.status(404).json({ message: 'Order not found' });
+    const stall = orderRes.rows[0];
+
+    // Filter available riders from memory
+    const availableOnline = assignmentManager.getAvailableRiders();
+    const userIds = availableOnline.map(([userId]) => userId);
+
+    if (userIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Get their DB info
+    const ridersRes = await pool.query(`
+      SELECT dp.id as delivery_partner_id, dp.user_id, u.name, u.phone 
+      FROM delivery_partners dp 
+      JOIN users u ON dp.user_id = u.id 
+      WHERE dp.user_id = ANY($1::int[])
+    `, [userIds]);
+
+    const result = ridersRes.rows.map(r => {
+      const memData = assignmentManager.getOnlineRider(r.user_id.toString());
+      let distance = null;
+      if (memData && memData.lat && memData.lng && stall.latitude && stall.longitude) {
+        distance = getDistance(stall.latitude, stall.longitude, memData.lat, memData.lng);
+      }
+      return {
+        ...r,
+        distance,
+        lat: memData?.lat,
+        lng: memData?.lng
+      };
+    });
+
+    // Sort by distance
+    result.sort((a, b) => {
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    });
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Error fetching available riders:', error);
+    res.status(500).json({ message: 'Error fetching available riders' });
   }
 });
 
@@ -282,7 +366,18 @@ router.get('/riders', async (req: Request, res: Response) => {
       JOIN users u ON d.user_id = u.id 
       ORDER BY d.id DESC
     `);
-    res.json(riders.rows);
+    
+    const mapped = riders.rows.map(r => {
+      const memData = assignmentManager.getOnlineRider(r.user_id.toString());
+      const isOnline = !!memData;
+      return {
+        ...r,
+        current_status: isOnline ? 'online' : 'offline',
+        is_busy: isOnline ? memData.isBusy : false
+      };
+    });
+    
+    res.json(mapped);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching riders' });
   }

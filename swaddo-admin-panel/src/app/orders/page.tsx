@@ -13,6 +13,8 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [assignRiderId, setAssignRiderId] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [availableRiders, setAvailableRiders] = useState<any[]>([]);
+  const [fetchingRiders, setFetchingRiders] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -23,19 +25,36 @@ export default function Orders() {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, ridersRes] = await Promise.all([
-        api.get("/admin/orders"),
-        api.get("/admin/riders")
-      ]);
+      const ordersRes = await api.get("/admin/orders");
       setOrders(ordersRes.data);
-      // Filter only active/online riders
-      setRiders(ridersRes.data.filter((r: any) => r.is_active && r.current_status === 'online'));
     } catch (error) {
       console.log("Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchAvailable = async () => {
+      if (!selectedOrder) {
+        setAvailableRiders([]);
+        return;
+      }
+      // Only fetch available riders if no rider is assigned yet
+      if (!selectedOrder.rider) {
+        setFetchingRiders(true);
+        try {
+          const res = await api.get(`/admin/orders/${selectedOrder.id}/available-riders`);
+          setAvailableRiders(res.data);
+        } catch (error) {
+          console.error("Failed to fetch available riders", error);
+        } finally {
+          setFetchingRiders(false);
+        }
+      }
+    };
+    fetchAvailable();
+  }, [selectedOrder]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -319,14 +338,17 @@ export default function Orders() {
                           className="flex-1 bg-bg-alt border border-border-subtle rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:border-primary"
                           value={assignRiderId}
                           onChange={(e) => setAssignRiderId(e.target.value)}
+                          disabled={fetchingRiders}
                         >
-                          <option value="">Select an online rider...</option>
-                          {riders.map((r) => (
-                            <option key={r.id} value={r.id}>{r.name} ({r.phone})</option>
+                          <option value="">{fetchingRiders ? 'Fetching nearby riders...' : 'Select a nearby online rider...'}</option>
+                          {availableRiders.map((r) => (
+                            <option key={r.delivery_partner_id} value={r.delivery_partner_id}>
+                              {r.name} - {r.distance !== null ? `${r.distance.toFixed(1)} km away` : 'Distance unknown'}
+                            </option>
                           ))}
                         </select>
                         <button 
-                          disabled={assigning || !assignRiderId}
+                          disabled={assigning || !assignRiderId || fetchingRiders}
                           onClick={() => handleAssignRider(selectedOrder.id)}
                           className="bg-primary text-white font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-50 flex items-center gap-2"
                         >

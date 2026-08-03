@@ -42,6 +42,14 @@ export class AssignmentManager {
     this.io = io;
   }
 
+  getOnlineRider(riderId: string): OnlineRider | undefined {
+    return this.onlineRiders.get(riderId);
+  }
+
+  getAvailableRiders(): [string, OnlineRider][] {
+    return Array.from(this.onlineRiders.entries()).filter(([_, data]) => !data.isBusy);
+  }
+
   registerRider(riderId: string, socketId: string, lat?: number, lng?: number) {
     this.onlineRiders.set(riderId, { socketId, isBusy: false, lat, lng });
     console.log(`[Assignment] Rider ${riderId} registered with socket ${socketId} at ${lat}, ${lng}`);
