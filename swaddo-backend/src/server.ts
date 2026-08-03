@@ -78,8 +78,9 @@ const migrateDB = async () => {
     await client.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS fcm_token TEXT;`);
     await client.query(`ALTER TABLE delivery_partners ADD COLUMN IF NOT EXISTS fcm_token TEXT;`);
     
-    // Add PIN hash column for new authentication system
+    // Add PIN hash and email columns for new authentication system
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(255);`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);`);
     
     // Create notifications table for history
     await client.query(`
