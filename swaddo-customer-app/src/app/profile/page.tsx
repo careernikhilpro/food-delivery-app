@@ -231,15 +231,15 @@ export default function ProfilePage() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 w-48 bg-[#0a0b10] rounded-2xl shadow-xl z-[999] overflow-hidden"
+                      className="absolute right-0 top-12 w-40 bg-[#0a0b10] rounded-2xl shadow-xl z-[999] overflow-hidden"
                     >
-                      <button onClick={openEditProfile} className="w-full text-left px-5 py-3.5 text-white hover:bg-white/5 text-[15px] font-medium transition-colors border-b border-white/10">
+                      <button onClick={openEditProfile} className="w-full text-left px-4 py-2.5 text-white hover:bg-white/5 text-[13px] font-medium transition-colors border-b border-white/10">
                         Edit Profile
                       </button>
-                      <button className="w-full text-left px-5 py-3.5 text-white hover:bg-white/5 text-[15px] font-medium transition-colors border-b border-white/10">
+                      <button className="w-full text-left px-4 py-2.5 text-white hover:bg-white/5 text-[13px] font-medium transition-colors border-b border-white/10">
                         Settings
                       </button>
-                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-5 py-3.5 text-white hover:bg-white/5 text-[15px] font-medium transition-colors">
+                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2.5 text-white hover:bg-white/5 text-[13px] font-medium transition-colors">
                         Log out
                       </button>
                     </motion.div>
