@@ -101,7 +101,7 @@ export default function MenuPage() {
 
     try {
       if (editingItemFullId) {
-        const res = await api.put(`/stalls/${stallId}/menu/${editingItemFullId}`, {
+        const payload = {
           name: form.name,
           description: form.description,
           price: finalBasePrice,
@@ -110,10 +110,12 @@ export default function MenuPage() {
           category: finalCategory,
           has_variants: hasVariants,
           variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
-        });
+        };
+        console.log("PUT Payload:", payload);
+        const res = await api.put(`/stalls/${stallId}/menu/${editingItemFullId}`, payload);
         setItems(items.map(i => i.id.toString() === editingItemFullId ? res.data : i));
       } else {
-        const res = await api.post(`/stalls/${stallId}/menu`, {
+        const payload = {
           name: form.name,
           description: form.description,
           price: finalBasePrice,
@@ -122,7 +124,9 @@ export default function MenuPage() {
           category: finalCategory,
           has_variants: hasVariants,
           variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
-        });
+        };
+        console.log("POST Payload:", payload);
+        const res = await api.post(`/stalls/${stallId}/menu`, payload);
         setItems([res.data, ...items]);
       }
       setIsAdding(false);
