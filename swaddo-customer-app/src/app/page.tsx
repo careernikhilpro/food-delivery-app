@@ -634,7 +634,7 @@ export default function Home() {
         {/* Restaurant Cards List */}
         <div className="flex flex-col gap-5">
           {stalls.map((restaurant, idx) => (
-            <RestaurantCard key={idx} data={restaurant} />
+             <RestaurantCard key={idx} data={restaurant} setVariantModal={setVariantModal} />
           ))}
         </div>
       </div>
@@ -727,7 +727,7 @@ export default function Home() {
   );
 }
 
-function RestaurantCard({ data }: { data: any }) {
+function RestaurantCard({ data, setVariantModal }: { data: any, setVariantModal: any }) {
   const { updateQuantity, cart } = useCart();
   const [items, setItems] = useState<any[]>(data.items || []);
 
