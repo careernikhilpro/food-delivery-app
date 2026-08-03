@@ -238,7 +238,7 @@ export default function Orders() {
                     {selectedOrder.items && selectedOrder.items.length > 0 && selectedOrder.items[0] !== null ? (
                       <ul className="divide-y divide-border-subtle">
                         {selectedOrder.items.map((item: any, idx: number) => {
-                          if (!item) return null;
+                          if (!item || !item.id) return null;
                           return (
                           <li key={idx} className="p-4 flex justify-between items-start">
                             <div>
@@ -255,45 +255,39 @@ export default function Orders() {
                             <span className="font-bold text-text-primary">₹{item.quantity * item.price_at_time}</span>
                           </li>
                         )})}
-                        
-                        {/* Breakdown Section */}
-                        <li className="p-4 bg-bg-alt flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-text-muted font-medium">Item Total</span>
-                            <span className="font-bold text-text-primary">₹{selectedOrder.item_total || selectedOrder.total_amount}</span>
-                          </div>
-                          {selectedOrder.delivery_charge > 0 && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-text-muted font-medium">Delivery Charge</span>
-                              <span className="font-bold text-text-primary">₹{selectedOrder.delivery_charge}</span>
-                            </div>
-                          )}
-                          {selectedOrder.gst_amount > 0 && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-text-muted font-medium">GST</span>
-                              <span className="font-bold text-text-primary">₹{selectedOrder.gst_amount}</span>
-                            </div>
-                          )}
-                          {selectedOrder.platform_fee > 0 && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-text-muted font-medium">Platform Fee</span>
-                              <span className="font-bold text-text-primary">₹{selectedOrder.platform_fee}</span>
-                            </div>
-                          )}
-                          <div className="mt-2 pt-2 border-t border-border-subtle flex justify-between items-center">
-                            <span className="font-bold text-text-primary">Total Amount</span>
-                            <span className="font-black font-heading text-lg text-primary">₹{selectedOrder.total_amount}</span>
-                          </div>
-                        </li>
-                        
-                        <li className="p-4 bg-primary/5 flex justify-between items-center border-t border-border-subtle">
-                          <span className="font-bold text-primary text-sm uppercase tracking-wider">Restaurant Share</span>
-                          <span className="font-black font-heading text-md text-primary">₹{selectedOrder.restaurant_share || selectedOrder.item_total || selectedOrder.total_amount}</span>
-                        </li>
                       </ul>
                     ) : (
-                      <p className="p-4 text-text-muted text-sm text-center">Item details not available.</p>
+                      <p className="p-4 text-text-muted text-sm text-center border-b border-border-subtle">Item details not available for this old order.</p>
                     )}
+                    
+                    {/* Breakdown Section - Always Rendered */}
+                    <div className="p-4 bg-bg-alt flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-text-muted font-medium">Order Value</span>
+                        <span className="font-bold text-text-primary">₹{selectedOrder.item_total || selectedOrder.total_amount}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-text-muted font-medium">Delivery Charge</span>
+                        <span className="font-bold text-text-primary">₹{selectedOrder.delivery_charge || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-text-muted font-medium">GST</span>
+                        <span className="font-bold text-text-primary">₹{selectedOrder.gst_amount || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-text-muted font-medium">Commission Amount (22%)</span>
+                        <span className="font-bold text-[#B82F12]">₹{selectedOrder.platform_fee || 0}</span>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-border-subtle flex justify-between items-center">
+                        <span className="font-bold text-text-primary">Customer Paid</span>
+                        <span className="font-black font-heading text-lg text-primary">₹{selectedOrder.total_amount}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-primary/5 flex justify-between items-center border-t border-border-subtle">
+                      <span className="font-bold text-primary text-sm uppercase tracking-wider">Merchant Payment</span>
+                      <span className="font-black font-heading text-xl text-primary">₹{selectedOrder.restaurant_share || selectedOrder.item_total || selectedOrder.total_amount}</span>
+                    </div>
                   </div>
                 </div>
 
