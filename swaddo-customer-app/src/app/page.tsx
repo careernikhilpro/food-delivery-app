@@ -743,8 +743,9 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
   useEffect(() => {
     if (!data.items) {
       api.get(`/stalls/${data.id}/menu`).then(res => {
-        if (Array.isArray(res.data)) {
-          const menuItems = res.data.slice(0, 3).map((item: any) => ({
+        const menuData = res.data.data || res.data;
+        if (Array.isArray(menuData)) {
+          const menuItems = menuData.slice(0, 3).map((item: any) => ({
             id: item.id?.toString() || Math.random().toString(),
             name: item.name,
             image: item.image_url || "/categories/burger.png",
