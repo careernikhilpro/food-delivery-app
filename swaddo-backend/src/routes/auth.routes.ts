@@ -171,7 +171,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const client = await pool.connect();
-    const result = await client.query('SELECT id, name, phone, role, created_at FROM users WHERE id = $1', [userId]);
+    const result = await client.query('SELECT id, name, phone, email, role, created_at FROM users WHERE id = $1', [userId]);
     client.release();
     
     if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
@@ -185,7 +185,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
 router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { name, phone } = req.body;
+    const { name, phone, email } = req.body;
     
     const client = await pool.connect();
     
@@ -199,8 +199,8 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
     }
     
     const result = await client.query(
-      'UPDATE users SET name = COALESCE($1, name), phone = COALESCE($2, phone) WHERE id = $3 RETURNING id, name, phone, role',
-      [name, phone, userId]
+      'UPDATE users SET name = COALESCE($1, name), phone = COALESCE($2, phone), email = COALESCE($3, email) WHERE id = $4 RETURNING id, name, phone, email, role',
+      [name, phone, email, userId]
     );
     client.release();
     
