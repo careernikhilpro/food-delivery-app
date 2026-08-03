@@ -88,6 +88,9 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
       logger.error('Error verifying MSG91 token', e);
       return res.status(500).json({ message: 'Error verifying OTP with MSG91' });
     }
+  } else if (msg91Token === 'dev_bypass') {
+    // Allow any OTP passed from frontend mock flow during development
+    logger.info(`[DEV BYPASS] Accepted mock OTP ${otp} for phone ${phone}`);
   } else if (otp !== '1234') {
     // Fallback to mock OTP for local dev when MSG91 is not triggered
     return res.status(401).json({ message: 'Invalid OTP' });
