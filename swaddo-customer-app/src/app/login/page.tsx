@@ -30,10 +30,10 @@ export default function Login() {
 
     try {
       const res = await api.get(`/auth/check-user?identifier=${phone}`);
-      if (res.data.user_found) {
-        setStep(2); // Existing user -> Login
+      if (res.data.user_found && res.data.pin_set) {
+        setStep(2); // Existing user with PIN -> Login
       } else {
-        setStep(3); // New user -> Register
+        setStep(3); // New user OR existing user without PIN -> Register
       }
     } catch (err: any) {
       setError("Failed to check user. Please try again.");
