@@ -180,18 +180,20 @@ export default function Login() {
                   <motion.div 
                     initial={{ opacity: 0, y: -10 }} 
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-green-50 border border-green-200 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-sm"
+                    className="bg-green-50 border border-green-200 p-2.5 rounded-xl flex items-center justify-between shadow-sm"
                   >
-                    <div className="flex items-center gap-1 text-green-700 font-bold text-sm uppercase tracking-wide">
-                      <ShieldCheck size={16} />
-                      <span>Dev Mode OTP</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1 text-green-700 font-bold text-[10px] uppercase tracking-wide">
+                        <ShieldCheck size={12} />
+                        <span>Dev Mode OTP</span>
+                      </div>
+                      <p className="text-[8px] text-green-600/70 font-semibold uppercase mt-0.5 tracking-wider">
+                        Don't share with anyone
+                      </p>
                     </div>
-                    <div className="text-3xl font-black text-green-600 tracking-[0.2em] my-1">
+                    <div className="text-lg font-black text-green-600 tracking-[0.2em] bg-white px-3 py-1 rounded-lg border border-green-100 shadow-sm">
                       {mockOtpState}
                     </div>
-                    <p className="text-[10px] text-green-600/70 font-semibold uppercase tracking-wider text-center max-w-[200px]">
-                      Don&apos;t share your account with any other person
-                    </p>
                   </motion.div>
                 )}
 
