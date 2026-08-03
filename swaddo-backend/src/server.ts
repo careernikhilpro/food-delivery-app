@@ -78,6 +78,12 @@ const migrateDB = async () => {
     await client.query(`ALTER TABLE vendors ADD COLUMN IF NOT EXISTS fcm_token TEXT;`);
     await client.query(`ALTER TABLE delivery_partners ADD COLUMN IF NOT EXISTS fcm_token TEXT;`);
     
+    // Auto-migrate menu_items
+    await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS has_variants BOOLEAN DEFAULT false;`);
+    await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS variants JSONB DEFAULT '[]'::jsonb;`);
+    await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS has_addons BOOLEAN DEFAULT false;`);
+    await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS addons JSONB DEFAULT '[]'::jsonb;`);
+    
     // Add PIN hash and email columns for new authentication system
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(255);`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);`);

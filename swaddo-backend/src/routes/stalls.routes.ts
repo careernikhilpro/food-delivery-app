@@ -309,7 +309,7 @@ router.get('/search/all', async (req: Request, res: Response, next: NextFunction
     );
 
     const dishesRes = await pool.query(
-      "SELECT m.id, m.name, m.price, m.is_veg, m.description, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 LIMIT 30",
+      "SELECT m.id, m.name, m.price, m.is_veg, m.description, m.has_variants, m.variants, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 LIMIT 30",
       [`%${q}%`]
     );
 
@@ -473,7 +473,7 @@ router.get('/:id/menu', async (req: Request, res: Response, next: NextFunction) 
 router.post('/:id/menu', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, description, price, is_veg, is_available, category } = req.body;
+    const { name, description, price, is_veg, is_available, category, has_variants, variants } = req.body;
     
     // Verify ownership
     const check = await pool.query('SELECT s.* FROM stalls s JOIN vendors v ON s.vendor_id = v.id WHERE s.id = $1 AND v.user_id = $2', [id, req.user!.id]);
@@ -482,8 +482,8 @@ router.post('/:id/menu', authenticate, requireVendor, async (req: AuthRequest, r
     }
 
     const result = await pool.query(
-      'INSERT INTO menu_items (stall_id, name, description, price, is_veg, is_available, category) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [id, name, description, price, is_veg, is_available ?? true, category]
+      'INSERT INTO menu_items (stall_id, name, description, price, is_veg, is_available, category, has_variants, variants) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+      [id, name, description, price, is_veg, is_available ?? true, category, has_variants ?? false, JSON.stringify(variants || [])]
     );
     
     const payload = {
@@ -504,15 +504,15 @@ router.post('/:id/menu', authenticate, requireVendor, async (req: AuthRequest, r
 router.put('/:id/menu/:itemId', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id: stallId, itemId } = req.params;
-    const { name, description, price, is_veg, is_available, category } = req.body;
+    const { name, description, price, is_veg, is_available, category, has_variants, variants } = req.body;
     
     // Verify ownership using vendors table
     const check = await pool.query('SELECT s.* FROM stalls s JOIN vendors v ON s.vendor_id = v.id WHERE s.id = $1 AND v.user_id = $2', [stallId, req.user!.id]);
     if (check.rows.length === 0) return res.status(403).json({ message: 'Unauthorized' });
 
     const result = await pool.query(
-      'UPDATE menu_items SET name = COALESCE($1, name), description = COALESCE($2, description), price = COALESCE($3, price), is_veg = COALESCE($4, is_veg), is_available = COALESCE($5, is_available), category = COALESCE($8, category) WHERE id = $6 AND stall_id = $7 RETURNING *',
-      [name, description, price, is_veg, is_available, itemId, stallId, category]
+      'UPDATE menu_items SET name = COALESCE($1, name), description = COALESCE($2, description), price = COALESCE($3, price), is_veg = COALESCE($4, is_veg), is_available = COALESCE($5, is_available), category = COALESCE($8, category), has_variants = COALESCE($9, has_variants), variants = COALESCE($10, variants) WHERE id = $6 AND stall_id = $7 RETURNING *',
+      [name, description, price, is_veg, is_available, itemId, stallId, category, has_variants, variants ? JSON.stringify(variants) : null]
     );
     
     if (result.rows.length > 0) {
