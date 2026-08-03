@@ -787,10 +787,10 @@ function RestaurantCard({ data }: { data: any }) {
               let quantity = 0;
               if (cart.stallId === data.id) {
                 if (item.has_variants) {
-                  const prefix = (item.id || idx.toString()) + '_';
-                  quantity = cart.items.filter(i => i.id.startsWith(prefix)).reduce((sum, i) => sum + i.quantity, 0);
+                  const prefix = String(item.id || idx) + '_';
+                  quantity = cart.items.filter(i => String(i.id).startsWith(prefix)).reduce((sum, i) => sum + i.quantity, 0);
                 } else {
-                  const isAdded = cart.items.find(i => i.id === item.id || i.id === idx.toString());
+                  const isAdded = cart.items.find(i => String(i.id) === String(item.id || idx));
                   quantity = isAdded ? isAdded.quantity : 0;
                 }
               }
@@ -801,7 +801,7 @@ function RestaurantCard({ data }: { data: any }) {
                 if (item.has_variants) {
                   setVariantModal({ isOpen: true, stallId: data.id, stallName: data.name, item });
                 } else {
-                  updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, delta);
+                  updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, delta);
                 }
               };
               
@@ -913,7 +913,8 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [modalQty, setModalQty] = useState(1);
 
-  const selectedVariant = item.variants[selectedIndex];
+  const variantsList = item.variants || [];
+  const selectedVariant = variantsList[selectedIndex];
   const variantId = `${item.id}_${selectedVariant?.name}`;
   
   const handleAdd = () => {
@@ -950,11 +951,11 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
           <p className="text-[12px] text-gray-500 mb-3 font-medium">Select any 1</p>
           
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {item.variants.map((v: any, i: number) => (
+            {variantsList.map((v: any, i: number) => (
               <div 
                 key={i} 
                 onClick={() => setSelectedIndex(i)}
-                className={`flex justify-between items-center p-4 cursor-pointer transition-colors ${i !== item.variants.length - 1 ? 'border-b border-gray-100' : ''}`}
+                className={`flex justify-between items-center p-4 cursor-pointer transition-colors ${i !== variantsList.length - 1 ? 'border-b border-gray-100' : ''}`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`mt-[2px] shrink-0 w-[14px] h-[14px] border flex items-center justify-center rounded-[3px] ${item.is_veg ? 'border-green-600' : 'border-[#8B3A1A]'}`}>
