@@ -26,15 +26,16 @@ router.get('/check-user', async (req: Request, res: Response) => {
     client.release();
 
     if (userRes.rows.length > 0) {
+      const user = userRes.rows[0];
       return res.status(200).json({
         user_found: true,
+        pin_set: !!user.pin_hash,
         identifier: identifier
       });
     } else {
-      // Return 200 with user_found: false (or you can return 404, depending on MSG91 strictness, 
-      // but returning 200 with user_found: false is safer as per their JSON schema)
       return res.status(200).json({
         user_found: false,
+        pin_set: false,
         identifier: identifier,
         message: 'User not found!!!'
       });
@@ -118,29 +119,37 @@ router.post('/register-pin', async (req: Request, res: Response) => {
     client = await pool.connect();
     await client.query('BEGIN');
 
+    const pinHash = await bcrypt.hash(pin, 10);
+    const userName = name || `New ${role}`;
+    let user;
+
     // Check if user already exists
     const existingRes = await client.query('SELECT * FROM users WHERE phone = $1', [phone]);
     if (existingRes.rows.length > 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ message: 'User already exists. Please login.' });
-    }
+      user = existingRes.rows[0];
+      if (user.pin_hash) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: 'User already exists. Please login.' });
+      } else {
+        // User exists but has no PIN. Update the user with the new PIN!
+        const updateRes = await client.query('UPDATE users SET pin_hash = $1 WHERE id = $2 RETURNING *', [pinHash, user.id]);
+        user = updateRes.rows[0];
+      }
+    } else {
+      const insertRes = await client.query(
+        'INSERT INTO users (phone, name, role, pin_hash) VALUES ($1, $2, $3, $4) RETURNING *',
+        [phone, userName, role, pinHash]
+      );
+      user = insertRes.rows[0];
 
-    const pinHash = await bcrypt.hash(pin, 10);
-    const userName = name || `New ${role}`;
-
-    const insertRes = await client.query(
-      'INSERT INTO users (phone, name, role, pin_hash) VALUES ($1, $2, $3, $4) RETURNING *',
-      [phone, userName, role, pinHash]
-    );
-    const user = insertRes.rows[0];
-
-    // Role-specific DB entries
-    if (role === 'vendor') {
-      const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
-      const newVendorId = vendorRes.rows[0].id;
-      await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
-    } else if (role === 'delivery') {
-      await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+      // Role-specific DB entries for brand new users
+      if (role === 'vendor') {
+        const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
+        const newVendorId = vendorRes.rows[0].id;
+        await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
+      } else if (role === 'delivery') {
+        await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+      }
     }
 
     await client.query('COMMIT');
