@@ -30,6 +30,7 @@ router.get('/merchant/stats', authenticate, requireVendor, async (req: AuthReque
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.stall_id = $1 
+      AND o.status != 'payment_pending'
       AND o.created_at >= CURRENT_DATE
     `, [stallId]);
     
@@ -87,7 +88,7 @@ router.get('/merchant/insights', authenticate, requireVendor, async (req: AuthRe
         COALESCE(SUM(CASE WHEN o.status = 'delivered' THEN (oi.price_at_time * oi.quantity) ELSE 0 END), 0) as total_revenue
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND DATE(o.created_at) >= ${dateFilter}
+      WHERE o.stall_id = $1 AND o.status != 'payment_pending' AND DATE(o.created_at) >= ${dateFilter}
     `, [stallId]);
 
     const prevStatsRes = await pool.query(`
@@ -96,7 +97,7 @@ router.get('/merchant/insights', authenticate, requireVendor, async (req: AuthRe
         COALESCE(SUM(CASE WHEN o.status = 'delivered' THEN (oi.price_at_time * oi.quantity) ELSE 0 END), 0) as total_revenue
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND DATE(o.created_at) >= ${prevDateFilterStart} AND DATE(o.created_at) <= ${prevDateFilterEnd}
+      WHERE o.stall_id = $1 AND o.status != 'payment_pending' AND DATE(o.created_at) >= ${prevDateFilterStart} AND DATE(o.created_at) <= ${prevDateFilterEnd}
     `, [stallId]);
 
     // For chart data (group by date)

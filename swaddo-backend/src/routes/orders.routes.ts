@@ -550,7 +550,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
         LEFT JOIN delivery_assignments da ON o.id = da.order_id
         LEFT JOIN delivery_partners dp ON da.delivery_partner_id = dp.id
         LEFT JOIN users u2 ON dp.user_id = u2.id
-        WHERE o.stall_id = (SELECT s2.id FROM stalls s2 JOIN vendors v ON s2.vendor_id = v.id WHERE v.user_id = $1 LIMIT 1)
+        WHERE o.stall_id = (SELECT s2.id FROM stalls s2 JOIN vendors v ON s2.vendor_id = v.id WHERE v.user_id = $1 LIMIT 1) AND o.status != 'payment_pending'
         ORDER BY o.created_at DESC LIMIT $2 OFFSET $3
       `;
       params = [req.user!.id, limit, offset];
