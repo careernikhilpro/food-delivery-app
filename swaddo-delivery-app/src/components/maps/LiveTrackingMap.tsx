@@ -5,8 +5,8 @@ import { MarkerF, PolylineF } from '@react-google-maps/api';
 interface LiveTrackingMapProps {
   apiKey: string;
   riderLoc: { lat: number; lng: number } | null;
-  userLoc: { lat: number; lng: number };
-  storeLoc: { lat: number; lng: number };
+  userLoc: { lat: number; lng: number } | null;
+  storeLoc: { lat: number; lng: number } | null;
   stageIndex: number;
   routePolyline?: string;
   className?: string;
@@ -42,17 +42,15 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     
     const bounds = new window.google.maps.LatLngBounds();
     let pointsCount = 0;
-
-    if (riderLoc && stageIndex >= 2) {
-      bounds.extend(riderLoc);
-      pointsCount++;
-    }
     
     if (stageIndex < 2) {
-      bounds.extend(storeLoc);
-      pointsCount++;
+      if (storeLoc) { bounds.extend(storeLoc); pointsCount++; }
     } else {
-      bounds.extend(userLoc);
+      if (userLoc) { bounds.extend(userLoc); pointsCount++; }
+    }
+
+    if (riderLoc) {
+      bounds.extend(riderLoc);
       pointsCount++;
     }
 
@@ -75,7 +73,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   return (
     <BaseMap 
       apiKey={apiKey} 
-      center={riderLoc || storeLoc} 
+      center={riderLoc || storeLoc || { lat: 28.7041, lng: 77.1025 }} 
       zoom={14} 
       className={className}
       onLoad={(map) => { mapRef.current = map; }}
@@ -106,7 +104,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       )}
 
       {/* Customer Location */}
-      {stageIndex >= 2 && (
+      {stageIndex >= 2 && userLoc && (
         <MarkerF
           position={userLoc}
           icon={{
@@ -119,7 +117,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       )}
 
       {/* Store Location */}
-      {stageIndex < 2 && (
+      {stageIndex < 2 && storeLoc && (
         <MarkerF
           position={storeLoc}
           icon={{

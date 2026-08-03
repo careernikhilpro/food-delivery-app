@@ -100,16 +100,16 @@ export default function Home() {
       
       const emitOnline = () => {
           const riderId = localStorage.getItem("mockRiderId");
-          socket.emit("rider_online", { riderId, lat: currentLocation?.lat, lng: currentLocation?.lng });
+          socket?.emit("rider_online", { riderId, lat: currentLocation?.lat, lng: currentLocation?.lng });
           console.log(`Socket connected for job updates as ${riderId}`);
         };
         
-        socket.on("connect", emitOnline);
-        if (socket.connected) {
+        socket?.on("connect", emitOnline);
+        if (socket?.connected) {
           emitOnline();
         }
 
-        socket.on("job_offer", (data) => {
+        socket?.on("job_offer", (data) => {
           setNewJob(data);
           setTimer(300); // 5 minutes to match backend timeout
           localStorage.setItem("pendingJob", JSON.stringify(data));
@@ -119,7 +119,7 @@ export default function Home() {
           }
         });
 
-        socket.on("job_revoked", (data) => {
+        socket?.on("job_revoked", (data) => {
           setNewJob((prev: any) => {
             if (prev && prev.id === data.id) {
               alert("This job was assigned to another rider or expired.");

@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { App } from "@capacitor/app";
 import { io, Socket } from "socket.io-client";
 import { LiveTrackingMap } from "@/components/maps/LiveTrackingMap";
+import { MarkerF } from '@react-google-maps/api';
 
 const libraries: any = ["geometry"];
 
