@@ -141,8 +141,28 @@ const runSchema = async () => {
         price DECIMAL(10,2) NOT NULL,
         is_veg BOOLEAN DEFAULT true,
         is_available BOOLEAN DEFAULT true,
-        category VARCHAR(100) DEFAULT 'Main Course'
+        category VARCHAR(100) DEFAULT 'Main Course',
+        variants JSONB DEFAULT '[]'::jsonb,
+        prep_time_minutes INTEGER DEFAULT 15,
+        discount_percentage DECIMAL(5,2) DEFAULT 0.00,
+        addons JSONB DEFAULT '[]'::jsonb
       );
+    `);
+
+    // Add new columns to menu_items if they don't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE menu_items ADD COLUMN variants JSONB DEFAULT '[]'::jsonb;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE menu_items ADD COLUMN prep_time_minutes INTEGER DEFAULT 15;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE menu_items ADD COLUMN discount_percentage DECIMAL(5,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE menu_items ADD COLUMN addons JSONB DEFAULT '[]'::jsonb;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 
     // Orders
@@ -151,6 +171,11 @@ const runSchema = async () => {
         id SERIAL PRIMARY KEY,
         customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         stall_id INTEGER REFERENCES stalls(id) ON DELETE CASCADE,
+        item_total DECIMAL(10,2) DEFAULT 0.00,
+        delivery_charge DECIMAL(10,2) DEFAULT 0.00,
+        gst_amount DECIMAL(10,2) DEFAULT 0.00,
+        platform_fee DECIMAL(10,2) DEFAULT 0.00,
+        restaurant_share DECIMAL(10,2) DEFAULT 0.00,
         total_amount DECIMAL(10,2) NOT NULL,
         status VARCHAR(50) DEFAULT 'payment_pending', -- payment_pending, placed, preparing, out_for_delivery, delivered, cancelled
         payment_method VARCHAR(50) DEFAULT 'upi', -- upi, cod
@@ -175,6 +200,21 @@ const runSchema = async () => {
       DO $$ BEGIN
         ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) DEFAULT 'upi';
       EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN item_total DECIMAL(10,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN delivery_charge DECIMAL(10,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN gst_amount DECIMAL(10,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN platform_fee DECIMAL(10,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN restaurant_share DECIMAL(10,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 
     // Order Items
@@ -182,10 +222,25 @@ const runSchema = async () => {
       CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
         order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
-        menu_item_id INTEGER REFERENCES menu_items(id),
+        menu_item_id INTEGER REFERENCES menu_items(id) ON DELETE SET NULL,
+        item_name VARCHAR(150),
+        variant_name VARCHAR(150),
+        addons JSONB DEFAULT '[]'::jsonb,
         quantity INTEGER NOT NULL,
         price_at_time DECIMAL(10,2) NOT NULL
       );
+    `);
+    
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE order_items ADD COLUMN item_name VARCHAR(150);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE order_items ADD COLUMN variant_name VARCHAR(150);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE order_items ADD COLUMN addons JSONB DEFAULT '[]'::jsonb;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 
     // Delivery Partners

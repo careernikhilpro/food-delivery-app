@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Loader2, Check, X } from "lucide-react";
+import { Loader2, Bike, User, MapPin, CheckCircle2, XCircle, Search } from "lucide-react";
 
 export default function Riders() {
   const [riders, setRiders] = useState<any[]>([]);
@@ -23,57 +23,79 @@ export default function Riders() {
     }
   };
 
-  const approveRider = async (id: number) => {
-    try {
-      await api.patch(`/admin/riders/\${id}/status`, { status: 'active' });
-      fetchRiders();
-    } catch (error) {
-      console.log("Failed to approve rider");
+  const getStatusBadge = (status: string) => {
+    if (status === 'online') {
+      return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online</span>;
     }
+    return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold uppercase"><span className="w-2 h-2 rounded-full bg-gray-400"></span> Offline</span>;
   };
 
-  if (loading) return <div className="p-8"><Loader2 className="animate-spin text-primary" /></div>;
+  if (loading) return (
+    <div className="p-8 flex justify-center items-center h-[80vh]">
+      <Loader2 className="animate-spin text-primary w-12 h-12" />
+    </div>
+  );
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold font-heading mb-6">Manage Riders</h1>
-      <div className="bg-bg-alt rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-bg-main border-b border-border-subtle text-sm text-text-muted">
-              <th className="p-4 font-medium">ID</th>
-              <th className="p-4 font-medium">Name</th>
-              <th className="p-4 font-medium">Phone</th>
-              <th className="p-4 font-medium">Vehicle</th>
-              <th className="p-4 font-medium">Status</th>
-              <th className="p-4 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {riders.map((r) => (
-              <tr key={r.id} className="border-b border-border-subtle last:border-0 hover:bg-bg-main/50 transition-colors">
-                <td className="p-4 text-text-muted">#{r.id}</td>
-                <td className="p-4 font-medium text-text-primary">{r.name || 'N/A'}</td>
-                <td className="p-4">{r.phone}</td>
-                <td className="p-4">{r.vehicle_type}</td>
-                <td className="p-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase
-                    \${r.status === 'active' ? 'bg-green-100 text-green-700' : 
-                      r.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {r.status || 'pending_approval'}
-                  </span>
-                </td>
-                <td className="p-4 flex gap-2 justify-end">
-                  {r.status !== 'active' && (
-                    <button onClick={() => approveRider(r.id)} className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors" title="Approve">
-                      <Check size={18} />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-heading font-black text-text-primary">Delivery Partners</h1>
+          <p className="text-text-muted mt-1 font-medium">Manage and track all riders on the platform.</p>
+        </div>
+        
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4" />
+          <input 
+            type="text" 
+            placeholder="Search Riders..." 
+            className="w-full pl-10 pr-4 py-2.5 bg-bg-alt border border-border-subtle rounded-xl text-sm focus:outline-none focus:border-primary transition-colors"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {riders.map((r) => (
+          <div key={r.id} className="bg-bg-alt/80 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-border-subtle hover:shadow-lg transition-all group">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center text-primary border border-orange-200">
+                  <Bike size={20} />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-lg text-text-primary">{r.name}</h3>
+                  <p className="text-sm text-text-muted font-medium">{r.phone}</p>
+                </div>
+              </div>
+              {getStatusBadge(r.current_status)}
+            </div>
+
+            <div className="space-y-3 mt-6">
+              <div className="flex items-center justify-between py-2 border-b border-border-subtle">
+                <span className="text-sm text-text-muted flex items-center gap-2"><User size={16} /> ID Proof Status</span>
+                <span className={`text-sm font-bold uppercase ${r.id_proof_status === 'verified' ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {r.id_proof_status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border-subtle">
+                <span className="text-sm text-text-muted flex items-center gap-2"><MapPin size={16} /> Activity Status</span>
+                <span className={`text-sm font-bold uppercase ${r.is_active ? 'text-primary' : 'text-red-500'}`}>
+                  {r.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-text-muted flex items-center gap-2"><Bike size={16} /> Vehicle Details</span>
+                <span className="text-sm font-semibold text-text-primary">
+                  {r.vehicle_details || 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            <button className="w-full mt-6 py-2.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl font-bold transition-colors">
+              View Profile
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

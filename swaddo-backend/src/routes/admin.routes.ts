@@ -16,7 +16,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 
     const ordersRes = await pool.query("SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue FROM orders WHERE created_at >= $1 AND status != 'cancelled'", [today]);
     const vendorsRes = await pool.query("SELECT COUNT(*) as count FROM vendors WHERE status = 'active'");
-    const ridersRes = await pool.query("SELECT COUNT(*) as count FROM delivery_partners WHERE kyc_status = 'verified'");
+    const ridersRes = await pool.query("SELECT COUNT(*) as count FROM delivery_partners WHERE id_proof_status = 'verified'");
     const disputesRes = await pool.query("SELECT COUNT(*) as count FROM disputes WHERE status = 'open'");
 
     res.json({
@@ -57,11 +57,143 @@ router.patch('/vendors/:id/status', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/vendors/:id/details', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Fetch stalls for this vendor
+    const stallsRes = await pool.query('SELECT * FROM stalls WHERE vendor_id = $1', [id]);
+    
+    if (stallsRes.rows.length === 0) {
+      return res.json({ stalls: [] });
+    }
+    
+    // For simplicity, assuming one vendor mostly has one or a few stalls. 
+    // We fetch menu items for all their stalls.
+    const stallIds = stallsRes.rows.map(s => s.id);
+    const menuItemsRes = await pool.query('SELECT * FROM menu_items WHERE stall_id = ANY($1)', [stallIds]);
+    
+    // Map items to their stalls
+    const stallsWithMenu = stallsRes.rows.map(stall => {
+      return {
+        ...stall,
+        menu_items: menuItemsRes.rows.filter(item => item.stall_id === stall.id)
+      };
+    });
+    
+    res.json({ stalls: stallsWithMenu });
+  } catch (error) {
+    logger.error('Error fetching vendor details', error);
+    res.status(500).json({ message: 'Error fetching vendor details' });
+  }
+});
+
+// Add Menu Item
+router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
+  try {
+    const { stallId } = req.params;
+    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons } = req.body;
+    
+    if (!name || !price) return res.status(400).json({ message: 'Name and price are required' });
+
+    const result = await pool.query(
+      'INSERT INTO menu_items (stall_id, name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+      [
+        stallId, name, description || null, price, is_veg ?? true, is_available ?? true, category || 'Main Course',
+        variants ? JSON.stringify(variants) : '[]', prep_time_minutes || 15, discount_percentage || 0,
+        addons ? JSON.stringify(addons) : '[]'
+      ]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    logger.error('Error adding admin menu item', error);
+    res.status(500).json({ message: 'Error adding menu item' });
+  }
+});
+
+// Update Menu Item
+router.put('/vendors/menu/:itemId', async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE menu_items 
+       SET name = COALESCE($1, name), 
+           description = COALESCE($2, description), 
+           price = COALESCE($3, price), 
+           is_veg = COALESCE($4, is_veg), 
+           is_available = COALESCE($5, is_available), 
+           category = COALESCE($6, category),
+           variants = $7,
+           prep_time_minutes = COALESCE($8, prep_time_minutes),
+           discount_percentage = COALESCE($9, discount_percentage),
+           addons = COALESCE($10, addons)
+       WHERE id = $11 RETURNING *`,
+      [
+        name, description, price, is_veg, is_available, category, 
+        variants ? JSON.stringify(variants) : null, prep_time_minutes, discount_percentage, 
+        addons ? JSON.stringify(addons) : null, 
+        itemId
+      ]
+    );
+    
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Item not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    logger.error('Error updating admin menu item', error);
+    res.status(500).json({ message: 'Error updating menu item' });
+  }
+});
+
+// Delete Menu Item
+router.delete('/vendors/menu/:itemId', async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    await pool.query('DELETE FROM menu_items WHERE id = $1', [itemId]);
+    res.json({ message: 'Item deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting admin menu item', error);
+    res.status(500).json({ message: 'Error deleting menu item' });
+  }
+});
+
 // 3. Orders
 router.get('/orders', async (req: Request, res: Response) => {
   try {
     const orders = await pool.query(`
-      SELECT o.*, u.name as customer_name, s.name as stall_name 
+      SELECT 
+        o.*, 
+        u.name as customer_name, 
+        u.phone as customer_phone,
+        CASE WHEN u.pin_hash IS NOT NULL THEN true ELSE false END as customer_has_pin,
+        s.name as stall_name,
+        (
+          SELECT json_agg(json_build_object(
+            'id', oi.id,
+            'name', COALESCE(oi.item_name, mi.name, 'Unknown Item'),
+            'variant_name', oi.variant_name,
+            'addons', oi.addons,
+            'quantity', oi.quantity,
+            'price_at_time', oi.price_at_time
+          ))
+          FROM order_items oi
+          LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+          WHERE oi.order_id = o.id
+        ) as items,
+        (
+          SELECT json_build_object(
+            'id', da.delivery_partner_id,
+            'name', ru.name,
+            'phone', ru.phone,
+            'status', da.status
+          )
+          FROM delivery_assignments da
+          JOIN delivery_partners dp ON da.delivery_partner_id = dp.id
+          JOIN users ru ON dp.user_id = ru.id
+          WHERE da.order_id = o.id
+          LIMIT 1
+        ) as rider
       FROM orders o 
       LEFT JOIN users u ON o.customer_id = u.id 
       LEFT JOIN stalls s ON o.stall_id = s.id 
@@ -69,7 +201,49 @@ router.get('/orders', async (req: Request, res: Response) => {
     `);
     res.json(orders.rows);
   } catch (error) {
+    logger.error('Error fetching admin orders:', error);
     res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
+
+router.post('/orders/:id/assign', async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { rider_id } = req.body; // This is delivery_partners.id
+
+    if (!rider_id) {
+      return res.status(400).json({ message: 'Rider ID is required' });
+    }
+
+    await client.query('BEGIN');
+    
+    // Check if order exists and is not cancelled/delivered
+    const orderCheck = await client.query('SELECT status FROM orders WHERE id = $1', [id]);
+    if (orderCheck.rows.length === 0) throw new Error('Order not found');
+    
+    // Check if rider is already assigned to this order
+    const existingAssignment = await client.query('SELECT id FROM delivery_assignments WHERE order_id = $1', [id]);
+    
+    if (existingAssignment.rows.length > 0) {
+      await client.query('UPDATE delivery_assignments SET delivery_partner_id = $1, status = $2, assigned_at = NOW() WHERE order_id = $3', [rider_id, 'assigned', id]);
+    } else {
+      await client.query('INSERT INTO delivery_assignments (order_id, delivery_partner_id, status) VALUES ($1, $2, $3)', [id, rider_id, 'assigned']);
+    }
+
+    // Update order status if it was payment_pending or placed
+    if (['payment_pending', 'placed', 'preparing'].includes(orderCheck.rows[0].status)) {
+      await client.query('UPDATE orders SET status = $1 WHERE id = $2', ['preparing', id]);
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Rider assigned successfully' });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    logger.error('Error assigning rider from admin:', error);
+    res.status(500).json({ message: error.message || 'Error assigning rider' });
+  } finally {
+    client.release();
   }
 });
 
@@ -225,13 +399,13 @@ router.post('/notifications/send', async (req: Request, res: Response) => {
 // 7. Support System
 router.get('/support/tickets', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(`
-      SELECT t.*, u.name as user_name, u.phone_number 
-      FROM support_tickets t 
-      JOIN users u ON t.user_id = u.id 
-      ORDER BY t.updated_at DESC
+    const tickets = await pool.query(`
+      SELECT t.*, u.name, u.phone, u.role
+      FROM support_tickets t
+      JOIN users u ON t.user_id = u.id
+      ORDER BY t.created_at DESC
     `);
-    res.json(result.rows);
+    res.json(tickets.rows);
   } catch (error) {
     logger.error('Error fetching admin tickets', error);
     res.status(500).json({ message: 'Error fetching tickets' });
@@ -274,6 +448,56 @@ router.patch('/support/tickets/:id/status', async (req: Request, res: Response) 
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ message: 'Error updating status' });
+  }
+});
+
+// --- Customers ---
+
+// Get all customers
+router.get('/customers', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.phone, u.email, u.created_at,
+              COUNT(o.id) as total_orders
+       FROM users u
+       LEFT JOIN orders o ON u.id = o.customer_id
+       WHERE u.role = 'customer'
+       GROUP BY u.id
+       ORDER BY u.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    logger.error('Error fetching customers', error);
+    res.status(500).json({ message: 'Error fetching customers' });
+  }
+});
+
+// Reset Customer PIN
+router.post('/customers/:id/reset-pin', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { newPin } = req.body;
+    
+    if (!newPin || newPin.length !== 4) {
+      return res.status(400).json({ message: 'A 4-digit PIN is required' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const pinHash = await bcrypt.hash(newPin, salt);
+
+    const result = await pool.query(
+      'UPDATE users SET pin_hash = $1 WHERE id = $2 AND role = $3 RETURNING id',
+      [pinHash, id, 'customer']
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    res.json({ message: 'PIN reset successfully' });
+  } catch (error) {
+    logger.error('Error resetting customer PIN', error);
+    res.status(500).json({ message: 'Error resetting customer PIN' });
   }
 });
 

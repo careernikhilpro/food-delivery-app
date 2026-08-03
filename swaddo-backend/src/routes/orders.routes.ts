@@ -48,15 +48,29 @@ const orderLimiter = rateLimit({
 router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect();
   try {
-    const { stallId, totalAmount, deliveryAddress, items, paymentMethod, deliveryLat, deliveryLng, customerPhone, deliveryInstructions, restaurantInstructions } = req.body;
+    const { 
+      stallId, 
+      items, 
+      totalAmount, 
+      itemTotal,
+      deliveryCharge,
+      gstAmount,
+      platformFee,
+      restaurantShare,
+      deliveryAddress, 
+      deliveryLat, 
+      deliveryLng, 
+      paymentMethod,
+      customerPhone,
+      deliveryInstructions,
+      restaurantInstructions
+    } = req.body;
     
     // 1. Validate payload
-    if (!stallId) return res.status(400).json({ message: 'Missing required field: stallId' });
-    if (totalAmount === undefined) return res.status(400).json({ message: 'Missing required field: totalAmount' });
-    if (!deliveryLat || !deliveryLng) return res.status(400).json({ message: 'Missing required field: deliveryLat or deliveryLng' });
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: 'Missing or empty required field: items' });
+    if (!stallId || !items || !Array.isArray(items) || items.length === 0 || totalAmount === undefined) {
+      return res.status(400).json({ message: 'Missing required order details' });
     }
+    if (!deliveryLat || !deliveryLng) return res.status(400).json({ message: 'Missing required field: deliveryLat or deliveryLng' });
     
     const isCod = paymentMethod === 'cod';
     const initialStatus = isCod ? 'placed' : 'payment_pending';
@@ -90,9 +104,15 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     await client.query('BEGIN');
     
     const orderRes = await client.query(
-      `INSERT INTO orders (customer_id, stall_id, total_amount, delivery_address, delivery_lat, delivery_lng, status, payment_method, customer_phone, delivery_instructions, restaurant_instructions) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [req.user!.id, stallId, totalAmount, deliveryAddress, deliveryLat, deliveryLng, initialStatus, paymentMethod || 'upi', customerPhone || null, deliveryInstructions || null, restaurantInstructions || null]
+      `INSERT INTO orders (
+        customer_id, stall_id, total_amount, item_total, delivery_charge, gst_amount, platform_fee, restaurant_share, 
+        delivery_address, delivery_lat, delivery_lng, status, payment_method, customer_phone, delivery_instructions, restaurant_instructions
+       ) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+      [
+        req.user!.id, stallId, totalAmount, itemTotal || 0, deliveryCharge || 0, gstAmount || 0, platformFee || 0, restaurantShare || 0,
+        deliveryAddress, deliveryLat, deliveryLng, initialStatus, paymentMethod || 'upi', customerPhone || null, deliveryInstructions || null, restaurantInstructions || null
+      ]
     );
     const order = orderRes.rows[0];
 
@@ -115,12 +135,23 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
          throw new Error(`Invalid menu item ID format: ${item.id}`);
       }
 
-      const baseIndex = index * 4;
-      placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4})`);
-      itemValuesList.push(order.id, menuId, item.quantity, item.price);
+      const baseIndex = index * 7;
+      placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`);
+      itemValuesList.push(
+        order.id, 
+        menuId, 
+        item.name || 'Unknown Item', 
+        item.variant_name || null, 
+        item.addons ? JSON.stringify(item.addons) : '[]', 
+        item.quantity, 
+        item.price
+      );
     });
 
-    await client.query(`INSERT INTO order_items (order_id, menu_item_id, quantity, price_at_time) VALUES ${placeholders.join(',')}`, itemValuesList);
+    await client.query(`
+      INSERT INTO order_items (order_id, menu_item_id, item_name, variant_name, addons, quantity, price_at_time) 
+      VALUES ${placeholders.join(',')}
+    `, itemValuesList);
     
     itemsDescription = items.map((i: any) => `${i.quantity}x ${i.name}`).join(', ');
 

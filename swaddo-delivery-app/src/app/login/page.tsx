@@ -4,69 +4,100 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/firebase";
-import { Phone, Lock, ArrowRight, Loader2, Bike } from "lucide-react";
+import { Phone, Lock, ArrowRight, Loader2, KeyRound, ShieldCheck, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Login() {
   const router = useRouter();
+  
+  // 1 = Enter Phone, 2 = Enter PIN (Login), 3 = Create PIN (Register)
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const requestOtp = async (e: React.FormEvent) => {
+  const checkUserExists = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 10) {
-      setError("Please enter a valid phone number");
+      setError("Please enter a valid 10-digit phone number");
       return;
     }
     setError("");
     setLoading(true);
 
     try {
-      await api.post("/auth/request-otp", { phone, role: "delivery" });
-      setStep(2);
+      const res = await api.get(`/auth/check-user?identifier=${phone}&role=delivery`);
+      if (res.data.user_found && res.data.pin_set) {
+        setStep(2); // Existing user with PIN -> Login
+      } else {
+        setStep(3); // New user OR existing user without PIN -> Register
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to request OTP. Ensure backend is running.");
+      setError("Failed to check user. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const verifyOtp = async (e: React.FormEvent) => {
+  const loginWithPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length < 4) {
-      setError("Please enter a valid OTP");
+    if (pin.length < 4) {
+      setError("PIN must be 4 digits");
       return;
     }
     setError("");
     setLoading(true);
 
     try {
-      const res = await api.post("/auth/verify-otp", { phone, otp, role: "delivery" });
-      const token = res.data.token;
-
-      localStorage.setItem("swaddo_delivery_token", token);
-      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `role=delivery; path=/; max-age=86400; SameSite=Lax`;
-      
-      try {
-        const fcmToken = await requestNotificationPermission();
-        if (fcmToken) {
-          await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        }
-      } catch (e) {
-        console.log("Failed to register FCM token");
-      }
-
-      router.push("/home");
+      const res = await api.post("/auth/login-pin", { phone, pin, role: "delivery" });
+      await handleSuccessfulAuth(res.data.token, phone);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid OTP");
-    } finally {
+      setError(err.response?.data?.message || "Invalid PIN. Please try again.");
       setLoading(false);
     }
+  };
+
+  const registerWithPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length < 4) {
+      setError("PIN must be 4 digits");
+      return;
+    }
+    if (pin !== confirmPin) {
+      setError("PINs do not match. Please try again.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await api.post("/auth/register-pin", { phone, pin, role: "delivery" });
+      await handleSuccessfulAuth(res.data.token, phone);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const handleSuccessfulAuth = async (token: string, userPhone: string) => {
+    localStorage.setItem("swaddo_delivery_token", token);
+    document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = `role=delivery; path=/; max-age=86400; SameSite=Lax`;
+    
+    try {
+      const fcmToken = await requestNotificationPermission();
+      if (fcmToken) {
+        await api.post("/notifications/register-token", { token: fcmToken, deviceType: 'web' }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to register FCM token", e);
+    }
+    
+    router.push("/home");
   };
 
   return (
@@ -81,7 +112,9 @@ export default function Login() {
             S
           </div>
           <h1 className="text-2xl font-heading font-bold text-text-primary mb-2">Delivery Partner</h1>
-          <p className="text-text-muted text-sm">Sign in to start receiving orders.</p>
+          <p className="text-text-muted text-sm">
+            {step === 1 ? "Sign in to start receiving orders." : step === 2 ? "Enter your 4-digit PIN" : "Create a 4-digit PIN for your account"}
+          </p>
         </div>
 
         {error && (
@@ -90,60 +123,113 @@ export default function Login() {
           </div>
         )}
 
-        {step === 1 ? (
-          <form onSubmit={requestOtp} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-text-primary mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                <span className="absolute left-11 top-1/2 -translate-y-1/2 text-text-primary font-medium">+91</span>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter your mobile number"
-                  className="w-full bg-bg-main border border-border-subtle rounded-xl py-3.5 pl-[85px] pr-4 outline-none focus:border-primary transition-colors font-medium text-text-primary"
-                  maxLength={10}
-                />
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.form key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} onSubmit={checkUserExists} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-2">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+                  <span className="absolute left-11 top-1/2 -translate-y-1/2 text-text-primary font-medium">+91</span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Enter your mobile number"
+                    className="w-full bg-bg-main border border-border-subtle rounded-xl py-3.5 pl-[85px] pr-4 outline-none focus:border-primary transition-colors font-medium text-text-primary"
+                    maxLength={10}
+                  />
+                </div>
               </div>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 size={20} className="animate-spin" /> : "Send OTP"}
-              {!loading && <ArrowRight size={20} />}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verifyOtp} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-text-primary mb-2">Enter OTP</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="4-digit OTP"
-                  className="w-full bg-bg-main border border-border-subtle rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-primary transition-colors font-medium text-text-primary tracking-widest"
-                  maxLength={4}
-                />
+              <button
+                type="submit"
+                disabled={loading || phone.length < 10}
+                className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 size={20} className="animate-spin" /> : "Continue"}
+                {!loading && <ArrowRight size={20} />}
+              </button>
+            </motion.form>
+          )}
+
+          {step === 2 && (
+            <motion.form key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onSubmit={loginWithPin} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-2">Enter PIN</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    className="w-full bg-bg-main border border-border-subtle rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-primary transition-colors font-bold text-text-primary tracking-widest text-lg"
+                    maxLength={4}
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-text-muted mt-3 text-center">
+                  Logging in as +91 {phone}. <button type="button" onClick={() => { setStep(1); setPin(""); setConfirmPin(""); }} className="text-primary font-bold hover:underline">Change</button>
+                </p>
               </div>
-              <p className="text-xs text-text-muted mt-3 text-center">
-                OTP sent to +91 {phone}. <button type="button" onClick={() => setStep(1)} className="text-primary font-bold hover:underline">Edit</button>
-              </p>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 size={20} className="animate-spin" /> : "Verify & Login"}
-            </button>
-          </form>
-        )}
+              <button
+                type="submit"
+                disabled={loading || pin.length < 4}
+                className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 size={20} className="animate-spin" /> : "Secure Login"}
+              </button>
+            </motion.form>
+          )}
+
+          {step === 3 && (
+            <motion.form key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onSubmit={registerWithPin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-2">Create a 4-Digit PIN</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    className="w-full bg-bg-main border border-border-subtle rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-primary transition-colors font-bold text-text-primary tracking-widest text-lg"
+                    maxLength={4}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-2">Confirm PIN</label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    className="w-full bg-bg-main border border-border-subtle rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-primary transition-colors font-bold text-text-primary tracking-widest text-lg"
+                    maxLength={4}
+                  />
+                </div>
+                <p className="text-xs text-text-muted mt-3 text-center">
+                  Registering +91 {phone}. <button type="button" onClick={() => { setStep(1); setPin(""); setConfirmPin(""); }} className="text-primary font-bold hover:underline">Change</button>
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={loading || pin.length < 4 || confirmPin.length < 4}
+                className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2 mt-4"
+              >
+                {loading ? <Loader2 size={20} className="animate-spin" /> : "Create Account & Login"}
+                {!loading && <UserPlus size={18} />}
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
