@@ -231,18 +231,15 @@ export default function ProfilePage() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-[999]"
+                      className="absolute right-0 top-12 w-48 bg-[#0a0b10] rounded-2xl shadow-xl z-[999] overflow-hidden"
                     >
-                      <button onClick={openEditProfile} className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 text-[14px] font-medium flex items-center gap-3 transition-colors border-b border-gray-100 rounded-t-xl">
-                        <Edit2 size={16} className="text-gray-400" />
-                        Edit profile
+                      <button onClick={openEditProfile} className="w-full text-left px-5 py-3.5 text-white hover:bg-white/5 text-[15px] font-medium transition-colors border-b border-white/10">
+                        Edit Profile
                       </button>
-                      <button className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 text-[14px] font-medium flex items-center gap-3 transition-colors border-b border-gray-100">
-                        <Settings size={16} className="text-gray-400" />
+                      <button className="w-full text-left px-5 py-3.5 text-white hover:bg-white/5 text-[15px] font-medium transition-colors border-b border-white/10">
                         Settings
                       </button>
-                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 text-red-500 hover:bg-red-50 text-[14px] font-medium flex items-center gap-3 transition-colors rounded-b-xl">
-                        <LogOut size={16} className="text-red-400" />
+                      <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-5 py-3.5 text-white hover:bg-white/5 text-[15px] font-medium transition-colors">
                         Log out
                       </button>
                     </motion.div>
