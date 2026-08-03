@@ -32,7 +32,7 @@ export default function Login() {
     setMockOtpState(generated);
     
     // Show OTP on screen
-    alert(`[DEV MODE] Your OTP for ${phone} is: ${generated}`);
+    // alert(`[DEV MODE] Your OTP for ${phone} is: ${generated}`); // removed native alert
     
     setStep(2);
     setLoading(false);
@@ -174,6 +174,27 @@ export default function Login() {
               </form>
             ) : (
               <form onSubmit={verifyOtp} className="flex flex-col gap-6">
+                
+                {/* DEV MODE OTP DISPLAY */}
+                {mockOtpState && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-50 border border-green-200 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-sm"
+                  >
+                    <div className="flex items-center gap-1 text-green-700 font-bold text-sm uppercase tracking-wide">
+                      <ShieldCheck size={16} />
+                      <span>Dev Mode OTP</span>
+                    </div>
+                    <div className="text-3xl font-black text-green-600 tracking-[0.2em] my-1">
+                      {mockOtpState}
+                    </div>
+                    <p className="text-[10px] text-green-600/70 font-semibold uppercase tracking-wider text-center max-w-[200px]">
+                      Don&apos;t share your account with any other person
+                    </p>
+                  </motion.div>
+                )}
+
                 <div>
                   <label className="block text-xs font-bold text-gray-900 mb-2">Enter OTP</label>
                   <div className="relative">
