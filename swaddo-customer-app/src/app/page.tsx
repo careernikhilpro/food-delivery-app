@@ -77,7 +77,7 @@ export default function Home() {
   useEffect(() => {
     api.get('/stalls').then(res => {
       if (res.data && res.data.data) {
-        const backendStalls = res.data.data.map((stall: any) => ({
+        let backendStalls = res.data.data.map((stall: any) => ({
           id: stall.id,
           name: stall.name,
           isAd: false,
@@ -88,6 +88,44 @@ export default function Home() {
           categories: stall.tags || "Food",
           deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
         }));
+        
+        backendStalls.unshift({
+          id: 9999,
+          name: "Test Variant Restaurant",
+          isAd: false,
+          discountText: "TEST VARIANT UI",
+          showStamp: true,
+          rating: "5.0",
+          deliveryTime: "15-20 mins",
+          categories: "Momos",
+          deliveryInfo: "Free Delivery",
+          items: [
+             {
+               id: "99991",
+               name: "Test Veg Momo (With Variants)",
+               image: "/categories/momo.png",
+               newPrice: "₹30",
+               originalPrice: "₹40",
+               isPopular: true,
+               lowerPriceApp: true,
+               lowerPriceText: "Customizable",
+               has_variants: true,
+               variants: [{name: 'Half', price: '30'}, {name: 'Full', price: '60'}]
+             },
+             {
+               id: "99992",
+               name: "Paneer Tikka Sandwich",
+               image: "/categories/burger.png",
+               newPrice: "₹239",
+               originalPrice: "₹300",
+               isPopular: false,
+               lowerPriceApp: false,
+               has_variants: true,
+               variants: [{name: '15cm', price: '239'}, {name: '30cm(SAVE UPTO 27%)', price: '449'}]
+             }
+          ]
+        });
+        
         setStalls(backendStalls);
       }
     }).catch(err => console.error("Error fetching stalls:", err));
