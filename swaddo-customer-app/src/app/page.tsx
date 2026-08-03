@@ -783,7 +783,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
       api.get(`/stalls/${data.id}/menu`).then(res => {
         const menuData = res.data.data || res.data;
         if (Array.isArray(menuData)) {
-          const menuItems = menuData.slice(0, 3).map((item: any) => ({
+          const menuItems = menuData.map((item: any) => ({
             id: item.id?.toString() || Math.random().toString(),
             name: item.name,
             image: item.image_url || "/categories/burger.png",
