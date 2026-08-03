@@ -98,7 +98,9 @@ export default function MenuPage() {
           price: parseFloat(form.basePrice) || 0,
           is_veg: form.dietaryType === "veg",
           is_available: form.inStock,
-          category: finalCategory
+          category: finalCategory,
+          has_variants: hasVariants,
+          variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
         });
         setItems(items.map(i => i.id.toString() === editingItemFullId ? res.data : i));
       } else {
@@ -108,7 +110,9 @@ export default function MenuPage() {
           price: parseFloat(form.basePrice) || 0,
           is_veg: form.dietaryType === "veg",
           is_available: form.inStock,
-          category: finalCategory
+          category: finalCategory,
+          has_variants: hasVariants,
+          variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
         });
         setItems([res.data, ...items]);
       }
@@ -284,14 +288,16 @@ export default function MenuPage() {
                             customCategory: ["Starters", "Main Course", "Breads", "Desserts", "Beverages"].includes(item.category) ? "" : item.category,
                             dietaryType: item.is_veg ? "veg" : "non-veg",
                             inStock: item.is_available,
-                            variants: [{ name: "", price: "" }],
-                            addons: [{ name: "", price: "" }],
+                            variants: item.has_variants && item.variants ? item.variants : [{ name: "", price: "" }],
+                            addons: item.has_addons && item.addons ? item.addons : [{ name: "", price: "" }],
                             prepTime: item.prep_time_minutes ? item.prep_time_minutes.toString() : "",
                             tags: item.tags || [],
                             discountPercentage: item.discount_percentage ? item.discount_percentage.toString() : "",
                             photos: item.photo_urls || []
                           });
                           setEditingItemFullId(item.id.toString());
+                          setHasVariants(item.has_variants || false);
+                          setHasAddons(item.has_addons || false);
                           setIsAdding(true);
                         }} className="p-1.5 text-slate-400 hover:text-accent hover:bg-orange-50 rounded-lg transition-colors -mt-1 -mr-1">
                           <Edit2 size={16} />
@@ -299,7 +305,11 @@ export default function MenuPage() {
                       </div>
                       
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-black text-slate-900 text-[15px]">₹{item.price}</span>
+                        {item.has_variants ? (
+                          <span className="font-bold text-accent text-[12px] bg-orange-50 px-2 py-0.5 rounded border border-orange-100">Multiple Sizes</span>
+                        ) : (
+                          <span className="font-black text-slate-900 text-[15px]">₹{item.price}</span>
+                        )}
                         {item.discount_percentage && (
                            <span className="text-[10px] bg-green-100 text-green-700 font-bold px-1.5 py-0.5 rounded-md">-{item.discount_percentage}%</span>
                         )}
