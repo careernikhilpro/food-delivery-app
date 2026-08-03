@@ -272,13 +272,13 @@ router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthReq
       LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.stall_id=$1 AND o.status='delivered'
     `, [stallId]);
-    const balance = parseFloat(balRes.rows[0]?.total || 0) * 0.8; // 80% payout (20% platform fee)
+    const balance = parseFloat(balRes.rows[0]?.total || 0) * 0.78; // 78% payout (22% platform fee)
 
     res.json({
       availableBalance: balance,
       history: historyRes.rows.map(r => ({
         date: r.date,
-        amount: parseFloat(r.amount) * 0.8,
+        amount: parseFloat(r.amount) * 0.78, // 78% payout
         orders: parseInt(r.orders),
         status: 'completed'
       }))

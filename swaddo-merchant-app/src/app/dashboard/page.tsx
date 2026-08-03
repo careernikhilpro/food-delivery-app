@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(false);
   const [incomingOrder, setIncomingOrder] = useState<any>(null);
   const [stallInfo, setStallInfo] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'new'|'preparing'|'ready'|'completed'|'past'>('new');
+  const [activeTab, setActiveTab] = useState<'new'|'preparing'|'ready'|'out_for_delivery'|'completed'|'past'>('new');
   const [activeOrderDetails, setActiveOrderDetails] = useState<any>(null);
   const [isTransitionReady, setIsTransitionReady] = useState(false);
   
@@ -51,11 +51,12 @@ export default function Dashboard() {
 
   const activeTabCounts = useMemo(() => {
     const todayStr = new Date().toDateString();
-    const counts = { new: 0, preparing: 0, ready: 0, completed: 0, past: 0 };
+    const counts = { new: 0, preparing: 0, ready: 0, out_for_delivery: 0, completed: 0, past: 0 };
     orders.forEach(o => {
       if (o.status === 'pending') counts.new++;
       else if (o.status === 'preparing') counts.preparing++;
-      else if (o.status === 'ready') counts.ready++;
+      else if (['ready', 'assigned', 'heading_to_stall', 'at_stall'].includes(o.status)) counts.ready++;
+      else if (['heading_to_customer', 'at_customer'].includes(o.status)) counts.out_for_delivery++;
       else if (['delivered', 'cancelled', 'declined'].includes(o.status)) {
         const orderDateStr = o.created_at ? new Date(o.created_at).toDateString() : o.time;
         if (orderDateStr === todayStr) counts.completed++;
@@ -70,7 +71,8 @@ export default function Dashboard() {
     return orders.filter(o => {
       if (activeTab === 'new') return o.status === 'pending';
       if (activeTab === 'preparing') return o.status === 'preparing';
-      if (activeTab === 'ready') return o.status === 'ready';
+      if (activeTab === 'ready') return ['ready', 'assigned', 'heading_to_stall', 'at_stall'].includes(o.status);
+      if (activeTab === 'out_for_delivery') return ['heading_to_customer', 'at_customer'].includes(o.status);
       
       const isPastStatus = ['delivered', 'cancelled', 'declined'].includes(o.status);
       if (!isPastStatus) return false;
@@ -423,11 +425,11 @@ export default function Dashboard() {
         Live Queue
       </h2>
       <div className="flex gap-2 overflow-x-auto pb-4 mb-2 hide-scrollbar w-full">
-        {(['new', 'preparing', 'ready', 'completed', 'past'] as const).map((tab) => {
+        {(['new', 'preparing', 'ready', 'out_for_delivery', 'completed', 'past'] as const).map((tab) => {
           const isActive = activeTab === tab;
           const count = activeTabCounts[tab];
           
-          const labels: Record<string, string> = { new: 'New', preparing: 'Preparing', ready: 'Delivery', completed: 'Completed', past: 'Past' };
+          const labels: Record<string, string> = { new: 'New', preparing: 'Preparing', ready: 'Ready / Waiting', out_for_delivery: 'Out for Delivery', completed: 'Completed', past: 'Past' };
           
           return (
             <button
