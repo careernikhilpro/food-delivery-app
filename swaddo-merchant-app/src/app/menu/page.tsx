@@ -66,11 +66,20 @@ export default function MenuPage() {
     // 1. Calculate final category
     const finalCategory = form.category === "Custom" ? form.customCategory : form.category;
     
+    // Auto-calculate base price from variants if hasVariants is true
+    let finalBasePrice = parseFloat(form.basePrice) || 0;
+    if (hasVariants && form.variants.length > 0) {
+      const validVariantPrices = form.variants.filter(v => v.name && v.price).map(v => parseFloat(v.price) || 0);
+      if (validVariantPrices.length > 0) {
+        finalBasePrice = Math.min(...validVariantPrices);
+      }
+    }
+
     // 2. Prepare advanced payload (for logging/future DB migration)
     const advancedPayload = {
       name: form.name,
       description: form.description,
-      price: parseFloat(form.basePrice) || 0,
+      price: finalBasePrice,
       category: finalCategory,
       dietary_type: form.dietaryType,
       is_available: form.inStock,
@@ -95,7 +104,7 @@ export default function MenuPage() {
         const res = await api.put(`/stalls/${stallId}/menu/${editingItemFullId}`, {
           name: form.name,
           description: form.description,
-          price: parseFloat(form.basePrice) || 0,
+          price: finalBasePrice,
           is_veg: form.dietaryType === "veg",
           is_available: form.inStock,
           category: finalCategory,
@@ -107,7 +116,7 @@ export default function MenuPage() {
         const res = await api.post(`/stalls/${stallId}/menu`, {
           name: form.name,
           description: form.description,
-          price: parseFloat(form.basePrice) || 0,
+          price: finalBasePrice,
           is_veg: form.dietaryType === "veg",
           is_available: form.inStock,
           category: finalCategory,
@@ -568,7 +577,7 @@ export default function MenuPage() {
             {/* Modal Footer */}
             <div className="px-6 py-5 border-t border-border-subtle bg-white shrink-0 flex justify-end gap-3 z-10 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
               <button onClick={() => { setIsAdding(false); resetForm(); }} className="px-6 py-3.5 rounded-xl font-bold text-text-muted hover:bg-gray-100 transition-colors">Cancel</button>
-              <button onClick={handleAddItem} disabled={!form.name || !form.basePrice} className="px-8 py-3.5 rounded-xl font-bold text-white bg-accent hover:bg-yellow-600 shadow-md transition-all disabled:opacity-50 disabled:shadow-none">
+              <button onClick={handleAddItem} disabled={!form.name || (!form.basePrice && (!hasVariants || !form.variants.some(v => v.name && v.price)))} className="px-8 py-3.5 rounded-xl font-bold text-white bg-accent hover:bg-yellow-600 shadow-md transition-all disabled:opacity-50 disabled:shadow-none">
                 {editingItemFullId ? "Save Changes" : "Save Item"}
               </button>
             </div>
