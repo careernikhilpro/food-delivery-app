@@ -52,6 +52,7 @@ export default function Home() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   const [stalls, setStalls] = useState<any[]>([]);
+  const [variantModal, setVariantModal] = useState<{isOpen: boolean, stallId: string, stallName: string, item: any}>({ isOpen: false, stallId: '', stallName: '', item: null });
 
   const [bannerRefreshKey, setBannerRefreshKey] = useState(0);
   const [scrollY, setScrollY] = useState(0);
@@ -783,8 +784,26 @@ function RestaurantCard({ data }: { data: any }) {
          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-1 pt-1 snap-x w-full">
             {items.map((item: any, idx: number) => {
               const parsedPrice = Number((item.newPrice || "0").replace(/[^0-9]/g, ''));
-              const isAdded = cart.stallId === data.id && cart.items.find(i => i.id === item.id || i.id === idx.toString());
-              const quantity = isAdded ? isAdded.quantity : 0;
+              let quantity = 0;
+              if (cart.stallId === data.id) {
+                if (item.has_variants) {
+                  const prefix = (item.id || idx.toString()) + '_';
+                  quantity = cart.items.filter(i => i.id.startsWith(prefix)).reduce((sum, i) => sum + i.quantity, 0);
+                } else {
+                  const isAdded = cart.items.find(i => i.id === item.id || i.id === idx.toString());
+                  quantity = isAdded ? isAdded.quantity : 0;
+                }
+              }
+
+              const handleAddClick = (e: React.MouseEvent, delta: number = 1) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (item.has_variants) {
+                  setVariantModal({ isOpen: true, stallId: data.id, stallName: data.name, item });
+                } else {
+                  updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, delta);
+                }
+              };
               
               return (
               <div key={idx} className="flex flex-col shrink-0 w-[140px] snap-start">
@@ -796,31 +815,39 @@ function RestaurantCard({ data }: { data: any }) {
                        <span className="text-[#00A14F] font-bold text-[10px]">Popular</span>
                      </div>
                    )}
-                   {quantity > 0 ? (
+                   {quantity > 0 && !item.has_variants ? (
                       <div className="absolute bottom-2 right-2 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, -1); }}
+                          onClick={(e) => handleAddClick(e, -1)}
                           className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
                         ><Minus size={14} /></button>
                         <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{quantity}</span>
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, 1); }}
+                          onClick={(e) => handleAddClick(e, 1)}
                           className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
                         ><Plus size={14} /></button>
                       </div>
                    ) : (
                      <button 
-                       onClick={(e) => { 
-                         e.preventDefault(); 
-                         e.stopPropagation(); 
-                         updateQuantity(data.id, data.name, { id: item.id || idx.toString(), name: item.name, price: parsedPrice, image: item.image }, 1); 
-                       }}
-                       className="absolute bottom-2 right-2 w-[28px] h-[28px] bg-white rounded-full border border-pink-100 shadow-md flex items-center justify-center z-10"
+                       onClick={(e) => handleAddClick(e, 1)}
+                       className={`absolute bottom-2 right-2 ${item.has_variants ? 'px-2' : 'w-[28px]'} h-[28px] bg-white rounded-full border border-pink-100 shadow-md flex items-center justify-center z-10`}
                      >
-                        <span className="text-[#FF007F] text-[20px] leading-none mb-[2px] font-medium">+</span>
+                        {item.has_variants ? (
+                          <span className="text-[#FF007F] text-[10px] font-bold">ADD +</span>
+                        ) : (
+                          <span className="text-[#FF007F] text-[20px] leading-none mb-[2px] font-medium">+</span>
+                        )}
+                        {item.has_variants && quantity > 0 && (
+                          <div className="absolute -top-1 -right-1 bg-[#FF007F] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                            {quantity}
+                          </div>
+                        )}
                      </button>
                    )}
                  </div>
+                 {item.has_variants && (
+                    <div className="text-[9px] text-gray-400 mt-0.5 text-center leading-none">Customizable</div>
+                 )}
                  <div className="flex flex-col gap-1">
                     <div className="flex items-start gap-1">
                        <div className="mt-[3px] shrink-0 w-[11px] h-[11px] border border-[#00A14F] flex items-center justify-center rounded-[2px]">
@@ -859,6 +886,79 @@ function RestaurantCard({ data }: { data: any }) {
          )}
 
       </div>
+
+      {/* Variant Selection Modal */}
+      {variantModal.isOpen && variantModal.item && (
+        <>
+          <div className="fixed inset-0 bg-black/60 z-50 transition-opacity" onClick={() => setVariantModal({ isOpen: false, stallId: '', stallName: '', item: null })} />
+          <div className="fixed bottom-0 left-0 w-full bg-white rounded-t-3xl z-50 p-5 shadow-2xl transform transition-transform duration-300">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="font-extrabold text-xl text-gray-900">{variantModal.item.name}</h3>
+                <p className="text-sm text-gray-500 font-medium">Customize your size</p>
+              </div>
+              <button 
+                onClick={() => setVariantModal({ isOpen: false, stallId: '', stallName: '', item: null })}
+                className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-600 rounded-full"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="space-y-3 mb-6 max-h-[50vh] overflow-y-auto hide-scrollbar">
+              {variantModal.item.variants.map((v: any, i: number) => {
+                const variantId = `${variantModal.item.id}_${v.name}`;
+                const variantCartItem = cart.stallId === variantModal.stallId 
+                  ? cart.items.find(ci => ci.id === variantId) 
+                  : null;
+                const vQty = variantCartItem ? variantCartItem.quantity : 0;
+                
+                return (
+                  <div key={i} className="flex justify-between items-center p-3 border border-gray-200 rounded-xl bg-gray-50/50">
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-[15px]">{v.name}</h4>
+                      <div className="font-black text-gray-900 text-sm mt-0.5">₹{v.price}</div>
+                    </div>
+                    
+                    {vQty > 0 ? (
+                      <div className="h-9 w-[90px] bg-white rounded-xl flex items-center justify-between shadow-sm border border-[#FF007F]/20 px-1.5">
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(variantModal.stallId, variantModal.stallName, { id: variantId, name: `${variantModal.item.name} (${v.name})`, price: Number(v.price), image: variantModal.item.image }, -1); }}
+                          className="w-8 h-full flex justify-center items-center text-gray-600 active:bg-gray-100 rounded-lg"
+                        ><Minus size={16} /></button>
+                        <span className="text-[14px] font-bold text-[#FF007F] w-4 text-center">{vQty}</span>
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(variantModal.stallId, variantModal.stallName, { id: variantId, name: `${variantModal.item.name} (${v.name})`, price: Number(v.price), image: variantModal.item.image }, 1); }}
+                          className="w-8 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100 rounded-lg"
+                        ><Plus size={16} /></button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={(e) => { 
+                          e.preventDefault(); 
+                          e.stopPropagation(); 
+                          updateQuantity(variantModal.stallId, variantModal.stallName, { id: variantId, name: `${variantModal.item.name} (${v.name})`, price: Number(v.price), image: variantModal.item.image }, 1); 
+                        }}
+                        className="h-9 px-5 bg-white border border-[#FF007F]/30 shadow-sm text-[#FF007F] font-bold text-sm rounded-xl active:bg-pink-50 transition-colors"
+                      >
+                        ADD
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <button 
+              onClick={() => setVariantModal({ isOpen: false, stallId: '', stallName: '', item: null })}
+              className="w-full py-4 bg-[#FF007F] text-white font-black rounded-xl text-[15px] shadow-lg shadow-pink-500/30 active:scale-[0.98] transition-transform"
+            >
+              Done
+            </button>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }
