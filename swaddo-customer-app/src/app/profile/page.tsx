@@ -209,7 +209,7 @@ export default function ProfilePage() {
             </button>
             <div className="relative">
               <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                onClick={() => setIsMenuOpen(prev => !prev)} 
                 className="p-2 -mr-2 rounded-full hover:bg-white/10 transition-colors relative z-50"
               >
                 <MoreVertical size={24} />
@@ -561,16 +561,16 @@ export default function ProfilePage() {
         {isLogoutModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsLogoutModalOpen(false)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
-              <h3 className="text-xl font-black text-gray-900 mb-2">Log out</h3>
-              <p className="text-[14px] text-gray-600 mb-6">
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-[#0a0b10] rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-white/10">
+              <h3 className="text-xl font-black text-white mb-2">Log out</h3>
+              <p className="text-[14px] text-gray-400 mb-6">
                 Please remember your 4-digit PIN for return login. Are you sure you want to log out?
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setIsLogoutModalOpen(false)} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+                <button onClick={() => setIsLogoutModalOpen(false)} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-white/10 hover:bg-white/20 transition-colors border border-white/5">
                   Cancel
                 </button>
-                <button onClick={handleLogout} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all">
+                <button onClick={handleLogout} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all">
                   Yes, Log out
                 </button>
               </div>
