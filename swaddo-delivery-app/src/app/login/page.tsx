@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/firebase";
@@ -10,13 +10,25 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Login() {
   const router = useRouter();
   
-  // 1 = Enter Phone, 2 = Enter PIN (Login), 3 = Create PIN (Register)
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let token = localStorage.getItem('swaddo_delivery_token');
+      if (!token && typeof document !== 'undefined') {
+        const match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+        if (match) token = match[2];
+      }
+      if (token && !token.startsWith('mock_')) {
+        router.push('/home');
+      }
+    }
+  }, [router]);
 
   const checkUserExists = async (e: React.FormEvent) => {
     e.preventDefault();

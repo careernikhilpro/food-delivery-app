@@ -2,7 +2,7 @@
   "name": "Swaddo Delivery",
   "short_name": "Swaddo Delivery",
   "description": "Deliver orders for SwaDDo. v2",
-  "start_url": "/login",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#E2401C",

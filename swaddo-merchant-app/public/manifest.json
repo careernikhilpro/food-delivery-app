@@ -2,7 +2,7 @@
   "name": "Swaddo Merchant",
   "short_name": "Swaddo Merchant",
   "description": "Manage your SwaDDo stall and orders. v2",
-  "start_url": "/login",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#16A34A",
   "theme_color": "#16A34A",
