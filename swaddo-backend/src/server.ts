@@ -134,7 +134,7 @@ const migrateDB = async () => {
     client.release();
     logger.info('Connected to PostgreSQL Database');
     
-    // Auto-migrate missing columns for orders table
+    // Auto-migrate missing columns for orders and order_items table
     try {
       await pool.query(`
         ALTER TABLE orders
@@ -145,8 +145,13 @@ const migrateDB = async () => {
         ADD COLUMN IF NOT EXISTS restaurant_share DECIMAL(10, 2) DEFAULT 0.00,
         ADD COLUMN IF NOT EXISTS delivery_instructions TEXT,
         ADD COLUMN IF NOT EXISTS restaurant_instructions TEXT;
+
+        ALTER TABLE order_items
+        ADD COLUMN IF NOT EXISTS item_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS variant_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS addons JSONB DEFAULT '[]'::jsonb;
       `);
-      logger.info('Auto-migrated orders table schema successfully.');
+      logger.info('Auto-migrated orders and order_items table schema successfully.');
     } catch (migErr) {
       logger.error('Failed to auto-migrate schema:', migErr);
     }
