@@ -371,9 +371,9 @@ function StallDetailContent() {
           
           <div className="flex items-center gap-2 text-[14px] text-gray-600 font-medium mb-4 relative">
             <Star size={14} className="fill-green-700 text-green-700" />
-            <span className="font-bold text-green-700">{stallData.rating || '4.3'}</span>
+            <span className="font-bold text-green-700">{Number(stallData.rating || 4.3).toFixed(1)}</span>
             <span className="text-gray-300">|</span>
-            <span>{stallData.prep_time || '35-45'} mins</span>
+            <span>{stallData.prep_time ? `${Number(stallData.prep_time)}-${Number(stallData.prep_time) + 10}` : '35-45'} mins</span>
             <span className="text-gray-300">|</span>
             <span 
               className="cursor-pointer flex items-center gap-0.5 relative"
