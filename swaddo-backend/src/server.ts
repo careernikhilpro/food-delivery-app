@@ -130,8 +130,26 @@ const migrateDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    
+    await client.query('SELECT NOW()');
     client.release();
+    logger.info('Connected to PostgreSQL Database');
+    
+    // Auto-migrate missing columns for orders table
+    try {
+      await pool.query(`
+        ALTER TABLE orders
+        ADD COLUMN IF NOT EXISTS item_total DECIMAL(10, 2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS delivery_charge DECIMAL(10, 2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS gst_amount DECIMAL(10, 2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS platform_fee DECIMAL(10, 2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS restaurant_share DECIMAL(10, 2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS delivery_instructions TEXT,
+        ADD COLUMN IF NOT EXISTS restaurant_instructions TEXT;
+      `);
+      logger.info('Auto-migrated orders table schema successfully.');
+    } catch (migErr) {
+      logger.error('Failed to auto-migrate schema:', migErr);
+    }
     logger.info('Database FCM columns & notifications table migrated successfully.');
   } catch (error) {
     logger.error('Database migration failed:', error);

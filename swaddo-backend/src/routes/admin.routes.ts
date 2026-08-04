@@ -23,6 +23,25 @@ const router = Router();
 router.use(authenticate, requireAdmin);
 
 // 1. Dashboard Stats
+router.get('/fix-db', async (req: Request, res: Response) => {
+  try {
+    await pool.query(`
+      ALTER TABLE orders
+      ADD COLUMN IF NOT EXISTS item_total DECIMAL(10, 2) DEFAULT 0.00,
+      ADD COLUMN IF NOT EXISTS delivery_charge DECIMAL(10, 2) DEFAULT 0.00,
+      ADD COLUMN IF NOT EXISTS gst_amount DECIMAL(10, 2) DEFAULT 0.00,
+      ADD COLUMN IF NOT EXISTS platform_fee DECIMAL(10, 2) DEFAULT 0.00,
+      ADD COLUMN IF NOT EXISTS restaurant_share DECIMAL(10, 2) DEFAULT 0.00,
+      ADD COLUMN IF NOT EXISTS delivery_instructions TEXT,
+      ADD COLUMN IF NOT EXISTS restaurant_instructions TEXT;
+    `);
+    res.json({ message: 'Table altered successfully!' });
+  } catch (error) {
+    logger.error('Error altering table', error);
+    res.status(500).json({ message: 'Error altering table', error: error });
+  }
+});
+
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const today = new Date();
