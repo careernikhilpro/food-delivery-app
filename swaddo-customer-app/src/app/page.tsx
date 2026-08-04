@@ -757,6 +757,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
             lowerPriceText: "Our app: 20% lower",
             has_variants: item.has_variants,
             variants: item.variants,
+            is_veg: item.is_veg,
           }));
           setItems(menuItems);
         }
