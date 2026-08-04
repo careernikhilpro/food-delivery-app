@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle, Store, ChefHat, PackageCheck, AlertCircle, MapPin, Navigation, BellRing } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Store, ChefHat, PackageCheck, AlertCircle, MapPin, Navigation, BellRing, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const { data: ordersRes, mutate: mutateOrders } = useSWR('/orders?limit=100', fetcher);
 
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const [incomingOrder, setIncomingOrder] = useState<any>(null);
   const [stallInfo, setStallInfo] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'new'|'preparing'|'ready'|'out_for_delivery'|'completed'|'past'>('new');
@@ -89,22 +90,6 @@ export default function Dashboard() {
     alarmAudio.current = new Audio('/orderring.mp3');
     alarmAudio.current.volume = 1.0;
     alarmAudio.current.loop = true;
-
-    // Unlock audio on first user interaction to prevent browser autoplay block
-    const unlockAudio = () => {
-      if (alarmAudio.current) {
-        alarmAudio.current.play().then(() => {
-          if (alarmAudio.current) {
-            alarmAudio.current.pause();
-            alarmAudio.current.currentTime = 0;
-          }
-        }).catch(e => console.log("Unlock failed:", e));
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('touchstart', unlockAudio);
-      }
-    };
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
 
     let socket: any;
     let stallChannel: string = "";
@@ -220,6 +205,42 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-[calc(100dvh-80px)] pt-4 max-w-md w-full mx-auto relative bg-[#F8FAFC] overflow-hidden">
       
+      {/* Sound Permission Overlay */}
+      <AnimatePresence>
+        {!soundEnabled && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-md z-[100] bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center p-6"
+          >
+            <div className="bg-white rounded-3xl p-8 text-center max-w-[300px] w-full shadow-2xl">
+              <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Volume2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Enable Sound Notifications</h3>
+              <p className="text-gray-500 mb-6 text-sm">Please tap below to allow order ringtones to play in the background when a new order arrives.</p>
+              <button 
+                onClick={() => {
+                  setSoundEnabled(true);
+                  if (alarmAudio.current) {
+                    alarmAudio.current.play().then(() => {
+                      if (alarmAudio.current) {
+                        alarmAudio.current.pause();
+                        alarmAudio.current.currentTime = 0;
+                      }
+                    }).catch(e => console.log("Unlock failed:", e));
+                  }
+                }}
+                className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform"
+              >
+                Allow Sound
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Full Screen Incoming Order Modal */}
       <AnimatePresence>
         {incomingOrder && (
