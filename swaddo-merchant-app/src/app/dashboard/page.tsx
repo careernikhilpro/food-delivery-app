@@ -86,7 +86,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     // Initialize audio
-    alarmAudio.current = new Audio('https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg');
+    alarmAudio.current = new Audio('/orderring.mp3');
     alarmAudio.current.loop = true;
 
     let socket: any;
