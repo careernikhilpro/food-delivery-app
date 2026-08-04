@@ -87,6 +87,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Initialize audio
     alarmAudio.current = new Audio('/orderring.mp3');
+    alarmAudio.current.volume = 1.0;
     alarmAudio.current.loop = true;
 
     let socket: any;

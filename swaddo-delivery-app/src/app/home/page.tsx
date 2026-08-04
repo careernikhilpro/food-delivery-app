@@ -32,6 +32,7 @@ export default function Home() {
   useEffect(() => {
     // Initialize audio
     alarmAudio.current = new Audio('/orderring.mp3');
+    alarmAudio.current.volume = 1.0;
     alarmAudio.current.loop = true;
 
     // Generate a persistent mock rider ID for testing concurrency across multiple tabs
