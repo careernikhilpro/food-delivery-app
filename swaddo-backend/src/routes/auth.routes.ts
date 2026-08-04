@@ -143,6 +143,21 @@ router.post('/register-pin', async (req: Request, res: Response) => {
         // User exists but has no PIN for this specific role. Update the specific PIN hash!
         const updateRes = await client.query(`UPDATE users SET ${pinColumn} = $1 WHERE id = $2 RETURNING *`, [pinHash, user.id]);
         user = updateRes.rows[0];
+
+        // Ensure role-specific DB entries exist if they are adding a new role
+        if (role === 'vendor') {
+          const vendorCheck = await client.query('SELECT id FROM vendors WHERE user_id = $1', [user.id]);
+          if (vendorCheck.rows.length === 0) {
+            const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
+            const newVendorId = vendorRes.rows[0].id;
+            await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
+          }
+        } else if (role === 'delivery') {
+          const dpCheck = await client.query('SELECT id FROM delivery_partners WHERE user_id = $1', [user.id]);
+          if (dpCheck.rows.length === 0) {
+            await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+          }
+        }
       }
     } else {
       const insertRes = await client.query(
