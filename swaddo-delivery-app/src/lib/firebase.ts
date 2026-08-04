@@ -24,8 +24,19 @@ export const requestNotificationPermission = async () => {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       const messaging = getMessaging(app);
+      
+      let registration;
+      try {
+        if ('serviceWorker' in navigator) {
+          registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        }
+      } catch (e) {
+        console.warn("Explicit SW registration failed:", e);
+      }
+
       const token = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "BI6vnkVEtGj64bmYXgqapOvQdzUhpBj0sWk4ikWRA7LPh5RU4kaJmAgwdTSyAwh8WNghmqdhCL2tVRv7bs0mLLo"
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "BI6vnkVEtGj64bmYXgqapOvQdzUhpBj0sWk4ikWRA7LPh5RU4kaJmAgwdTSyAwh8WNghmqdhCL2tVRv7bs0mLLo",
+        serviceWorkerRegistration: registration
       });
       return token;
     }
