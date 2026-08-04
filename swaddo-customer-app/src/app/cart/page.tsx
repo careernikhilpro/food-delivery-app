@@ -495,6 +495,11 @@ export default function Cart() {
       const payload = {
         stallId: cart.stallId,
         totalAmount: finalTotal,
+        itemTotal: itemTotal,
+        deliveryCharge: deliveryFee,
+        gstAmount: GST,
+        platformFee: Math.round(itemTotal * 0.22),
+        restaurantShare: itemTotal - Math.round(itemTotal * 0.22),
         deliveryAddress: finalDeliveryAddress,
         deliveryLat: selectedAddr.latitude,
         deliveryLng: selectedAddr.longitude,
