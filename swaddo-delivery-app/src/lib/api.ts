@@ -6,7 +6,17 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('swaddo_delivery_token');
+    let token = localStorage.getItem('swaddo_delivery_token');
+    
+    // Fallback to cookie
+    if (!token && typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+      if (match) {
+        token = match[2];
+        localStorage.setItem('swaddo_delivery_token', token);
+      }
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

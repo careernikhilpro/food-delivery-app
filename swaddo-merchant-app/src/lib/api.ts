@@ -6,7 +6,17 @@ export const api = axios.create({
 
 api.interceptors.request.use(function (config) {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('swaddo_merchant_token');
+    let token = localStorage.getItem('swaddo_merchant_token');
+    
+    // Fallback to cookie
+    if (!token && typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
+      if (match) {
+        token = match[2];
+        localStorage.setItem('swaddo_merchant_token', token);
+      }
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -19,7 +29,7 @@ api.interceptors.response.use(
     return response;
   },
   function (error) {
-    if (error.response && (error.response.status === 401 || (error.response.status === 404 && error.config?.url?.includes('merchant/my-stall')))) {
+    if (error.response && error.response.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('swaddo_merchant_token');
         if (window.location.pathname !== '/login') {
