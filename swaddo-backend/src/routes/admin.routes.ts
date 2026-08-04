@@ -107,27 +107,29 @@ router.patch('/vendors/:id/status', async (req: Request, res: Response) => {
 
 router.delete('/vendors/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid vendor ID' });
     
     // Get stalls for this vendor
-    const stallsRes = await pool.query('SELECT id FROM stalls WHERE vendor_id = $1', [id]);
+    const stallsRes = await pool.query(`SELECT id FROM stalls WHERE vendor_id = ${id}`);
     const stallIds = stallsRes.rows.map(s => s.id);
 
     if (stallIds.length > 0) {
+      const idsStr = stallIds.join(',');
       // Delete delivery assignments related to orders of these stalls
-      await pool.query('DELETE FROM delivery_assignments WHERE order_id IN (SELECT id FROM orders WHERE stall_id = ANY($1))', [stallIds]);
+      await pool.query(`DELETE FROM delivery_assignments WHERE order_id IN (SELECT id FROM orders WHERE stall_id IN (${idsStr}))`);
       // Delete order items
-      await pool.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE stall_id = ANY($1))', [stallIds]);
+      await pool.query(`DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE stall_id IN (${idsStr}))`);
       // Delete orders
-      await pool.query('DELETE FROM orders WHERE stall_id = ANY($1)', [stallIds]);
+      await pool.query(`DELETE FROM orders WHERE stall_id IN (${idsStr})`);
       // Delete menu items
-      await pool.query('DELETE FROM menu_items WHERE stall_id = ANY($1)', [stallIds]);
+      await pool.query(`DELETE FROM menu_items WHERE stall_id IN (${idsStr})`);
       // Delete stalls
-      await pool.query('DELETE FROM stalls WHERE vendor_id = $1', [id]);
+      await pool.query(`DELETE FROM stalls WHERE vendor_id = ${id}`);
     }
     
     // Finally delete the vendor
-    await pool.query('DELETE FROM vendors WHERE id = $1', [id]);
+    await pool.query(`DELETE FROM vendors WHERE id = ${id}`);
     
     res.json({ message: 'Vendor and all associated data deleted successfully' });
   } catch (error) {
