@@ -140,32 +140,58 @@ router.delete('/vendors/:id', async (req: Request, res: Response) => {
 
 router.get('/vendors/:id/details', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    
-    // Fetch stalls for this vendor
-    const stallsRes = await pool.query('SELECT * FROM stalls WHERE vendor_id = $1', [id]);
-    
-    if (stallsRes.rows.length === 0) {
-      return res.json({ stalls: [] });
+    const vendorId = req.params.id;
+    // Get vendor details
+    const vendorRes = await pool.query('SELECT * FROM vendors WHERE id = $1', [vendorId]);
+    if (vendorRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Vendor not found' });
     }
+
+    // Get their stalls
+    const stallsRes = await pool.query('SELECT * FROM stalls WHERE vendor_id = $1', [vendorId]);
     
-    // For simplicity, assuming one vendor mostly has one or a few stalls. 
-    // We fetch menu items for all their stalls.
+    // Get menu items for all their stalls
     const stallIds = stallsRes.rows.map(s => s.id);
-    const menuItemsRes = await pool.query('SELECT * FROM menu_items WHERE stall_id = ANY($1)', [stallIds]);
-    
-    // Map items to their stalls
-    const stallsWithMenu = stallsRes.rows.map(stall => {
-      return {
-        ...stall,
-        menu_items: menuItemsRes.rows.filter(item => item.stall_id === stall.id)
-      };
+    let menuItems: any[] = [];
+    if (stallIds.length > 0) {
+      const menuRes = await pool.query('SELECT * FROM menu_items WHERE stall_id = ANY($1)', [stallIds]);
+      menuItems = menuRes.rows;
+    }
+
+    // Attach items to their respective stalls
+    const stallsWithItems = stallsRes.rows.map(stall => ({
+      ...stall,
+      menu_items: menuItems.filter(item => item.stall_id === stall.id)
+    }));
+
+    res.json({
+      ...vendorRes.rows[0],
+      stalls: stallsWithItems
     });
-    
-    res.json({ stalls: stallsWithMenu });
-  } catch (error) {
-    logger.error('Error fetching vendor details', error);
+  } catch (err) {
+    console.error('Error fetching vendor details:', err);
     res.status(500).json({ message: 'Error fetching vendor details' });
+  }
+});
+
+router.put('/stalls/:id', async (req: Request, res: Response) => {
+  try {
+    const stallId = req.params.id;
+    const { rating, prep_time } = req.body;
+    
+    const updateRes = await pool.query(
+      'UPDATE stalls SET rating = $1, prep_time = $2 WHERE id = $3 RETURNING *',
+      [rating, prep_time, stallId]
+    );
+
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Stall not found' });
+    }
+
+    res.json(updateRes.rows[0]);
+  } catch (err) {
+    console.error('Error updating stall:', err);
+    res.status(500).json({ message: 'Error updating stall' });
   }
 });
 

@@ -84,7 +84,7 @@ export default function Home() {
           discountText: stall.active_offer_title || "20% LOWER PRICES",
           showStamp: true,
           rating: stall.rating || "4.1",
-          deliveryTime: `${stall.prep_time || 30}-${(stall.prep_time || 30) + 10} mins`,
+          deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
           categories: stall.tags || "Food",
           deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
         }));
