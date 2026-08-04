@@ -83,6 +83,8 @@ const migrateDB = async () => {
     await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS variants JSONB DEFAULT '[]'::jsonb;`);
     await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS has_addons BOOLEAN DEFAULT false;`);
     await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS addons JSONB DEFAULT '[]'::jsonb;`);
+    await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS prep_time_minutes INTEGER DEFAULT 15;`);
+    await client.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0;`);
     
     // Add PIN hash and email columns for new authentication system
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(255);`);
