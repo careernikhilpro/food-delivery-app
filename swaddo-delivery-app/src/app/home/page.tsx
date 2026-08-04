@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
 import { MapPin, Navigation, Clock, CheckCircle2, XCircle, BellRing, Store, Siren, Volume2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 
 import Link from "next/link";
@@ -13,6 +13,7 @@ import Link from "next/link";
 export default function Home() {
   useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isOnline, setIsOnline] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("isOnline") === "true";
@@ -226,21 +227,22 @@ export default function Home() {
     }
   }, [newJob, soundEnabled]);
 
-  const acceptJob = async () => {
-    if (!newJob) return;
+  const acceptJob = useCallback(async (jobIdToAccept?: string | any) => {
+    const targetJobId = (typeof jobIdToAccept === 'string') ? jobIdToAccept : newJob?.id;
+    if (!targetJobId) return;
     try {
-      const res = await api.patch(`/delivery/assignments/${newJob.id}/accept`, {
+      const res = await api.patch(`/delivery/assignments/${targetJobId}/accept`, {
         riderId: riderIdRef.current,
         lat: currentLocation?.lat,
         lng: currentLocation?.lng
       });
       // Store active delivery to prevent navigating away
-      localStorage.setItem('activeDelivery', newJob.id);
+      localStorage.setItem('activeDelivery', targetJobId);
       
       localStorage.removeItem("pendingJob");
       localStorage.removeItem("pendingTimer");
-      localStorage.setItem('activeDelivery', newJob.orderId);
-      router.push(`/active-delivery?id=${newJob.orderId}`);
+      setNewJob(null);
+      router.push(`/active-delivery?id=${targetJobId}`);
     } catch (err: any) {
       console.log(err.message);
       alert(err.response?.data?.message || "Failed to accept job");
@@ -248,13 +250,53 @@ export default function Home() {
       localStorage.removeItem("pendingJob");
       localStorage.removeItem("pendingTimer");
     }
-  };
+  }, [newJob?.id, currentLocation, router]);
 
-  const declineJob = () => {
+  const rejectJob = useCallback((jobIdToReject?: string) => {
+    // Optionally call an endpoint to explicitly reject
     setNewJob(null);
     localStorage.removeItem("pendingJob");
     localStorage.removeItem("pendingTimer");
-  };
+  }, []);
+
+  // Handle Push Notification Actions (from URL or active Window)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const actionOrderId = searchParams.get('orderId');
+    if (action && actionOrderId) {
+      if (action === 'accept') {
+         acceptJob(actionOrderId).finally(() => {
+           router.replace('/home');
+         });
+      } else {
+         rejectJob(actionOrderId);
+         router.replace('/home');
+      }
+    }
+  }, [searchParams, acceptJob, rejectJob, router]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NOTIFICATION_ACTION') {
+        const { action, payload } = event.data;
+        if (payload?.orderId) {
+          if (action === 'accept') {
+             acceptJob(payload.orderId);
+          } else {
+             rejectJob(payload.orderId);
+          }
+        }
+      }
+    };
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+    }
+    return () => {
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      }
+    };
+  }, [acceptJob, rejectJob]);
 
   if (!mounted) return null; // Prevent UI flicker on mount
 
@@ -476,17 +518,17 @@ export default function Home() {
 
             <div className="w-full space-y-4">
               <button 
-                onClick={acceptJob}
+                onClick={() => acceptJob()}
                 className="w-full bg-white text-primary py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform"
               >
                 Accept Delivery
               </button>
               <button 
-                  onClick={declineJob}
-                  className={`w-full py-4 rounded-xl font-bold text-lg transition-transform border border-white/20 bg-black/20 text-white active:scale-95`}
-                >
-                  Decline
-                </button>
+                onClick={() => rejectJob()}
+                className="flex-1 bg-white/10 text-white py-4 rounded-2xl font-bold text-lg active:scale-95 transition-transform backdrop-blur-md border border-white/20"
+              >
+                Decline
+              </button>
             </div>
           </motion.div>
         )}

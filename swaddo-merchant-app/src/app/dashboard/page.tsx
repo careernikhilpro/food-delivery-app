@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import useSWR from "swr";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Clock, XCircle, Store, ChefHat, PackageCheck, AlertCircle, MapPin, Navigation, BellRing, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [pickupPin, setPickupPin] = useState("");
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const alarmAudio = useRef<HTMLAudioElement | null>(null);
 
   const orders = ordersRes?.data || [];
@@ -166,7 +167,7 @@ export default function Dashboard() {
     }
   }, [orders, soundEnabled]);
 
-  const updateOrderStatus = async (orderId: string, newStatus: string, pin?: string) => {
+  const updateOrderStatus = useCallback(async (orderId: string, newStatus: string, pin?: string) => {
     if (incomingOrder && incomingOrder.id === orderId) {
       setIncomingOrder(null);
     }
@@ -193,7 +194,39 @@ export default function Dashboard() {
       console.error("Failed to update status", err);
       alert("Error: " + (err.response?.data?.message || "Failed to update order status. Please check your connection."));
     }
-  };
+  }, [incomingOrder, mutateOrders]);
+
+  // Handle Push Notification Actions (from URL or active Window)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const actionOrderId = searchParams.get('orderId');
+    if (action && actionOrderId && !isInitializing) {
+      const status = action === 'accept' ? 'preparing' : 'cancelled';
+      updateOrderStatus(actionOrderId, status).finally(() => {
+        router.replace('/');
+      });
+    }
+  }, [searchParams, isInitializing, updateOrderStatus, router]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NOTIFICATION_ACTION') {
+        const { action, payload } = event.data;
+        if (payload?.orderId) {
+          const status = action === 'accept' ? 'preparing' : 'cancelled';
+          updateOrderStatus(payload.orderId, status);
+        }
+      }
+    };
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+    }
+    return () => {
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      }
+    };
+  }, [updateOrderStatus]);
 
   if (isInitializing) {
     return (

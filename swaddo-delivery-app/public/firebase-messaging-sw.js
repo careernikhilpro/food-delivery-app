@@ -28,7 +28,12 @@ if (firebaseConfig.apiKey !== "REPLACE_ME") {
       vibrate: [500, 250, 500, 250, 500, 250, 500, 250, 500], // Intense vibration for new orders
       tag: 'swaddo-rider-new-order',
       renotify: true,
-      requireInteraction: true
+      requireInteraction: true,
+      data: payload,
+      actions: [
+        { action: 'accept', title: 'Accept Order' },
+        { action: 'reject', title: 'Reject' }
+      ]
     };
 
     // Wake up any backgrounded tabs to fetch the new order and ring
@@ -42,5 +47,36 @@ if (firebaseConfig.apiKey !== "REPLACE_ME") {
     });
 
     self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+
+  self.addEventListener('notificationclick', function(event) {
+    console.log('[firebase-messaging-sw.js] Notification click Received.', event);
+    event.notification.close();
+
+    const action = event.action;
+    const payload = event.notification.data;
+
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+        for (var i = 0; i < clientList.length; i++) {
+          var client = clientList[i];
+          if ('focus' in client) {
+            client.focus();
+            if (action) {
+              client.postMessage({ type: 'NOTIFICATION_ACTION', action: action, payload: payload });
+            }
+            return;
+          }
+        }
+        if (self.clients.openWindow) {
+          // If app was closed, open it. We pass the action in the URL so it can be handled on load
+          let url = '/home';
+          if (action && payload?.data?.orderId) {
+             url = `/home?action=${action}&orderId=${payload.data.orderId}`;
+          }
+          return self.clients.openWindow(url);
+        }
+      })
+    );
   });
 }

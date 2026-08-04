@@ -197,7 +197,8 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
         notificationService.sendToVendor(
           vendorId, 
           'New Order Received! 🚀', 
-          `${customerFirstName} just placed an order for ₹${totalAmount}`
+          `${customerFirstName} just placed an order for ₹${totalAmount}`,
+          { orderId: order.id.toString(), type: 'new_order' }
         );
       }
 
