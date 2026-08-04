@@ -90,6 +90,22 @@ export default function Dashboard() {
     alarmAudio.current.volume = 1.0;
     alarmAudio.current.loop = true;
 
+    // Unlock audio on first user interaction to prevent browser autoplay block
+    const unlockAudio = () => {
+      if (alarmAudio.current) {
+        alarmAudio.current.play().then(() => {
+          if (alarmAudio.current) {
+            alarmAudio.current.pause();
+            alarmAudio.current.currentTime = 0;
+          }
+        }).catch(e => console.log("Unlock failed:", e));
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+      }
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+
     let socket: any;
     let stallChannel: string = "";
     
