@@ -41,8 +41,12 @@ export const requestNotificationPermission = async () => {
       return token;
     }
     return null;
-  } catch (error) {
-    console.error("FCM Permission Error:", error);
+  } catch (error: any) {
+    if (error?.name === 'AbortError' || error?.message?.includes('AbortError') || error?.message?.includes('Registration failed')) {
+      // Silently ignore push service AbortError caused by local env or mismatched VAPID keys
+      return null;
+    }
+    console.warn("FCM Permission Note:", error);
     return null;
   }
 };
