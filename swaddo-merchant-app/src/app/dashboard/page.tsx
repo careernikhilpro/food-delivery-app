@@ -19,7 +19,7 @@ export default function Dashboard() {
   const { data: statsRes, mutate: mutateStats } = useSWR('/stalls/merchant/stats', fetcher);
   const { data: ordersRes, mutate: mutateOrders } = useSWR('/orders?limit=100', fetcher);
 
-  const [isAcceptingOrders, setIsAcceptingOrders] = useState(false);
+  // Removed isAcceptingOrders local state to avoid toggle flicker
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('soundPermission') === 'granted';
@@ -43,13 +43,7 @@ export default function Dashboard() {
   const stats = statsRes || { ordersToday: 0, revenueToday: 0, avgRating: 0 };
   const isInitializing = !ordersRes || !statsRes || !stallRes;
 
-  const hasInitializedToggle = useRef(false);
-  useEffect(() => {
-    if (stallRes?.is_open !== undefined && !hasInitializedToggle.current) {
-      setIsAcceptingOrders(stallRes.is_open);
-      hasInitializedToggle.current = true;
-    }
-  }, [stallRes]);
+  // Removed hasInitializedToggle effect
 
   useEffect(() => {
     setIsTransitionReady(true);
@@ -422,12 +416,11 @@ export default function Dashboard() {
           <p className="text-slate-500 text-sm font-medium -mt-0.5 truncate">Manage your live orders</p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isAcceptingOrders ? 'Online' : 'Offline'}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stallRes?.is_open ? 'Online' : 'Offline'}</span>
           <button 
             onClick={async () => {
               if (isInitializing) return;
-              const newState = !isAcceptingOrders;
-              setIsAcceptingOrders(newState);
+              const newState = !stallRes?.is_open;
               mutateStall((prev: any) => ({ ...prev, is_open: newState }), { revalidate: false });
               try {
                 if (stallRes && stallRes.id) {
@@ -440,17 +433,16 @@ export default function Dashboard() {
                 }
               } catch (err) {
                 console.error("Failed to update status", err);
-                setIsAcceptingOrders(!newState); // revert on failure
                 mutateStall((prev: any) => ({ ...prev, is_open: !newState }), { revalidate: false });
               }
             }}
             className={`w-14 h-8 rounded-full flex items-center p-1 ${isInitializing ? '' : 'transition-colors duration-300'} ${
-              isAcceptingOrders ? "bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]" : "bg-slate-300"
+              stallRes?.is_open ? "bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]" : "bg-slate-300"
             }`}
           >
             <div 
               className={`w-6 h-6 rounded-full bg-white shadow-md transform ${isInitializing ? '' : 'transition-transform duration-300'}`} 
-              style={{ transform: isAcceptingOrders ? "translateX(1.5rem)" : "translateX(0)", transitionDuration: isTransitionReady ? '300ms' : '0ms' }}
+              style={{ transform: stallRes?.is_open ? "translateX(1.5rem)" : "translateX(0)", transitionDuration: isTransitionReady ? '300ms' : '0ms' }}
             />
           </button>
         </div>

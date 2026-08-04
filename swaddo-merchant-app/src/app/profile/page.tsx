@@ -331,6 +331,8 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("swaddo_merchant_token");
+    document.cookie = 'token=; Max-Age=-99999999; path=/';
+    document.cookie = 'role=; Max-Age=-99999999; path=/';
     router.push("/login");
   };
 
