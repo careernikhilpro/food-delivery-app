@@ -3,7 +3,8 @@ import { pool } from '../db';
 import { authenticate, requireAdmin } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { assignmentManager } from '../services/assignment';
-import bcrypt from 'bcrypt';
+// We use require to avoid tsc and runtime issues with native modules on some environments
+const bcrypt = require('bcryptjs');
 
 // Simple haversine formula for distance
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

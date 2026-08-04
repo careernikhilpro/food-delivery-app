@@ -26,9 +26,10 @@ export default function Orders() {
   const fetchData = async () => {
     try {
       const ordersRes = await api.get("/admin/orders");
-      setOrders(ordersRes.data);
-    } catch (error) {
-      console.log("Failed to fetch data");
+      setOrders(ordersRes.data || []);
+    } catch (error: any) {
+      console.log("Failed to fetch data", error);
+      toast.error("Failed to load orders: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
