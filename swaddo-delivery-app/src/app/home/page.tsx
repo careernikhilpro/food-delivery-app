@@ -25,7 +25,12 @@ export default function Home() {
   const [stats, setStats] = useState({ deliveries: 0, earnings: 0, floatingCash: 0, hours: 0 });
   const [mounted, setMounted] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('soundPermission') === 'granted';
+    }
+    return false;
+  });
   const riderIdRef = useRef<string>("");
   const alarmAudio = useRef<HTMLAudioElement | null>(null);
 
@@ -121,12 +126,9 @@ export default function Home() {
           }
         });
 
-        socket?.on("job_revoked", (data) => {
+        socket?.on("job_revoked", (payload) => {
           setNewJob((prev: any) => {
-            if (prev && prev.id === data.id) {
-              alert("This job was assigned to another rider or expired.");
-              localStorage.removeItem("pendingJob");
-              localStorage.removeItem("pendingTimer");
+            if (prev && prev.id === payload.id) {
               if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
               return null;
             }
@@ -198,16 +200,12 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, mounted]);
 
-  // Handle Modal Timer
+  // Timer auto-decline logic REMOVED intentionally 
+  // so the order stays on screen indefinitely until the rider acts on it.
   useEffect(() => {
-    if (newJob && timer > 0) {
-      const t = setTimeout(() => setTimer(timer - 1), 1000);
-      return () => clearTimeout(t);
-    } else if (newJob && timer === 0) {
-      setNewJob(null); // Auto decline
-      if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
-    }
-  }, [newJob, timer]);
+    // We keep this hook empty or handle minimal things,
+    // previously this had auto-decline logic.
+  }, [newJob]);
 
   const acceptJob = async () => {
     if (!newJob) return;
@@ -264,6 +262,9 @@ export default function Home() {
               <button 
                 onClick={() => {
                   setSoundEnabled(true);
+                  if (typeof window !== 'undefined') {
+                      localStorage.setItem('soundPermission', 'granted');
+                    }
                   if (alarmAudio.current) {
                     alarmAudio.current.play().then(() => {
                       if (alarmAudio.current) {
@@ -464,12 +465,11 @@ export default function Home() {
                 Accept Delivery
               </button>
               <button 
-                onClick={declineJob}
-                disabled={timer > 0}
-                className={`w-full py-4 rounded-xl font-bold text-lg transition-transform border border-white/20 ${timer > 0 ? 'bg-black/10 text-white/50 cursor-not-allowed' : 'bg-black/20 text-white active:scale-95'}`}
-              >
-                Decline {timer > 0 ? `(${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, '0')})` : ''}
-              </button>
+                  onClick={declineJob}
+                  className={`w-full py-4 rounded-xl font-bold text-lg transition-transform border border-white/20 bg-black/20 text-white active:scale-95`}
+                >
+                  Decline
+                </button>
             </div>
           </motion.div>
         )}

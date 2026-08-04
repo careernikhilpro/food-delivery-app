@@ -18,11 +18,11 @@
   --font-body: var(--font-body);
 }
 
-body {
+html, body {
   background-color: #F8FAFC;
   color: theme('colors.text.primary');
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 .app-container {

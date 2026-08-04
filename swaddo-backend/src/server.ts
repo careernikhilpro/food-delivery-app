@@ -32,6 +32,7 @@ io.on('connection', (socket) => {
     // For local testing, we expect the client to send their ID. 
     // If none provided, we mock it using the socket ID.
     const riderId = data?.riderId || `mock_rider_${socket.id.substring(0,5)}`;
+    socket.join(`rider_${riderId}`);
     assignmentManager.registerRider(riderId, socket.id, data?.lat, data?.lng);
   });
 

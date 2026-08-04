@@ -110,9 +110,8 @@ export class AssignmentManager {
     // Revoke from previously notified rider if they ignored it, UNLESS they are the only rider
     if (notifiedRiders.size > 0 && this.io && !isSingleRider) {
       for (const riderId of notifiedRiders) {
-        const riderData = this.onlineRiders.get(riderId);
-        if (riderData) {
-          this.io.to(riderData.socketId).emit('job_revoked', { id: jobPayload.id });
+        if (this.io) {
+          this.io.to(`rider_${riderId}`).emit('job_revoked', { id: jobPayload.id });
         }
       }
     }
@@ -190,7 +189,7 @@ export class AssignmentManager {
     };
     
     if (this.io) {
-      this.io.to(nearestRider.data.socketId).emit('job_offer', jobWithDistance);
+      this.io.to(`rider_${nearestRider.riderId}`).emit('job_offer', jobWithDistance);
     }
     
     console.log(`[Assignment] Job ${jobPayload.id} offered to nearest rider ${nearestRider.riderId} (Distance: ${actualPickupDistance.toFixed(2)} km)`);
@@ -213,12 +212,9 @@ export class AssignmentManager {
     const notifiedRiders = this.activeJobs.get(jobId)!;
     
     for (const riderId of notifiedRiders) {
-      if (riderId !== acceptedByRiderId) {
-        const riderData = this.onlineRiders.get(riderId);
-        if (riderData && this.io) {
-          this.io.to(riderData.socketId).emit('job_revoked', { id: jobId });
-          console.log(`[Assignment] Job ${jobId} revoked from Rider ${riderId}`);
-        }
+      if (this.io) {
+        this.io.to(`rider_${riderId}`).emit('job_revoked', { id: jobId });
+        console.log(`[Assignment] Job ${jobId} revoked from Rider ${riderId}`);
       }
     }
 

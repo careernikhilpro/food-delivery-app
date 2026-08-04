@@ -13,9 +13,9 @@
   --font-body: var(--font-body);
 }
 
-body {
+html, body {
   background-color: theme('colors.bg.main');
   color: theme('colors.text.primary');
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }

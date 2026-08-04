@@ -106,7 +106,7 @@ router.post('/login-pin', async (req: Request, res: Response) => {
       }
     }
 
-    const token = jwt.sign({ id: user.id, role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, role }, JWT_SECRET, { expiresIn: '365d' });
     res.json({ token, user: { id: user.id, phone, role, name: user.name } });
   } catch (error: any) {
     logger.error('Login error', error);
@@ -178,7 +178,7 @@ router.post('/register-pin', async (req: Request, res: Response) => {
 
     await client.query('COMMIT');
     
-    const token = jwt.sign({ id: user.id, role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, role }, JWT_SECRET, { expiresIn: '365d' });
     res.json({ token, user: { id: user.id, phone, role, name: user.name } });
   } catch (error: any) {
     if (client) await client.query('ROLLBACK');

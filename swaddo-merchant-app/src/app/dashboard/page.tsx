@@ -20,7 +20,12 @@ export default function Dashboard() {
   const { data: ordersRes, mutate: mutateOrders } = useSWR('/orders?limit=100', fetcher);
 
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('soundPermission') === 'granted';
+    }
+    return false;
+  });
   const [incomingOrder, setIncomingOrder] = useState<any>(null);
   const [stallInfo, setStallInfo] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'new'|'preparing'|'ready'|'out_for_delivery'|'completed'|'past'>('new');
@@ -124,16 +129,26 @@ export default function Dashboard() {
                }, false);
             }
             
-            if (incomingOrder && incomingOrder.id === update.id && update.status !== 'pending') {
-               setIncomingOrder(null);
-               if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
-            }
+            // Fix closure bug by using a state updater function for incomingOrder
+            setIncomingOrder((prevIncoming: any) => {
+               if (prevIncoming && (prevIncoming.id === update.id || prevIncoming.id === update.orderId) && update.status !== 'pending') {
+                  if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
+                  return null;
+               }
+               return prevIncoming;
+            });
             return { ...currentData, data: newOrders };
           } else {
             if (update.status === 'pending') {
               setIncomingOrder(update);
               if (alarmAudio.current) {
-                alarmAudio.current.play().catch((e: any) => console.log('Audio play blocked:', e));
+                alarmAudio.current.play().catch((e: any) => {
+                  console.log('Audio play blocked:', e);
+                  setSoundEnabled(false);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('soundPermission', 'denied');
+                  }
+                });
               }
               mutateStats((s: any) => {
                 if (!s) return s;
@@ -223,6 +238,9 @@ export default function Dashboard() {
               <button 
                 onClick={() => {
                   setSoundEnabled(true);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('soundPermission', 'granted');
+                  }
                   if (alarmAudio.current) {
                     alarmAudio.current.play().then(() => {
                       if (alarmAudio.current) {
