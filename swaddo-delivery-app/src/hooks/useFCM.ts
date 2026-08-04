@@ -9,10 +9,11 @@ export const useFCM = () => {
         const token = await requestNotificationPermission();
         if (token) {
           console.log('FCM Token generated:', token);
-          // Send to backend
-          await api.post('/auth/fcm-token', { token }).catch(() => {
-            console.warn("Could not save FCM token to backend");
-          });
+          // Send to backend only if authenticated
+          const authToken = typeof window !== 'undefined' ? localStorage.getItem('swaddo_delivery_token') : null;
+          if (authToken) {
+            await api.post('/auth/fcm-token', { token }).catch(() => {});
+          }
         }
       } catch (err) {
         console.error('Failed to setup FCM:', err);
