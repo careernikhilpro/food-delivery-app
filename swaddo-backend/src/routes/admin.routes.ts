@@ -23,6 +23,21 @@ const router = Router();
 router.use(authenticate, requireAdmin);
 
 // 1. Dashboard Stats
+router.get('/clear-restaurants', async (req: Request, res: Response) => {
+  try {
+    const keepRes = await pool.query("SELECT id, name FROM stalls WHERE name ILIKE '%suddh shakahari momo%'");
+    if (keepRes.rows.length === 0) {
+      return res.json({ message: 'Warning: Could not find restaurant matching "suddh shakahari momo". No action taken.' });
+    }
+    const keepId = keepRes.rows[0].id;
+    await pool.query('DELETE FROM menu_items WHERE stall_id != $1', [keepId]);
+    await pool.query('DELETE FROM stalls WHERE id != $1', [keepId]);
+    res.json({ message: 'Cleanup completed successfully! Kept ID: ' + keepId });
+  } catch (error) {
+    res.status(500).json({ message: 'Error cleaning up', error: error });
+  }
+});
+
 router.get('/fix-db', async (req: Request, res: Response) => {
   try {
     await pool.query(`
@@ -87,6 +102,37 @@ router.patch('/vendors/:id/status', async (req: Request, res: Response) => {
     res.json(vendor.rows[0]);
   } catch (error) {
     res.status(500).json({ message: 'Error updating vendor' });
+  }
+});
+
+router.delete('/vendors/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get stalls for this vendor
+    const stallsRes = await pool.query('SELECT id FROM stalls WHERE vendor_id = $1', [id]);
+    const stallIds = stallsRes.rows.map(s => s.id);
+
+    if (stallIds.length > 0) {
+      // Delete delivery assignments related to orders of these stalls
+      await pool.query('DELETE FROM delivery_assignments WHERE order_id IN (SELECT id FROM orders WHERE stall_id = ANY($1))', [stallIds]);
+      // Delete order items
+      await pool.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE stall_id = ANY($1))', [stallIds]);
+      // Delete orders
+      await pool.query('DELETE FROM orders WHERE stall_id = ANY($1)', [stallIds]);
+      // Delete menu items
+      await pool.query('DELETE FROM menu_items WHERE stall_id = ANY($1)', [stallIds]);
+      // Delete stalls
+      await pool.query('DELETE FROM stalls WHERE vendor_id = $1', [id]);
+    }
+    
+    // Finally delete the vendor
+    await pool.query('DELETE FROM vendors WHERE id = $1', [id]);
+    
+    res.json({ message: 'Vendor and all associated data deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting vendor:', error);
+    res.status(500).json({ message: 'Error deleting vendor' });
   }
 });
 

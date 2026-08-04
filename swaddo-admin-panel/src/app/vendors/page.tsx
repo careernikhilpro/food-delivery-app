@@ -41,6 +41,31 @@ export default function Vendors() {
     fetchVendors();
   }, []);
 
+  const handleStatusToggle = async (vendorId: number, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await api.patch(`/admin/vendors/${vendorId}/status`, { status: newStatus });
+      fetchVendors();
+      toast.success(`Vendor marked as ${newStatus}`);
+    } catch (error) {
+      toast.error('Failed to update vendor status');
+    }
+  };
+
+  const handleDeleteVendor = async (vendorId: number) => {
+    if (!window.confirm("Are you sure you want to delete this vendor and all their stalls, menu items, and past orders? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/admin/vendors/${vendorId}`);
+      toast.success("Vendor and all related data deleted successfully");
+      fetchVendors();
+    } catch (error) {
+      toast.error("Failed to delete vendor");
+    }
+  };
+
   const fetchVendors = async () => {
     try {
       const res = await api.get("/admin/vendors");
@@ -218,12 +243,21 @@ export default function Vendors() {
               </div>
             </div>
 
-            <button 
-              onClick={() => handleViewDetails(v)}
-              className="w-full mt-6 py-2.5 bg-bg-main border border-border-subtle text-text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/20 rounded-xl font-bold transition-colors"
-            >
-              View Stall & Manage Menu
-            </button>
+            <div className="flex gap-2 mt-6">
+              <button 
+                onClick={() => handleViewDetails(v)}
+                className="flex-1 py-2.5 bg-bg-main border border-border-subtle text-text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/20 rounded-xl font-bold transition-colors"
+              >
+                Manage Menu
+              </button>
+              <button 
+                onClick={() => handleDeleteVendor(v.id)}
+                className="px-4 py-2.5 bg-bg-main border border-border-subtle text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl font-bold transition-colors"
+                title="Delete Vendor"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
