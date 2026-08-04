@@ -336,7 +336,6 @@ router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunc
       WHERE CAST(m.price as numeric) <= 99 
         AND m.is_available = true
       ORDER BY RANDOM()
-      LIMIT 10
     `);
     res.json({ data: itemsRes.rows });
   } catch (err) {

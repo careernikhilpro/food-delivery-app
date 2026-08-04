@@ -52,6 +52,7 @@ export default function Home() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   const [stalls, setStalls] = useState<any[]>([]);
+  const [mealsUnder99, setMealsUnder99] = useState<any[]>([]);
   const [variantModal, setVariantModal] = useState<any>({ isOpen: false, stallId: '', stallName: '', item: null });
 
   const [bannerRefreshKey, setBannerRefreshKey] = useState(0);
@@ -442,26 +443,22 @@ export default function Home() {
                   </div>
                 </div>
                 
-                {/* Content Area */}
-                <div className="p-3 pt-5">
-                  <div className="flex items-center gap-1 mb-1.5">
-                    <div className={`w-3 h-3 border-[1.5px] rounded-[3px] flex items-center justify-center shrink-0 ${item.is_veg ? 'border-[#00A14F]' : 'border-[#8B3A1A]'}`}>
+                {/* Info Area */}
+                <div className="px-2.5 pt-4 pb-3 flex flex-col gap-0.5 bg-white rounded-b-2xl relative z-10">
+                  <p className="text-[11px] font-medium text-gray-500 leading-tight truncate">{item.stall_name}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className={`shrink-0 w-[10px] h-[10px] border flex items-center justify-center rounded-[2px] ${item.is_veg ? 'border-[#00A14F]' : 'border-[#8B3A1A]'}`}>
                       {item.is_veg ? (
                         <div className="w-1.5 h-1.5 bg-[#00A14F] rounded-full"></div>
                       ) : (
-                        <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] border-b-[#8B3A1A] mt-[1px]"></div>
+                        <div className="w-0 h-0 border-l-[2px] border-l-transparent border-r-[2px] border-r-transparent border-b-[4px] border-b-[#8B3A1A] mt-[1px]"></div>
                       )}
                     </div>
-                    <span className="text-[11px] font-bold text-gray-500 truncate">{item.stall_name}</span>
+                    <h3 className="font-bold text-[13px] text-gray-900 leading-tight truncate">{item.name}</h3>
                   </div>
-                  
-                  <h3 className="font-extrabold text-[14px] text-gray-900 leading-tight mb-2 truncate">
-                    {item.name}
-                  </h3>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-[15px] text-gray-900 leading-none">₹{item.price}</span>
-                    <span className="text-[12px] font-bold text-gray-400 line-through leading-none">₹{Math.round(item.price * 1.2)}</span>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[12px] font-semibold text-gray-400 line-through">₹{Math.round(item.price * 1.2)}</span>
+                    <span className="text-[11px] font-black text-[#FF007F] bg-[#FFF0F5] px-1.5 py-0.5 rounded-md">₹{item.price}</span>
                   </div>
                 </div>
              </div>
