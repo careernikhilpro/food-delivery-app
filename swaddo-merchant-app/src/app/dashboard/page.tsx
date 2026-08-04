@@ -132,7 +132,6 @@ export default function Dashboard() {
             // Fix closure bug by using a state updater function for incomingOrder
             setIncomingOrder((prevIncoming: any) => {
                if (prevIncoming && (prevIncoming.id === update.id || prevIncoming.id === update.orderId) && update.status !== 'pending') {
-                  if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
                   return null;
                }
                return prevIncoming;
@@ -141,15 +140,6 @@ export default function Dashboard() {
           } else {
             if (update.status === 'pending') {
               setIncomingOrder(update);
-              if (alarmAudio.current) {
-                alarmAudio.current.play().catch((e: any) => {
-                  console.log('Audio play blocked:', e);
-                  setSoundEnabled(false);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('soundPermission', 'denied');
-                  }
-                });
-              }
               mutateStats((s: any) => {
                 if (!s) return s;
                 return { ...s, ordersToday: (s.ordersToday || 0) + 1 };
@@ -167,13 +157,24 @@ export default function Dashboard() {
         disconnectSocket();
       }
     };
-  }, [stallRes?.id]);
+  }, [stallRes?.id, mutateOrders, mutateStats]);
+
+  // Robust State-Driven Ringing Logic
+  useEffect(() => {
+    const hasPending = orders.some(o => o.status === 'pending');
+    if (hasPending && soundEnabled && alarmAudio.current && alarmAudio.current.paused) {
+      alarmAudio.current.play().catch(e => {
+        console.log('Autoplay blocked:', e);
+      });
+    } else if (!hasPending && alarmAudio.current && !alarmAudio.current.paused) {
+      alarmAudio.current.pause();
+      alarmAudio.current.currentTime = 0;
+    }
+  }, [orders, soundEnabled]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string, pin?: string) => {
-    // Stop alarm if accepting/rejecting the incoming order
     if (incomingOrder && incomingOrder.id === orderId) {
       setIncomingOrder(null);
-      if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
     }
     
     // Call backend first if PIN is required to avoid false optimistic updates

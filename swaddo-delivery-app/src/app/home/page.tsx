@@ -121,15 +121,11 @@ export default function Home() {
           setTimer(300); // 5 minutes to match backend timeout
           localStorage.setItem("pendingJob", JSON.stringify(data));
           localStorage.setItem("pendingTimer", (Math.floor(Date.now() / 1000) + 300).toString());
-          if (alarmAudio.current) {
-            alarmAudio.current.play().catch(e => console.log('Audio play blocked:', e));
-          }
         });
 
         socket?.on("job_revoked", (payload) => {
           setNewJob((prev: any) => {
             if (prev && prev.id === payload.id) {
-              if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
               return null;
             }
             return prev;
@@ -202,14 +198,18 @@ export default function Home() {
 
   // Timer auto-decline logic REMOVED intentionally 
   // so the order stays on screen indefinitely until the rider acts on it.
+  // Robust State-Driven Ringing Logic
   useEffect(() => {
-    // We keep this hook empty or handle minimal things,
-    // previously this had auto-decline logic.
-  }, [newJob]);
+    if (newJob && soundEnabled && alarmAudio.current && alarmAudio.current.paused) {
+      alarmAudio.current.play().catch(e => console.log('Autoplay blocked:', e));
+    } else if (!newJob && alarmAudio.current && !alarmAudio.current.paused) {
+      alarmAudio.current.pause();
+      alarmAudio.current.currentTime = 0;
+    }
+  }, [newJob, soundEnabled]);
 
   const acceptJob = async () => {
     if (!newJob) return;
-    if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
     try {
       const res = await api.patch(`/delivery/assignments/${newJob.id}/accept`, {
         riderId: riderIdRef.current,
@@ -236,7 +236,6 @@ export default function Home() {
     setNewJob(null);
     localStorage.removeItem("pendingJob");
     localStorage.removeItem("pendingTimer");
-    if (alarmAudio.current) { alarmAudio.current.pause(); alarmAudio.current.currentTime = 0; }
   };
 
   if (!mounted) return null; // Prevent UI flicker on mount
