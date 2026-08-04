@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { routeETA } from './maps/mapProvider';
+import { notificationService } from './notification';
 
 interface OnlineRider {
   socketId: string;
@@ -190,6 +191,13 @@ export class AssignmentManager {
     
     if (this.io) {
       this.io.to(`rider_${nearestRider.riderId}`).emit('job_offer', jobWithDistance);
+      // Send a high-priority FCM Push Notification so the app rings in the background
+      notificationService.sendToRider(
+        parseInt(nearestRider.riderId),
+        'New Delivery Assignment! 🛵',
+        `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${pickupPayout}`,
+        jobWithDistance
+      );
     }
     
     console.log(`[Assignment] Job ${jobPayload.id} offered to nearest rider ${nearestRider.riderId} (Distance: ${actualPickupDistance.toFixed(2)} km)`);

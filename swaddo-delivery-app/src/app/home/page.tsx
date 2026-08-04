@@ -192,9 +192,27 @@ export default function Home() {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       disconnectSocket();
       if (pingTimer) clearInterval(pingTimer);
+      // Remove listener inside the useEffect cleanup, but since we defined it conditionally in if(isOnline),
+      // we must find a way to remove it. A simpler way is defining it globally inside the component effect.
+      // Actually, removing by reference is safer if we just define it in the same scope.
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, mounted]);
+
+  // Make sure we remove the event listener safely
+  useEffect(() => {
+    const handleCustomNewJob = (e: any) => {
+      if (isOnline) {
+        console.log('Custom new job event received:', e.detail);
+        setNewJob(e.detail);
+        setTimer(300);
+        localStorage.setItem("pendingJob", JSON.stringify(e.detail));
+        localStorage.setItem("pendingTimer", (Math.floor(Date.now() / 1000) + 300).toString());
+      }
+    };
+    window.addEventListener('swaddo_new_job', handleCustomNewJob);
+    return () => window.removeEventListener('swaddo_new_job', handleCustomNewJob);
+  }, [isOnline]);
 
   // Timer auto-decline logic REMOVED intentionally 
   // so the order stays on screen indefinitely until the rider acts on it.

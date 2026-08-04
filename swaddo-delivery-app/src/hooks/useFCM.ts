@@ -24,6 +24,10 @@ export const useFCM = () => {
 
     onForegroundMessage((payload) => {
       console.log('Foreground push notification received:', payload);
+      // Fire an event that the Home component can listen to
+      if (payload.data) {
+        window.dispatchEvent(new CustomEvent('swaddo_new_job', { detail: payload.data }));
+      }
       if (payload.notification) {
         if ('Notification' in window && Notification.permission === 'granted') {
            new Notification(payload.notification.title, { body: payload.notification.body });
@@ -32,5 +36,24 @@ export const useFCM = () => {
         }
       }
     });
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'BACKGROUND_NEW_ORDER') {
+        console.log('Woken up by background SW message!', event.data.payload);
+        if (event.data.payload?.data) {
+          window.dispatchEvent(new CustomEvent('swaddo_new_job', { detail: event.data.payload.data }));
+        }
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+      }
+    };
   }, []);
 };

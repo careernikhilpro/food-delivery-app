@@ -24,8 +24,22 @@ if (firebaseConfig.apiKey !== "REPLACE_ME") {
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
       body: payload.notification.body,
-      icon: '/icon.png'
+      icon: '/icon.png',
+      vibrate: [500, 250, 500, 250, 500, 250, 500, 250, 500], // Intense vibration for new orders
+      tag: 'swaddo-new-order',
+      renotify: true,
+      requireInteraction: true
     };
+
+    // Wake up any backgrounded tabs to fetch the new order and ring
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if ('postMessage' in client) {
+           client.postMessage({ type: 'BACKGROUND_NEW_ORDER', payload: payload });
+        }
+      }
+    });
 
     self.registration.showNotification(notificationTitle, notificationOptions);
   });
