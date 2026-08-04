@@ -75,23 +75,27 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    api.get('/stalls').then(res => {
-      if (res.data && res.data.data) {
+    // Fetch Stalls
+    api.get("/stalls").then((res) => {
+      if (res.data && Array.isArray(res.data.data)) {
         let backendStalls = res.data.data.map((stall: any) => ({
           id: stall.id,
           name: stall.name,
-          isAd: false,
-          discountText: stall.active_offer_title || "20% LOWER PRICES",
-          showStamp: true,
           rating: Number(stall.rating || 4.1).toFixed(1),
           deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
           categories: stall.tags || "Food",
           deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
         }));
-        
         setStalls(backendStalls);
       }
-    }).catch(err => console.error("Error fetching stalls:", err));
+    }).catch((err) => console.error("Error fetching stalls:", err));
+
+    // Fetch Meals Under 99
+    api.get("/stalls/meals-under-99").then((res) => {
+      if (res.data && Array.isArray(res.data.data)) {
+        setMealsUnder99(res.data.data);
+      }
+    }).catch(err => console.error("Error fetching meals under 99:", err));
   }, []);
 
   useEffect(() => {
@@ -365,17 +369,26 @@ export default function Home() {
 
         {/* Horizontal Stalls Slider */}
         <div className="flex overflow-x-auto hide-scrollbar gap-3 px-4 pb-4 snap-x">
-          {[
-            { brand: "Domino's Pizza", item: "Garlic Breadsticks", price: 99, oldPrice: 125, rating: 4.0, img: "/categories/pizza.png" },
-            { brand: "Frozen Bottle - Milkshakes, ...", item: "Peri Peri Maggi", price: 69, oldPrice: 159, rating: 5.0, img: "/categories/Noodles.png" },
-            { brand: "SRUSHTI", item: "Jolada Rotti", price: 40, oldPrice: 80, rating: 4.5, img: "/categories/paratha.png" },
-          ].map((item, idx) => (
-             <div key={idx} className="flex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2">
+          {mealsUnder99.map((item, idx) => {
+             const parsedPrice = Number((item.price || "0").toString().replace(/[^0-9]/g, ''));
+             let quantity = 0;
+             if (cart.stallId === item.stall_id) {
+               if (item.has_variants) {
+                 const prefix = String(item.id) + '_';
+                 quantity = cart.items.filter(i => String(i.id).startsWith(prefix)).reduce((sum, i) => sum + i.quantity, 0);
+               } else {
+                 const isAdded = cart.items.find(i => String(i.id) === String(item.id));
+                 quantity = isAdded ? isAdded.quantity : 0;
+               }
+             }
+
+             return (
+             <div key={item.id} className="flex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2">
                  
                 {/* Image Area */}
                 <div className="relative w-full h-[110px] bg-blue-50/50 rounded-t-2xl overflow-visible">
                   <div className="absolute inset-0 rounded-t-2xl overflow-hidden">
-                     <Image src={item.img} alt="Food" fill className="object-cover" />
+                     <Image src={item.image_url || "/categories/burger.png"} alt={item.name} fill className="object-cover" />
                   </div>
                   
                   {/* Popular Tag */}
@@ -384,15 +397,15 @@ export default function Home() {
                   </div>
                   
                   {/* Plus Button */}
-                  {cart.stallId === "meals_99_stall" && cart.items.find(i => i.id === idx.toString()) ? (
+                  {quantity > 0 && !item.has_variants ? (
                     <div className="absolute -bottom-4 right-3 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                       <button 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity("meals_99_stall", "Meals under ₹99", { id: idx.toString(), name: item.item, price: item.price, markup: 0 }, -1); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(item.stall_id, item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, -1); }}
                         className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
                       ><Minus size={14} /></button>
-                      <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{cart.items.find(i => i.id === idx.toString())?.quantity}</span>
+                      <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{quantity}</span>
                       <button 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity("meals_99_stall", "Meals under ₹99", { id: idx.toString(), name: item.item, price: item.price, markup: 0 }, 1); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(item.stall_id, item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, 1); }}
                         className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
                       ><Plus size={14} /></button>
                     </div>
@@ -401,42 +414,58 @@ export default function Home() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        updateQuantity(
-                          "meals_99_stall", 
-                          "Meals under ₹99", 
-                          { id: idx.toString(), name: item.item, price: item.price, markup: 0 }, 
-                          1
-                        );
+                        if (item.has_variants) {
+                          setVariantModal({ isOpen: true, stallId: item.stall_id.toString(), stallName: item.stall_name, item });
+                        } else {
+                          updateQuantity(
+                            item.stall_id.toString(), 
+                            item.stall_name, 
+                            { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, 
+                            1
+                          );
+                        }
                       }}
                       className="absolute -bottom-4 right-3 w-7 h-7 bg-white border-2 border-pink-100 text-[#FF007F] shadow-sm rounded-full flex items-center justify-center text-lg font-semibold hover:bg-pink-50 transition-colors z-20"
                     >
-                      <Plus size={16} />
+                      {item.has_variants ? (
+                        <span className="text-[10px] font-bold">ADD</span>
+                      ) : (
+                        <Plus size={16} />
+                      )}
                     </button>
                   )}
                   
                   {/* Rating Tag */}
                   <div className="absolute -bottom-2.5 left-2 bg-white text-[#00A14F] font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-sm border border-gray-100 flex items-center gap-0.5 z-20">
                     <Star size={10} className="fill-[#00A14F]" />
-                    {item.rating.toFixed(1)}
+                    {Number(item.stall_rating || 4.5).toFixed(1)}
                   </div>
                 </div>
-
-                {/* Info Area */}
-                <div className="px-2.5 pt-4 pb-3 flex flex-col gap-0.5 bg-white rounded-b-2xl relative z-10">
-                  <p className="text-[11px] font-medium text-gray-500 leading-tight truncate">{item.brand}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <div className="shrink-0 w-[10px] h-[10px] border border-[#00A14F] flex items-center justify-center rounded-[2px]">
-                      <div className="w-1.5 h-1.5 bg-[#00A14F] rounded-full"></div>
+                
+                {/* Content Area */}
+                <div className="p-3 pt-5">
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <div className={`w-3 h-3 border-[1.5px] rounded-[3px] flex items-center justify-center shrink-0 ${item.is_veg ? 'border-[#00A14F]' : 'border-[#8B3A1A]'}`}>
+                      {item.is_veg ? (
+                        <div className="w-1.5 h-1.5 bg-[#00A14F] rounded-full"></div>
+                      ) : (
+                        <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] border-b-[#8B3A1A] mt-[1px]"></div>
+                      )}
                     </div>
-                    <h3 className="font-bold text-[13px] text-gray-900 leading-tight truncate">{item.item}</h3>
+                    <span className="text-[11px] font-bold text-gray-500 truncate">{item.stall_name}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className="text-[12px] font-semibold text-gray-400 line-through">₹{item.oldPrice}</span>
-                    <span className="text-[11px] font-black text-[#FF007F] bg-[#FFF0F5] px-1.5 py-0.5 rounded-md">₹{item.price}</span>
+                  
+                  <h3 className="font-extrabold text-[14px] text-gray-900 leading-tight mb-2 truncate">
+                    {item.name}
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-[15px] text-gray-900 leading-none">₹{item.price}</span>
+                    <span className="text-[12px] font-bold text-gray-400 line-through leading-none">₹{Math.round(item.price * 1.2)}</span>
                   </div>
                 </div>
              </div>
-          ))}
+          )})}
         </div>
       </div>
 

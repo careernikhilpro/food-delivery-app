@@ -323,7 +323,28 @@ router.get('/search/all', async (req: Request, res: Response, next: NextFunction
   }
 });
 
-// List Stalls (Public)
+// Meals Under 99
+router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const itemsRes = await pool.query(`
+      SELECT 
+        m.id, m.stall_id, m.name, m.description, m.price, m.image_url, 
+        m.category, m.is_veg, m.is_available, m.has_variants, m.variants,
+        s.name as stall_name, s.rating as stall_rating
+      FROM menu_items m
+      JOIN stalls s ON m.stall_id = s.id
+      WHERE CAST(m.price as numeric) <= 99 
+        AND m.is_available = true
+      ORDER BY RANDOM()
+      LIMIT 10
+    `);
+    res.json({ data: itemsRes.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// All Stalls (Public)
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
