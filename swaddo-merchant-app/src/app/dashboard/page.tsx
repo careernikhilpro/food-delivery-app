@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,7 @@ import Link from "next/link";
 import { CheckCircle2, Clock, XCircle, Store, ChefHat, PackageCheck, AlertCircle, MapPin, Navigation, BellRing, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function Dashboard() {
+function DashboardContent() {
   useAuth();
   
   // SWR Data Fetching
@@ -244,6 +244,7 @@ export default function Dashboard() {
       </div>
     );
   }
+
 
   return (
     <div className="flex flex-col h-[calc(100dvh-80px)] pt-4 max-w-md w-full mx-auto relative bg-[#F8FAFC] overflow-hidden">
@@ -726,5 +727,13 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

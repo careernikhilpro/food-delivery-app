@@ -4,23 +4,22 @@
   "description": "Deliver orders for SwaDDo. v2",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#E2401C",
-  "icons": [
+  "background_color": "#064E3B",
+  "theme_color": "#10B981",
     {
-      "src": "/icon.svg",
+      "src": "/icon.png",
       "sizes": "any",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-192x192.png",
+      "src": "/icon.png?s=192",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icon.png?s=512",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

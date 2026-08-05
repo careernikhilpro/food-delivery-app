@@ -8,6 +8,26 @@ import { routeETA } from '../services/maps/mapProvider';
 import { emitOrderStatusUpdate } from '../utils/socketEmitters';
 
 const router = Router();
+
+router.post('/profile/fcm-token', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.body; // 'token' here will be the JSON.stringify(subscription)
+    if (!token) return res.status(400).json({ message: 'Token is required' });
+    
+    await pool.query(
+      `UPDATE delivery_partners SET fcm_token = $1 WHERE user_id = $2`,
+      [token, req.user!.id]
+    );
+    res.json({ message: 'Web Push subscription registered' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/profile/vapid-key', authenticate, requireDelivery, async (req: AuthRequest, res: Response) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
 router.get('/profile', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
@@ -49,9 +69,12 @@ router.get('/profile', authenticate, requireDelivery, async (req: AuthRequest, r
       active: partner.is_active,
       kycStatus: partner.is_active ? 'verified' : 'pending',
       documents: {
-        aadhar: partner.id_proof_status || 'verified',
-        license: partner.dl_status || 'verified',
-        rc: partner.rc_status || 'verified'
+        aadharStatus: partner.id_proof_status || 'pending',
+        licenseStatus: partner.dl_status || 'pending',
+        rcStatus: partner.rc_status || 'pending',
+        aadharNumber: partner.aadhar_number || '',
+        dlNumber: partner.dl_number || '',
+        rcNumber: partner.rc_number || ''
       },
       bankDetails: {
         bankName: partner.bank_name || '',
@@ -90,6 +113,51 @@ router.patch('/profile', authenticate, requireDelivery, async (req: AuthRequest,
     }
     
     res.json({ message: 'Profile updated successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/profile/kyc', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const { aadharNumber, dlNumber, rcNumber } = req.body;
+    
+    // Check if they are already filled
+    const partnerRes = await pool.query(
+      `SELECT aadhar_number, dl_number, rc_number FROM delivery_partners WHERE user_id = $1`,
+      [userId]
+    );
+    
+    if (partnerRes.rows.length === 0) {
+      // Create the delivery partner row if it somehow doesn't exist
+      await pool.query(
+        `INSERT INTO delivery_partners (user_id, aadhar_number, dl_number, rc_number, id_proof_status, dl_status, rc_status, is_active)
+         VALUES ($1, $2, $3, $4, 'verified', 'verified', 'verified', false)`,
+        [userId, aadharNumber, dlNumber, rcNumber]
+      );
+      return res.json({ message: 'KYC details submitted successfully' });
+    }
+    
+    const p = partnerRes.rows[0];
+    
+    if (p.aadhar_number || p.dl_number || p.rc_number) {
+      return res.status(400).json({ message: 'KYC details have already been submitted. You can only submit them once.' });
+    }
+    
+    if (!aadharNumber || !dlNumber || !rcNumber) {
+      return res.status(400).json({ message: 'Please provide all KYC document numbers.' });
+    }
+
+    await pool.query(
+      `UPDATE delivery_partners 
+       SET aadhar_number = $1, dl_number = $2, rc_number = $3,
+           id_proof_status = 'verified', dl_status = 'verified', rc_status = 'verified'
+       WHERE user_id = $4`,
+      [aadharNumber, dlNumber, rcNumber, userId]
+    );
+    
+    res.json({ message: 'KYC details submitted successfully' });
   } catch (err) {
     next(err);
   }
@@ -206,6 +274,11 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       
       // Emit to targeted channels via central helper!
       emitOrderStatusUpdate(req.app, order.id, order.stall_id, 'heading_to_stall', extraData);
+      
+      // Emit to the specific rider so their other devices sync immediately
+      if (req.body.riderId) {
+        req.app.get('io').to(`rider_${req.body.riderId}`).emit('job_accepted_by_me', order);
+      }
     }
     
     res.json({ message: 'Job accepted successfully' });
@@ -246,7 +319,7 @@ router.get('/dashboard', authenticate, requireDelivery, async (req: AuthRequest,
     const sessionRes = await pool.query(`
       SELECT online_minutes 
       FROM rider_daily_stats 
-      WHERE delivery_partner_id = $1 AND date = CURRENT_DATE
+      WHERE delivery_partner_id = $1 AND date = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')
     `, [partnerId]);
     
     let totalMinutes = sessionRes.rows.length > 0 ? sessionRes.rows[0].online_minutes : 0;
@@ -322,7 +395,7 @@ router.post('/ping-time', authenticate, requireDelivery, async (req: AuthRequest
 
     await pool.query(`
       INSERT INTO rider_daily_stats (delivery_partner_id, date, online_minutes) 
-      VALUES ($1, CURRENT_DATE, 1) 
+      VALUES ($1, DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata'), 1) 
       ON CONFLICT (delivery_partner_id, date) 
       DO UPDATE SET online_minutes = rider_daily_stats.online_minutes + 1
     `, [partnerId]);
@@ -374,31 +447,68 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
       const diffTime = Math.abs(now.getTime() - dDate.getTime());
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       
-      const amount = parseFloat(d.earnings_amount || '0');
-
-      if (diffDays === 0 && dDate.getDate() === now.getDate()) todayEarnings += amount;
-      if (diffDays < 7) weekEarnings += amount;
-      if (dDate.getMonth() === now.getMonth() && dDate.getFullYear() === now.getFullYear()) monthEarnings += amount;
-
-      const dateStr = dDate.toISOString().split('T')[0];
-      const dayData = dailyBreakdown.find(day => day.date === dateStr);
-      if (dayData) dayData.earnings += amount;
-
       const pickupKm = parseFloat(d.pickup_distance_km || '0');
       const deliveryKm = parseFloat(d.delivery_distance_km || '0');
       const totalDist = (pickupKm + deliveryKm).toFixed(1);
       
-      const pickupFee = Math.max(5, Math.round(pickupKm * 3));
-      const dropFee = Math.max(10, Math.round(deliveryKm * 5));
-      const returnFee = 0; // standard placeholder
+      let pickupFee = 0;
+      if (pickupKm <= 0.4) pickupFee = 0;
+      else if (pickupKm <= 0.6) pickupFee = 1;
+      else if (pickupKm <= 0.8) pickupFee = 2;
+      else if (pickupKm <= 1.2) pickupFee = 3;
+      else if (pickupKm <= 1.8) pickupFee = 4;
+      else if (pickupKm <= 2.4) pickupFee = 5;
+      else if (pickupKm <= 3.0) pickupFee = 6;
+      else if (pickupKm <= 3.5) pickupFee = 7;
+      else if (pickupKm <= 4.0) pickupFee = 8;
+      else pickupFee = 10;
       
+      let dropFee = 15;
+      if (deliveryKm <= 1.4) dropFee = 15;
+      else if (deliveryKm <= 2.0) dropFee = 15 + ((deliveryKm - 1.4) / 0.6) * 4;
+      else if (deliveryKm <= 3.0) dropFee = 19 + ((deliveryKm - 2.0) / 1.0) * 5;
+      else if (deliveryKm <= 4.0) dropFee = 24 + ((deliveryKm - 3.0) / 1.0) * 6;
+      else dropFee = 30 + ((deliveryKm - 4.0) / 1.0) * 6;
+      dropFee = Math.round(dropFee * 100) / 100;
+      
+      let returnFee = 0;
+      if (deliveryKm > 3.0 && deliveryKm <= 3.5) {
+        returnFee = ((deliveryKm - 3.0) / 0.5) * 3;
+      } else if (deliveryKm > 3.5) {
+        const extraDist = Math.min(deliveryKm, 4.5) - 3.5;
+        returnFee = 3 + (extraDist / 1.0) * 10; 
+      }
+      returnFee = Math.round(returnFee * 100) / 100;
+
+      const calculatedAmount = Math.round((pickupFee + dropFee + returnFee) * 100) / 100;
+      const historicalAmount = parseFloat(d.earnings_amount);
+      const isHistoricalValid = !isNaN(historicalAmount) && historicalAmount > 0;
+      
+      let finalAmount = calculatedAmount;
+      if (isHistoricalValid) {
+        finalAmount = historicalAmount;
+        // Adjust dropFee so the breakdown perfectly matches the saved amount
+        dropFee = Math.round((finalAmount - pickupFee - returnFee) * 100) / 100;
+      }
+
+      if (diffDays === 0 && dDate.getDate() === now.getDate()) todayEarnings += finalAmount;
+      if (diffDays < 7) weekEarnings += finalAmount;
+      if (dDate.getMonth() === now.getMonth() && dDate.getFullYear() === now.getFullYear()) monthEarnings += finalAmount;
+
+      const dateStr = dDate.toISOString().split('T')[0];
+      const dayData = dailyBreakdown.find(day => day.date === dateStr);
+      if (dayData) dayData.earnings += finalAmount;
+
       const isCod = d.payment_method === 'cod';
+
+      // Format time correctly (e.g. 06:05 PM)
+      const timeString = dDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
       return {
         id: d.id.toString(),
-        date: diffDays === 0 ? `Today, ${dDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : dDate.toLocaleDateString(),
+        date: diffDays === 0 ? `Today, ${timeString}` : `${dDate.toLocaleDateString()} • ${timeString}`,
         stall: d.stall_name,
-        amount: amount,
+        amount: finalAmount,
         distance: `${totalDist} km`,
         breakdown: {
           pickup: pickupFee,

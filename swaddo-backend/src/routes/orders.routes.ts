@@ -388,18 +388,11 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
     if (status === 'delivered') {
       await pool.query(
         `UPDATE delivery_assignments 
-         SET status = 'completed', 
-             earnings_amount = CASE 
-                WHEN delivery_distance_km <= 2.4 THEN 20.00
-                WHEN delivery_distance_km <= 3.0 THEN 25.00
-                WHEN delivery_distance_km <= 4.0 THEN 30.00
-                WHEN delivery_distance_km <= 5.0 THEN 35.00
-                ELSE 35.00 + CEIL(delivery_distance_km - 5.0) * 5.00
-             END
+         SET status = 'completed'
          WHERE order_id = $1`,
         [order.id]
       );
-      console.log(`[Database] Delivery assignment for order ${order.id} marked completed with earnings.`);
+      console.log(`[Database] Delivery assignment for order ${order.id} marked completed.`);
     }
 
     if (status === 'delivered' || status === 'cancelled') {

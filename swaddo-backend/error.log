@@ -1,0 +1,4 @@
+2026-08-05T06:20:13.324Z error: column "aadhar_number" does not exist
+    at D:\swaddo-main\swaddo-main\swaddo-backend\node_modules\pg-pool\index.js:45:11
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at D:\swaddo-main\swaddo-main\swaddo-backend\src\routes\delivery.routes.ts:107:24

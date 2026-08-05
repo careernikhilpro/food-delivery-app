@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Landmark, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import AppLoader from "@/components/AppLoader";
 
 export default function FloatingCashPage() {
   useAuth();
@@ -47,7 +48,7 @@ export default function FloatingCashPage() {
   const progressPercent = Math.min((floatingCash / 2000) * 100, 100);
 
   if (loading) {
-    return <div className="min-h-screen bg-bg-main flex items-center justify-center">Loading...</div>;
+    return <AppLoader type="floating-cash" />;
   }
 
   return (

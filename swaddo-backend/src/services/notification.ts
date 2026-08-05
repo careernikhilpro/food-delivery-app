@@ -80,11 +80,12 @@ export const notificationService = {
       
       const token = result.rows[0]?.fcm_token;
       if (!token) {
-        logger.info(`No FCM token found for vendor ${vendorId}`);
+        logger.info(`No Web Push token found for vendor ${vendorId}`);
         return false;
       }
       
-      return await this.sendPush(token, title, body, data);
+      const { sendPushNotification } = require('./push');
+      return await sendPushNotification(token, title, body, data);
     } catch (error) {
       logger.error(`Error sending push to vendor ${vendorId}:`, error);
       return false;
@@ -109,20 +110,21 @@ export const notificationService = {
       }
 
       const result = await client.query(`
-        SELECT u.fcm_token 
-        FROM users u 
-        JOIN delivery_partners dp ON u.id = dp.user_id 
+        SELECT dp.fcm_token 
+        FROM delivery_partners dp 
         WHERE dp.id = $1
       `, [riderId]);
       client.release();
       
       const token = result.rows[0]?.fcm_token;
       if (!token) {
-        logger.info(`No FCM token found for rider ${riderId}`);
+        logger.info(`No Web Push token found for rider ${riderId}`);
         return false;
       }
       
-      return await this.sendPush(token, title, body, data);
+      // Import the new web push service dynamically to avoid circular dependencies
+      const { sendPushNotification } = require('./push');
+      return await sendPushNotification(token, title, body, data);
     } catch (error) {
       logger.error(`Error sending push to rider ${riderId}:`, error);
       return false;

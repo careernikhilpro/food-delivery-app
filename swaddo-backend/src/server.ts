@@ -100,6 +100,18 @@ const migrateDB = async () => {
     
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);`);
     
+    // Add KYC columns for delivery partners
+    await client.query(`
+      ALTER TABLE delivery_partners 
+      ADD COLUMN IF NOT EXISTS aadhar_number VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS dl_number VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS rc_number VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS id_proof_status VARCHAR(50) DEFAULT 'pending',
+      ADD COLUMN IF NOT EXISTS dl_status VARCHAR(50) DEFAULT 'pending',
+      ADD COLUMN IF NOT EXISTS rc_status VARCHAR(50) DEFAULT 'pending',
+      ADD COLUMN IF NOT EXISTS fcm_token TEXT;
+    `);
+    
     // Create notifications table for history
     await client.query(`
       CREATE TABLE IF NOT EXISTS notifications (

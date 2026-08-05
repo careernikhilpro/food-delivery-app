@@ -12,43 +12,34 @@ export default function Icon() {
     (
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#E2401C",
-        }}
-      >
-        <div
-          style={{
-            width: 320,
-            height: 320,
-            backgroundColor: "#FFFFFF",
-            borderRadius: 160,
             display: "flex",
+            width: "100%",
+            height: "100%",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            border: "20px solid #292524", // dark rim like the screenshot
+            background: "linear-gradient(135deg, #10B981 0%, #064E3B 100%)",
           }}
         >
-          {/* Bike Icon */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="160"
-            height="160"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#E2401C"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="18.5" cy="17.5" r="3.5" />
-            <circle cx="5.5" cy="17.5" r="3.5" />
-            <circle cx="15" cy="5" r="1" />
-            <path d="M12 17.5V14l-3-3 4-3 2 3h2" />
-          </svg>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255, 255, 255, 0.15)",
+            borderRadius: 60, // Squircle shape
+            width: 400,
+            height: 400,
+            boxShadow: "0 16px 64px rgba(0,0,0,0.3)",
+            border: "2px solid rgba(255,255,255,0.2)",
+          }}
+        >
+          <div style={{ display: "flex", fontSize: 90, fontWeight: 900, color: "white", letterSpacing: -3, lineHeight: 1 }}>Swaddo</div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 16 }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#34D399", letterSpacing: 4, textTransform: 'uppercase' }}>Delivery</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#34D399", letterSpacing: 4, textTransform: 'uppercase' }}>Partner</div>
+          </div>
         </div>
       </div>
     ),

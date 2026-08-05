@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { useState, useEffect } from "react";
+import AppLoader from "@/components/AppLoader";
 
 export default function Profile() {
   useAuth();
@@ -21,6 +22,10 @@ export default function Profile() {
   // Bank Form States
   const [bankForm, setBankForm] = useState({ bankName: '', accountName: '', accountNumber: '', ifscCode: '' });
   const [isSavingBank, setIsSavingBank] = useState(false);
+
+  // KYC Form States
+  const [kycForm, setKycForm] = useState({ aadharNumber: '', dlNumber: '', rcNumber: '' });
+  const [isSavingKyc, setIsSavingKyc] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -72,6 +77,23 @@ export default function Profile() {
     }
   };
 
+  const handleSaveKyc = async () => {
+    if (!kycForm.aadharNumber || !kycForm.dlNumber || !kycForm.rcNumber) {
+      alert("Please fill all KYC details.");
+      return;
+    }
+    try {
+      setIsSavingKyc(true);
+      await api.patch('/delivery/profile/kyc', kycForm);
+      await fetchProfile();
+    } catch (err: any) {
+      console.error("Failed to save KYC details", err);
+      alert(err.response?.data?.message || "Failed to save KYC details.");
+    } finally {
+      setIsSavingKyc(false);
+    }
+  };
+
   const handleLogout = () => {
     if (confirm("Are you sure you want to log out?")) {
       localStorage.removeItem("swaddo_delivery_token");
@@ -87,25 +109,25 @@ export default function Profile() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading Profile...</div>;
+    return <AppLoader type="profile" />;
   }
 
   return (
-    <div className="px-6 pt-8 pb-28 max-w-md mx-auto">
-      <h1 className="text-xl font-heading font-bold text-text-primary mb-6">Account</h1>
+    <div className="px-5 pt-8 pb-28 max-w-md mx-auto min-h-screen bg-[#F8FAFC]">
+      <h1 className="text-[28px] font-black tracking-tight text-slate-900 leading-none mb-6">Account</h1>
 
       {/* Partner Info Card */}
-      <div className="bg-bg-alt border border-border-subtle rounded-2xl p-6 mb-6 shadow-sm relative">
+      <div className="bg-white border border-slate-100 rounded-[24px] p-6 mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative">
         {!isEditingProfile ? (
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/20">
-              <User size={32} />
+            <div className="w-16 h-16 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981] shrink-0 border-[3px] border-[#10B981]/20">
+              <User size={28} strokeWidth={2.5} />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-heading font-bold text-text-primary">{profile?.name || "Delivery Partner"}</h2>
-              <p className="text-sm text-text-muted mt-0.5">{profile?.phone || "N/A"}</p>
-              <div className="inline-flex items-center bg-bg-main border border-border-subtle px-2 py-1 rounded-md mt-2">
-                <span className="text-xs font-bold text-text-primary">{profile?.vehicle || "Bike"}</span>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">{profile?.name || "Delivery Partner"}</h2>
+              <p className="text-[13px] font-bold text-slate-400 mt-0.5">{profile?.phone || "N/A"}</p>
+              <div className="inline-flex items-center bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-[8px] mt-2">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{profile?.vehicle || "Bike"}</span>
               </div>
             </div>
             <button 
@@ -113,7 +135,7 @@ export default function Profile() {
                 setEditForm({ name: profile?.name || '', vehicle: profile?.vehicle || '' });
                 setIsEditingProfile(true);
               }}
-              className="absolute top-4 right-4 text-primary text-sm font-bold"
+              className="absolute top-5 right-5 text-[#10B981] text-[12px] font-bold hover:text-[#059669] transition-colors uppercase tracking-wider"
             >
               Edit
             </button>
@@ -121,34 +143,34 @@ export default function Profile() {
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-text-muted mb-1 block">Full Name</label>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Full Name</label>
               <input 
                 type="text" 
                 value={editForm.name} 
                 onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                className="w-full bg-white border border-border-subtle rounded-xl px-4 py-2 text-text-primary font-medium focus:border-primary outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] outline-none transition-all"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-text-muted mb-1 block">Vehicle Details</label>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Vehicle Details</label>
               <input 
                 type="text" 
                 value={editForm.vehicle} 
                 onChange={(e) => setEditForm({...editForm, vehicle: e.target.value})}
-                className="w-full bg-white border border-border-subtle rounded-xl px-4 py-2 text-text-primary font-medium focus:border-primary outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] outline-none transition-all"
               />
             </div>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-3 pt-2">
               <button 
                 onClick={() => setIsEditingProfile(false)}
-                className="flex-1 py-2 rounded-xl font-bold text-text-muted bg-bg-subtle"
+                className="flex-1 py-3 rounded-xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleSaveProfile}
                 disabled={isSaving}
-                className="flex-1 py-2 rounded-xl font-bold text-white bg-primary disabled:opacity-50"
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-[#10B981] hover:bg-[#059669] disabled:opacity-50 transition-colors"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -157,105 +179,137 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="space-y-4 mb-10">
+      <div className="space-y-4 mb-8">
         
         {/* Documents & KYC */}
-        <div className="bg-bg-alt border border-border-subtle rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <button 
             onClick={() => toggleTab('documents')}
-            className="w-full flex items-center justify-between p-4 bg-white active:bg-bg-subtle transition-colors"
+            className="w-full flex items-center justify-between p-5 active:bg-slate-50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <FileText size={18} className="text-primary" />
-              <span className="font-heading font-bold text-text-primary text-base">Documents & KYC</span>
+              <FileText size={20} className="text-[#10B981]" strokeWidth={2.5} />
+              <span className="font-black text-slate-800 text-[16px]">Documents & KYC</span>
             </div>
-            <ChevronDown size={20} className={`text-text-muted transition-transform duration-300 ${activeTab === 'documents' ? 'rotate-180' : ''}`} />
+            <ChevronDown size={22} className={`text-slate-400 transition-transform duration-300 ${activeTab === 'documents' ? 'rotate-180' : ''}`} />
           </button>
           
           {activeTab === 'documents' && (
-            <div className="p-5 pt-0 border-t border-border-subtle/50 space-y-4 bg-white">
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-sm font-bold text-text-primary">Aadhar Card</span>
-                <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">
-                  <CheckCircle2 size={12} /> Verified
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-text-primary">Driving License</span>
-                <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">
-                  <CheckCircle2 size={12} /> Verified
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-text-primary">Vehicle RC</span>
-                <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">
-                  <CheckCircle2 size={12} /> Verified
-                </span>
-              </div>
+            <div className="p-5 pt-0 border-t border-slate-100 space-y-4 bg-slate-50/50">
+              {!profile?.documents?.aadharNumber ? (
+                <div className="mt-4 space-y-4">
+                  <p className="text-[11px] text-red-500 font-bold mb-2">Note: You can only fill this once. Please double-check your document details.</p>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Aadhar Number</label>
+                    <input type="text" value={kycForm.aadharNumber} onChange={e => setKycForm({...kycForm, aadharNumber: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-[#10B981] outline-none" placeholder="1234 5678 9012" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Driving License</label>
+                    <input type="text" value={kycForm.dlNumber} onChange={e => setKycForm({...kycForm, dlNumber: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-[#10B981] outline-none" placeholder="DL-1420110012345" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Vehicle RC</label>
+                    <input type="text" value={kycForm.rcNumber} onChange={e => setKycForm({...kycForm, rcNumber: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-[#10B981] outline-none" placeholder="MH 01 AB 1234" />
+                  </div>
+                  <button onClick={handleSaveKyc} disabled={isSavingKyc} className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-bold py-3.5 rounded-xl mt-2 transition-colors disabled:opacity-50">
+                    {isSavingKyc ? "Saving..." : "Save KYC Details"}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block mb-0.5">Aadhar Card</span>
+                      <span className="text-[14px] font-black text-slate-700">{profile.documents.aadharNumber}</span>
+                    </div>
+                    <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#10B981] bg-[#10B981]/10 px-2.5 py-1 rounded-md">
+                      <CheckCircle2 size={14} strokeWidth={2.5} /> {profile.documents.aadharStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block mb-0.5">Driving License</span>
+                      <span className="text-[14px] font-black text-slate-700">{profile.documents.dlNumber}</span>
+                    </div>
+                    <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#10B981] bg-[#10B981]/10 px-2.5 py-1 rounded-md">
+                      <CheckCircle2 size={14} strokeWidth={2.5} /> {profile.documents.licenseStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block mb-0.5">Vehicle RC</span>
+                      <span className="text-[14px] font-black text-slate-700">{profile.documents.rcNumber}</span>
+                    </div>
+                    <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#10B981] bg-[#10B981]/10 px-2.5 py-1 rounded-md">
+                      <CheckCircle2 size={14} strokeWidth={2.5} /> {profile.documents.rcStatus}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Bank Details */}
-        <div className="bg-bg-alt border border-border-subtle rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <button 
             onClick={() => toggleTab('bank')}
-            className="w-full flex items-center justify-between p-4 bg-white active:bg-bg-subtle transition-colors"
+            className="w-full flex items-center justify-between p-5 active:bg-slate-50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <Landmark size={18} className="text-accent" />
-              <span className="font-heading font-bold text-text-primary text-base">Bank Details</span>
+              <Landmark size={20} className="text-indigo-500" strokeWidth={2.5} />
+              <span className="font-black text-slate-800 text-[16px]">Bank Details</span>
             </div>
-            <ChevronDown size={20} className={`text-text-muted transition-transform duration-300 ${activeTab === 'bank' ? 'rotate-180' : ''}`} />
+            <ChevronDown size={22} className={`text-slate-400 transition-transform duration-300 ${activeTab === 'bank' ? 'rotate-180' : ''}`} />
           </button>
           
           {activeTab === 'bank' && (
-            <div className="p-5 pt-0 border-t border-border-subtle/50 bg-white">
+            <div className="p-5 pt-0 border-t border-slate-100 bg-slate-50/50">
               {!profile?.bankDetails?.accountNumber ? (
                 <div className="mt-4 space-y-4">
-                  <p className="text-xs text-red-500 font-medium mb-2">Note: You can only fill this once. Please double-check details.</p>
+                  <p className="text-[11px] text-red-500 font-bold mb-2">Note: You can only fill this once. Please double-check details.</p>
                   <div>
-                    <label className="text-xs font-bold text-text-muted block mb-1">Bank Name</label>
-                    <input type="text" value={bankForm.bankName} onChange={e => setBankForm({...bankForm, bankName: e.target.value})} className="w-full bg-bg-subtle border border-border-subtle rounded-xl px-4 py-2" placeholder="State Bank of India" />
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Bank Name</label>
+                    <input type="text" value={bankForm.bankName} onChange={e => setBankForm({...bankForm, bankName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-indigo-500 outline-none" placeholder="State Bank of India" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-text-muted block mb-1">Account Holder Name</label>
-                    <input type="text" value={bankForm.accountName} onChange={e => setBankForm({...bankForm, accountName: e.target.value})} className="w-full bg-bg-subtle border border-border-subtle rounded-xl px-4 py-2" placeholder="Rahul Kumar" />
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Account Holder Name</label>
+                    <input type="text" value={bankForm.accountName} onChange={e => setBankForm({...bankForm, accountName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-indigo-500 outline-none" placeholder="Rahul Kumar" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-text-muted block mb-1">Account Number</label>
-                    <input type="text" value={bankForm.accountNumber} onChange={e => setBankForm({...bankForm, accountNumber: e.target.value})} className="w-full bg-bg-subtle border border-border-subtle rounded-xl px-4 py-2" placeholder="XXXX XXXX 1234" />
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Account Number</label>
+                    <input type="text" value={bankForm.accountNumber} onChange={e => setBankForm({...bankForm, accountNumber: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-indigo-500 outline-none" placeholder="XXXX XXXX 1234" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-text-muted block mb-1">IFSC Code</label>
-                    <input type="text" value={bankForm.ifscCode} onChange={e => setBankForm({...bankForm, ifscCode: e.target.value})} className="w-full bg-bg-subtle border border-border-subtle rounded-xl px-4 py-2" placeholder="SBIN000XXXX" />
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1">IFSC Code</label>
+                    <input type="text" value={bankForm.ifscCode} onChange={e => setBankForm({...bankForm, ifscCode: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-indigo-500 outline-none" placeholder="SBIN000XXXX" />
                   </div>
-                  <button onClick={handleSaveBankDetails} disabled={isSavingBank} className="w-full bg-primary text-white font-bold py-3 rounded-xl mt-2 disabled:opacity-50">
+                  <button onClick={handleSaveBankDetails} disabled={isSavingBank} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl mt-2 transition-colors disabled:opacity-50">
                     {isSavingBank ? "Saving..." : "Save Bank Details"}
                   </button>
                 </div>
               ) : (
                 <div className="mt-4">
-                  <div className="bg-bg-subtle p-4 rounded-xl border border-border-subtle/50 space-y-3">
+                  <div className="bg-white p-5 rounded-[16px] border border-slate-100 shadow-sm space-y-4">
                     <div>
-                      <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Bank Name</span>
-                      <p className="font-medium text-text-primary">{profile.bankDetails.bankName}</p>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Bank Name</span>
+                      <p className="font-black text-slate-800 text-[14px] mt-0.5">{profile.bankDetails.bankName}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Account Name</span>
-                      <p className="font-medium text-text-primary">{profile.bankDetails.accountName}</p>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Account Name</span>
+                      <p className="font-black text-slate-800 text-[14px] mt-0.5">{profile.bankDetails.accountName}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Account Number</span>
-                      <p className="font-mono text-lg font-bold text-text-primary">{profile.bankDetails.accountNumber}</p>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Account Number</span>
+                      <p className="font-mono text-xl font-black text-slate-800 mt-0.5 tracking-tight">{profile.bankDetails.accountNumber}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">IFSC Code</span>
-                      <p className="font-mono text-sm font-bold text-text-primary">{profile.bankDetails.ifscCode}</p>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">IFSC Code</span>
+                      <p className="font-mono text-[14px] font-bold text-slate-600 mt-0.5">{profile.bankDetails.ifscCode}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 mt-4 text-xs text-text-muted">
-                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-2 mt-4 text-[11px] font-bold text-slate-500">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5 text-orange-500" />
                     <p>To edit or update your bank details, please contact Support.</p>
                   </div>
                 </div>
@@ -265,71 +319,71 @@ export default function Profile() {
         </div>
 
         {/* Deposit History */}
-        <div className="bg-bg-alt border border-border-subtle rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <button 
             onClick={() => toggleTab('deposits')}
-            className="w-full flex items-center justify-between p-4 bg-white active:bg-bg-subtle transition-colors"
+            className="w-full flex items-center justify-between p-5 active:bg-slate-50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <IndianRupee size={18} className="text-green-600" />
-              <span className="font-heading font-bold text-text-primary text-base">Deposit History</span>
+              <IndianRupee size={20} className="text-[#10B981]" strokeWidth={2.5} />
+              <span className="font-black text-slate-800 text-[16px]">Deposit History</span>
             </div>
-            <ChevronDown size={20} className={`text-text-muted transition-transform duration-300 ${activeTab === 'deposit' ? 'rotate-180' : ''}`} />
+            <ChevronDown size={22} className={`text-slate-400 transition-transform duration-300 ${activeTab === 'deposits' ? 'rotate-180' : ''}`} />
           </button>
           
-          {activeTab === 'deposit' && (
-            <div className="p-5 pt-0 border-t border-border-subtle/50 bg-white">
+          {activeTab === 'deposits' && (
+            <div className="p-5 pt-0 border-t border-slate-100 bg-slate-50/50">
               {profile?.depositHistory?.length > 0 ? (
                 <div className="space-y-3 mt-4">
                   {profile.depositHistory.map((dep: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-border-subtle/50 last:border-0">
+                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-200 last:border-0">
                       <div>
-                        <p className="font-bold text-text-primary">₹{dep.amount}</p>
-                        <p className="text-xs text-text-muted">{new Date(dep.date).toLocaleDateString()}</p>
+                        <p className="font-black text-[15px] text-slate-800">₹{dep.amount}</p>
+                        <p className="text-[11px] font-bold text-slate-400">{new Date(dep.date).toLocaleDateString()}</p>
                       </div>
-                      <span className="text-xs font-bold text-green-600 uppercase tracking-wider bg-green-50 px-2 py-1 rounded">
+                      <span className="text-[10px] font-black text-[#10B981] uppercase tracking-wider bg-[#10B981]/10 px-2.5 py-1.5 rounded-md">
                         {dep.status}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-text-muted mt-4 text-center py-4">No deposits found.</p>
+                <p className="text-[12px] font-bold text-slate-400 mt-4 text-center py-4">No deposits found.</p>
               )}
             </div>
           )}
         </div>
 
         {/* Online Sessions */}
-        <div className="bg-bg-alt border border-border-subtle rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
           <button 
             onClick={() => toggleTab('sessions')}
-            className="w-full flex items-center justify-between p-4 bg-white active:bg-bg-subtle transition-colors"
+            className="w-full flex items-center justify-between p-5 active:bg-slate-50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <Clock size={18} className="text-blue-500" />
-              <span className="font-heading font-bold text-text-primary text-base">Online Sessions</span>
+              <Clock size={20} className="text-sky-500" strokeWidth={2.5} />
+              <span className="font-black text-slate-800 text-[16px]">Online Sessions</span>
             </div>
-            <ChevronDown size={20} className={`text-text-muted transition-transform duration-300 ${activeTab === 'sessions' ? 'rotate-180' : ''}`} />
+            <ChevronDown size={22} className={`text-slate-400 transition-transform duration-300 ${activeTab === 'sessions' ? 'rotate-180' : ''}`} />
           </button>
           
           {activeTab === 'sessions' && (
-            <div className="p-5 pt-0 border-t border-border-subtle/50 bg-white">
+            <div className="p-5 pt-0 border-t border-slate-100 bg-slate-50/50">
               {profile?.onlineSessions?.length > 0 ? (
                 <div className="space-y-3 mt-4">
                   {profile.onlineSessions.map((session: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-border-subtle/50 last:border-0">
-                      <p className="font-medium text-text-primary">
+                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-200 last:border-0">
+                      <p className="font-bold text-slate-700 text-[13px]">
                         {new Date(session.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                       </p>
-                      <p className="font-bold text-blue-600">
+                      <p className="font-black text-sky-600 text-[14px]">
                         {Math.floor(session.online_minutes / 60)}h {session.online_minutes % 60}m
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-text-muted mt-4 text-center py-4">No sessions recorded yet.</p>
+                <p className="text-[12px] font-bold text-slate-400 mt-4 text-center py-4">No sessions recorded yet.</p>
               )}
             </div>
           )}
@@ -341,11 +395,11 @@ export default function Profile() {
         {/* Help & Support Button */}
         <button 
           onClick={() => alert("Contacting Support... Support Number: 1800-123-4567")}
-          className="w-full bg-white border border-border-subtle rounded-2xl p-5 shadow-sm flex items-center justify-between active:bg-bg-subtle transition-colors"
+          className="w-full bg-white border border-slate-100 rounded-[20px] p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:-translate-y-0.5 active:bg-slate-50 transition-all"
         >
           <div className="flex items-center gap-3">
-            <HelpCircle size={20} className="text-orange-500" />
-            <span className="font-heading font-bold text-text-primary text-lg">Help & Support</span>
+            <HelpCircle size={22} className="text-orange-500" strokeWidth={2.5} />
+            <span className="font-black text-slate-800 text-[16px]">Help & Support</span>
           </div>
         </button>
       </div>
@@ -353,9 +407,9 @@ export default function Profile() {
       {/* Logout Button */}
       <button 
         onClick={handleLogout}
-        className="w-full bg-red-50 text-red-600 border border-red-100 rounded-xl py-4 font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+        className="w-full bg-red-50 text-red-600 border border-red-100 rounded-[20px] py-4 font-black text-[15px] flex items-center justify-center gap-2 hover:bg-red-100 active:scale-95 transition-all shadow-[0_2px_12px_rgba(239,68,68,0.1)]"
       >
-        <LogOut size={20} />
+        <LogOut size={20} strokeWidth={2.5} />
         Log Out
       </button>
     </div>

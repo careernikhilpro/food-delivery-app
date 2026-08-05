@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Phone, CheckCircle, Store, User, Loader2, Home } from "lucide-react";
+import { MapPin, Navigation, Phone, CheckCircle, Store, User, Loader2, Home, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { App } from "@capacitor/app";
@@ -132,7 +132,8 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
   useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const orderId = searchParams.get('id') as string;
+  const orderIdRaw = searchParams.get('id') as string;
+  const orderId = orderIdRaw?.startsWith('job_') ? orderIdRaw.replace('job_', '') : orderIdRaw;
   
   const [stageIndex, setStageIndex] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -348,7 +349,7 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
   const initialCenter = useMemo(() => ({ lat: 25.611, lng: 85.130 }), []);
 
   return (
-    <div className="relative h-screen w-full bg-bg-main overflow-hidden flex flex-col">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-bg-main overflow-hidden flex flex-col z-[100]">
       {/* Real Map Area */}
       <div className="flex-1 relative bg-[#FDFBF7]">
         {!mapboxToken || !riderLocation ? (
@@ -362,13 +363,14 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
           </div>
         )}
 
-        {/* Top Back Button / Header overlay */}
-        <div className="absolute top-safe pt-4 px-4 w-full z-10 flex justify-between items-start pointer-events-none">
-          <div className="bg-bg-alt px-4 py-2 rounded-full shadow-md pointer-events-auto border border-border-subtle">
-            <span className="font-heading font-bold text-primary">Order #{String(orderId).slice(-4).toUpperCase() || '102A'}</span>
+        {/* Top Header overlay */}
+        <div className="absolute top-8 pt-safe-8 px-5 w-full z-10 flex justify-between items-start pointer-events-none">
+          <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.1)] pointer-events-auto border border-white/40 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+            <span className="font-black text-slate-800 tracking-wider text-[13px]">ORDER #{String(orderId).slice(-4).toUpperCase() || '102A'}</span>
           </div>
           {orderData && (
-            <div className="bg-accent px-4 py-2 rounded-full shadow-md font-bold text-white pointer-events-auto">
+            <div className="bg-[#10B981] px-5 py-2.5 rounded-full shadow-[0_4px_16px_rgba(16,185,129,0.3)] font-black text-white pointer-events-auto text-[15px]">
               ₹{orderData.earnings}
             </div>
           )}
@@ -377,14 +379,14 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
 
       {/* Swipeable Bottom Sheet */}
       <motion.div 
-        className="bg-bg-alt rounded-t-[32px] shadow-[0_-10px_40px_rgba(43,36,32,0.1)] border-t border-border-subtle z-30 flex flex-col"
+        className="bg-white rounded-t-[32px] shadow-[0_-12px_40px_rgba(0,0,0,0.08)] z-30 flex flex-col relative overflow-hidden"
         initial={{ y: "20%" }}
         animate={{ y: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
       >
-        <div className="w-12 h-1.5 bg-border-subtle rounded-full mx-auto my-3" />
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3" />
         
-        <div className="px-6 pb-8 pt-2">
+        <div className="px-5 pb-8 pt-2">
           
           {completed ? (
             <div className="flex flex-col items-center justify-center py-10">
@@ -393,30 +395,34 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", bounce: 0.5 }}
               >
-                <CheckCircle size={80} className="text-primary mb-4" />
+                <CheckCircle size={80} className="text-[#10B981] mb-4" />
               </motion.div>
-              <h2 className="text-2xl font-heading font-bold text-text-primary">Delivery Completed!</h2>
-              <p className="text-text-muted mt-2">Earnings added to your wallet.</p>
+              <h2 className="text-2xl font-black tracking-tight text-slate-800">Delivery Completed!</h2>
+              <p className="text-slate-500 font-bold mt-2">Earnings added to your wallet.</p>
             </div>
           ) : (
             <>
               {/* Stage Indicator */}
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-3 h-3 rounded-full bg-primary animate-pulse" />
-                <h2 className="text-lg font-heading font-bold text-text-primary">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center relative">
+                  <div className="w-3 h-3 rounded-full bg-[#10B981] animate-ping absolute" />
+                  <div className="w-3 h-3 rounded-full bg-[#10B981] relative" />
+                </div>
+                <h2 className="text-[20px] font-black tracking-tight text-slate-800">
                   {STAGES[stageIndex].title}
                 </h2>
               </div>
 
               {/* Target Info Card */}
               {orderData && (
-                <div className="bg-bg-main border border-border-subtle rounded-2xl p-4 mb-6">
-                  <div className="flex justify-between items-start mb-2">
+                <div className="bg-[#F8FAFC] border border-slate-100 rounded-[20px] p-5 mb-5 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#10B981]/5 rounded-bl-full -z-0"></div>
+                  <div className="flex justify-between items-start mb-3 relative z-10">
                     <div>
-                      <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                         {stageIndex < 2 ? "Pickup From" : "Deliver To"}
                       </p>
-                      <h3 className="font-heading font-bold text-lg text-text-primary">
+                      <h3 className="font-black text-[18px] text-slate-800 leading-tight">
                         {stageIndex < 2 ? orderData.stallName : orderData.customerName}
                       </h3>
                     </div>
@@ -425,15 +431,15 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
                         href={`https://www.google.com/maps/dir/?api=1&destination=${stageIndex < 2 ? stallLocation?.lat + ',' + stallLocation?.lng : customerLocation?.lat + ',' + customerLocation?.lng}&travelmode=driving`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 hover:bg-blue-500/20 transition-colors"
+                        className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors shadow-sm"
                       >
-                        <Navigation size={20} />
+                        <Navigation size={22} />
                       </a>
                       <a 
                         href={`tel:${stageIndex < 2 ? orderData.stallPhone : orderData.customerPhone}`}
-                        className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                        className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-[#10B981] hover:bg-emerald-100 transition-colors shadow-sm"
                       >
-                        <Phone size={20} />
+                        <Phone size={22} />
                       </a>
                     </div>
                   </div>
@@ -441,16 +447,16 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
                     href={`https://www.google.com/maps/dir/?api=1&destination=${stageIndex < 2 ? stallLocation?.lat + ',' + stallLocation?.lng : customerLocation?.lat + ',' + customerLocation?.lng}&travelmode=driving`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-start gap-2 text-text-muted text-sm hover:text-blue-500 transition-colors cursor-pointer"
+                    className="flex items-start gap-2 text-slate-500 text-[13px] font-medium hover:text-blue-600 transition-colors cursor-pointer relative z-10"
                   >
-                    <MapPin size={16} className="shrink-0 mt-0.5" />
-                    <p className="underline underline-offset-2">{stageIndex < 2 ? orderData.stallAddress : orderData.customerAddress}</p>
+                    <MapPin size={18} className="shrink-0 mt-0.5 text-slate-400" />
+                    <p className="leading-snug pr-4">{stageIndex < 2 ? orderData.stallAddress : orderData.customerAddress}</p>
                   </a>
                   
                   {stageIndex >= 2 && orderData.deliveryInstructions && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
-                      <p className="text-xs font-bold text-blue-800 uppercase mb-1">Delivery Instructions</p>
-                      <p className="text-sm font-medium text-blue-900">{orderData.deliveryInstructions}</p>
+                    <div className="mt-4 p-3.5 bg-blue-50/80 rounded-xl border border-blue-100 relative z-10">
+                      <p className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Delivery Instructions</p>
+                      <p className="text-[13px] font-bold text-blue-900">{orderData.deliveryInstructions}</p>
                     </div>
                   )}
                 </div>
@@ -458,20 +464,20 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
 
               {/* COD Banner & Checkbox */}
               {orderData?.paymentMethod === 'cod' && stageIndex >= 2 && (
-                <div className="bg-[#8B4513]/10 border border-[#8B4513]/20 rounded-2xl p-4 mb-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-bold text-[#8B4513] text-sm">To Collect (Cash)</span>
-                    <span className="font-bold text-[#8B4513] text-xl">₹{orderData.totalAmount}</span>
+                <div className="bg-orange-50 border border-orange-100 rounded-[20px] p-5 mb-5 shadow-sm">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-bold text-orange-800 text-[13px] uppercase tracking-wide">To Collect (Cash)</span>
+                    <span className="font-black text-orange-700 text-[22px]">₹{orderData.totalAmount}</span>
                   </div>
                   {stageIndex === 3 && (
-                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-white rounded-xl border border-border-subtle shadow-sm">
+                    <label className="flex items-center gap-3 cursor-pointer p-3.5 bg-white rounded-xl border border-orange-200 shadow-sm transition-all hover:bg-orange-50/50">
                       <input 
                         type="checkbox" 
-                        className="w-5 h-5 rounded accent-primary border-border-subtle"
+                        className="w-5 h-5 rounded text-[#10B981] accent-[#10B981] border-slate-300"
                         checked={cashCollected}
                         onChange={(e) => setCashCollected(e.target.checked)}
                       />
-                      <span className="font-bold text-text-primary text-sm">I have collected ₹{orderData.totalAmount} in cash.</span>
+                      <span className="font-bold text-slate-700 text-[13px]">I have collected ₹{orderData.totalAmount} in cash.</span>
                     </label>
                   )}
                 </div>
@@ -479,18 +485,22 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
 
               {/* Action Button */}
               {stageIndex === 1 ? (
-                <div className="w-full bg-blue-50 border border-blue-200 text-blue-800 p-5 rounded-2xl text-center shadow-inner">
-                  <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-80">Pickup Verification</p>
-                  <p className="text-lg">Provide PIN <span className="font-black text-3xl tracking-widest text-blue-900 mx-1">{String((parseInt(orderId) * 83) % 10000).padStart(4, '0')}</span> to Merchant</p>
-                  <p className="text-xs font-medium opacity-70 mt-2">Waiting for merchant to handover...</p>
+                <div className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[20px] text-center shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-slate-400">Pickup Verification</p>
+                  <p className="text-[15px] font-bold text-slate-700">Provide PIN <span className="font-black text-3xl tracking-widest text-[#10B981] mx-1">{String((parseInt(orderId) * 83) % 10000).padStart(4, '0')}</span> to Merchant</p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
+                    <p className="text-[12px] font-bold text-slate-500">Waiting for merchant to handover...</p>
+                  </div>
                 </div>
               ) : (
                 <button 
                   onClick={handleNextStage}
                   disabled={stageIndex === 3 && orderData?.paymentMethod === 'cod' && !cashCollected}
-                  className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-primary/30 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-black py-4 rounded-[20px] transition-all shadow-[0_8px_24px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.4)] active:scale-95 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
                 >
                   {STAGES[stageIndex].action}
+                  <ChevronRight size={20} strokeWidth={3} />
                 </button>
               )}
             </>

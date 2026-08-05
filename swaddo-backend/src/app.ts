@@ -71,8 +71,9 @@ app.get('/health', async (req, res) => {
 });
 
 // Global Error Handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  logger.error('Unhandled Exception:', err);
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  logger.error(err.stack);
+  require('fs').appendFileSync('error.log', new Date().toISOString() + ' ' + err.stack + '\n');
   res.status(500).json({
     status: 'error',
     message: 'Internal server error',

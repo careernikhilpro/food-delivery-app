@@ -28,7 +28,7 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 2): Promise<T> => {
 };
 
 export const geocode = async (address: string) => {
-  if (getApiKey() === 'dummy_key_for_dev' && process.env.NODE_ENV === 'development') {
+  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
     return { lat: 20.5937, lng: 78.9629, address: 'Dummy Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
   }
   const cacheKey = `geocode_${address.toLowerCase()}`;
@@ -66,7 +66,7 @@ export const geocode = async (address: string) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] geocode failed | ${Date.now() - start}ms | ${address}`);
-    if (process.env.NODE_ENV === 'development') {
+    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
         return { lat: 20.5937, lng: 78.9629, address: 'Dummy Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
     }
     throw err;
@@ -74,7 +74,7 @@ export const geocode = async (address: string) => {
 };
 
 export const reverseGeocode = async (lat: number, lng: number) => {
-  if (getApiKey() === 'dummy_key_for_dev' && process.env.NODE_ENV === 'development') {
+  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
     return { lat, lng, address: 'Dummy Reverse Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
   }
   const cacheKey = `rev_geocode_${lat}_${lng}`;
@@ -112,7 +112,7 @@ export const reverseGeocode = async (lat: number, lng: number) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] reverseGeocode failed | ${Date.now() - start}ms | ${lat},${lng}`);
-    if (process.env.NODE_ENV === 'development') {
+    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
         return { lat, lng, address: 'Dummy Reverse Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
     }
     throw err;
@@ -120,7 +120,7 @@ export const reverseGeocode = async (lat: number, lng: number) => {
 };
 
 export const autosuggest = async (query: string, location?: string) => {
-  if (getApiKey() === 'dummy_key_for_dev' && process.env.NODE_ENV === 'development') {
+  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
     return [{ placeId: 'dummy', description: 'Dummy Suggestion', mainText: 'Dummy Suggestion', secondaryText: '' }];
   }
   const start = Date.now();
@@ -148,7 +148,7 @@ export const autosuggest = async (query: string, location?: string) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] autosuggest failed | ${Date.now() - start}ms | ${query}`);
-    if (process.env.NODE_ENV === 'development') {
+    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
         return [{ placeId: 'dummy', description: 'Dummy Suggestion', mainText: 'Dummy Suggestion', secondaryText: '' }];
     }
     throw err;
@@ -156,7 +156,7 @@ export const autosuggest = async (query: string, location?: string) => {
 };
 
 export const distance = async (coordinates: string) => {
-  if (getApiKey() === 'dummy_key_for_dev' && process.env.NODE_ENV === 'development') {
+  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
     return { distanceKm: 5, durationMin: 15 };
   }
   const start = Date.now();
@@ -185,7 +185,7 @@ export const distance = async (coordinates: string) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] distance failed | ${Date.now() - start}ms | ${coordinates}`);
-    if (process.env.NODE_ENV === 'development') {
+    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
         return { distanceKm: 5, durationMin: 15 };
     }
     throw err;
@@ -193,7 +193,7 @@ export const distance = async (coordinates: string) => {
 };
 
 export const routeETA = async (originLat: number, originLng: number, destLat: number, destLng: number) => {
-  if (getApiKey() === 'dummy_key_for_dev' && process.env.NODE_ENV === 'development') {
+  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
     return { distanceKm: 5, durationMin: 15, polyline: 'dummy_polyline' };
   }
   const start = Date.now();
@@ -219,7 +219,7 @@ export const routeETA = async (originLat: number, originLng: number, destLat: nu
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] routeETA failed | ${Date.now() - start}ms`);
-    if (process.env.NODE_ENV === 'development') {
+    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
         return { distanceKm: 5, durationMin: 15, polyline: 'dummy_polyline' };
     }
     throw err;

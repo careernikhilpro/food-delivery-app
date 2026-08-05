@@ -356,6 +356,15 @@ const runSchema = async () => {
       DO $$ BEGIN
         ALTER TABLE delivery_partners ADD COLUMN rc_status VARCHAR(20) DEFAULT 'pending';
       EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE delivery_partners ADD COLUMN aadhar_number VARCHAR(20);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE delivery_partners ADD COLUMN dl_number VARCHAR(30);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE delivery_partners ADD COLUMN rc_number VARCHAR(30);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 
     // Payments

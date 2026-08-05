@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
-import { MapPin, Navigation, Clock, CheckCircle2, XCircle, BellRing, Store, Siren, Volume2 } from "lucide-react";
+import { MapPin, Navigation, Clock, CheckCircle2, XCircle, BellRing, Store, Siren, Volume2, Package, ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebPush } from "@/hooks/usePushNotifications";
 
 import Link from "next/link";
 
-export default function Home() {
+function HomeContent() {
   useAuth();
+  useWebPush();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isOnline, setIsOnline] = useState(() => {
@@ -25,6 +27,7 @@ export default function Home() {
   const [timer, setTimer] = useState(300);
   const [stats, setStats] = useState({ deliveries: 0, earnings: 0, floatingCash: 0, hours: 0 });
   const [mounted, setMounted] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -34,6 +37,8 @@ export default function Home() {
   });
   const riderIdRef = useRef<string>("");
   const alarmAudio = useRef<HTMLAudioElement | null>(null);
+  const acceptSliderRef = useRef<HTMLDivElement>(null);
+  const [isAccepted, setIsAccepted] = useState(false);
 
   // Load persisted state on mount
   useEffect(() => {
@@ -98,6 +103,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!mounted) return; // Prevent overwriting localStorage on first render before mount
 
     let intervalId: any;
@@ -132,6 +145,24 @@ export default function Home() {
             return prev;
           });
         });
+
+        socket?.on("job_accepted_by_me", (payload) => {
+          // This event is fired when we accept the job on another device
+          setNewJob(null);
+          localStorage.setItem("currentJob", JSON.stringify(payload));
+          localStorage.setItem('activeDelivery', `job_${payload.id}`);
+          router.push(`/active-delivery?id=job_${payload.id}`);
+        });
+        
+        // Listen to background push messages from Service Worker
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'NEW_ORDER_PUSH') {
+              console.log("Wake up via Web Push!", event.data.data);
+              setNewJob(event.data.data);
+            }
+          });
+        }
 
       // Start pinging GPS
       if ("geolocation" in navigator) {
@@ -301,7 +332,7 @@ export default function Home() {
   if (!mounted) return null; // Prevent UI flicker on mount
 
   return (
-    <div className="flex flex-col min-h-screen pt-8 px-6 pb-24 max-w-md mx-auto relative">
+    <div className="flex flex-col h-[calc(100dvh-80px)] overflow-hidden pt-5 px-5 pb-4 max-w-md mx-auto relative bg-[#F8FAFC]">
       
       {/* Sound Permission Overlay */}
       <AnimatePresence>
@@ -310,14 +341,14 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-md z-[100] bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center p-6"
+            className="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-md z-[100] bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center p-5"
           >
-            <div className="bg-white rounded-3xl p-8 text-center max-w-[300px] w-full shadow-2xl">
-              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Volume2 size={32} />
+            <div className="bg-white rounded-3xl p-6 text-center max-w-[280px] w-full shadow-2xl">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Volume2 size={28} />
               </div>
-              <h3 className="text-xl font-bold mb-2">Enable Sound Notifications</h3>
-              <p className="text-gray-500 mb-6 text-sm">Please tap below to allow order ringtones to play in the background when a new delivery arrives.</p>
+              <h3 className="text-lg font-bold mb-2">Enable Sound</h3>
+              <p className="text-gray-500 mb-5 text-[13px] leading-relaxed">Please tap below to allow order ringtones to play in the background.</p>
               <button 
                 onClick={() => {
                   setSoundEnabled(true);
@@ -343,98 +374,111 @@ export default function Home() {
       </AnimatePresence>
 
       {/* Header & Toggle */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-5 bg-white p-4 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-2xl font-heading font-bold text-text-primary">Status</h1>
-            <p className="text-sm font-medium text-text-muted">
-              {isOnline ? "You are online and visible" : "You are currently offline"}
+            <div className="flex items-end gap-2 mb-1.5">
+              <h1 className="text-[28px] font-black tracking-tight text-slate-900 leading-none">Status</h1>
+              {currentTime && (
+                <span className="text-[12px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
+            <p className="text-[13px] font-medium text-slate-500">
+              {isOnline ? (
+                <span className="text-[#10B981] font-bold flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>Online & Ready</span>
+              ) : "Currently Offline"}
             </p>
           </div>
-          <button 
-            onClick={() => alert("SOS Emergency Activated! Alerting authorities and support team.")}
-            className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 shadow-sm border border-red-200 active:scale-95 transition-transform"
-          >
-            <Siren size={24} />
-          </button>
         </div>
         
-        {/* Large Toggle */}
-        <button 
-          onClick={() => {
-            if (!isOnline && stats.floatingCash >= 2000) {
-              alert("Your floating cash limit (₹2000) has been reached. Please deposit cash to go online and receive new orders.");
-              return;
-            }
-            setIsOnline(!isOnline);
-          }}
-          className={`w-20 h-10 rounded-full flex items-center p-1 transition-colors duration-300 shadow-inner ${
-            isOnline ? "bg-primary" : "bg-border-subtle"
-          }`}
-        >
-          <motion.div 
-            className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center"
-            initial={false}
-            animate={{ x: isOnline ? 40 : 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => alert("SOS Emergency Activated! Alerting authorities and support team.")}
+            className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500 shadow-sm border border-red-100 active:scale-95 transition-all hover:bg-red-100"
           >
-            {isOnline ? <CheckCircle2 size={16} className="text-primary" /> : <XCircle size={16} className="text-text-muted" />}
-          </motion.div>
-        </button>
+            <Siren size={24} strokeWidth={2.5} />
+          </button>
+          
+          {/* Large Premium Toggle */}
+          <button 
+            onClick={() => {
+              if (!isOnline && stats.floatingCash >= 2000) {
+                alert("Your floating cash limit (₹2000) has been reached. Please deposit cash to go online and receive new orders.");
+                return;
+              }
+              setIsOnline(!isOnline);
+            }}
+            className={`w-[72px] h-10 rounded-full flex items-center p-1 transition-all duration-500 shadow-inner ${
+              isOnline ? "bg-[#10B981]" : "bg-slate-200"
+            }`}
+          >
+            <motion.div 
+              className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center"
+              initial={false}
+              animate={{ x: isOnline ? 32 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            >
+              {isOnline ? <CheckCircle2 size={18} className="text-[#10B981]" /> : <XCircle size={18} className="text-slate-400" />}
+            </motion.div>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <h2 className="text-lg font-heading font-bold text-text-primary mb-4">Today's Performance</h2>
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-bg-alt rounded-2xl p-4 border border-border-subtle shadow-sm flex flex-col justify-center">
-          <span className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Deliveries</span>
-          <span className="text-3xl font-heading font-bold text-accent">{stats.deliveries}</span>
+      <h2 className="text-[16px] font-black text-slate-800 mb-3 tracking-tight px-1">Today's Performance</h2>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-white rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
+          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.1em] mb-1 flex items-center gap-1.5"><Package size={14} className="text-[#10B981]"/> Deliveries</span>
+          <span className="text-3xl font-black text-slate-800 tracking-tighter">{stats.deliveries}</span>
         </div>
-        <div className="bg-bg-alt rounded-2xl p-4 border border-border-subtle shadow-sm flex flex-col justify-center">
-          <span className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Earnings</span>
-          <span className="text-3xl font-heading font-bold text-primary">₹{stats.earnings}</span>
+        <div className="bg-white rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
+          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.1em] mb-1 flex items-center gap-1.5">Earnings</span>
+          <span className="text-3xl font-black text-[#10B981] tracking-tighter">₹{stats.earnings}</span>
         </div>
-        <div className="bg-bg-alt rounded-2xl p-4 border border-border-subtle shadow-sm flex flex-col justify-center">
-          <span className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Online Time</span>
-          <div className="flex items-center gap-2">
-            <Clock size={20} className="text-text-muted" />
-            <span className="text-xl font-heading font-bold text-text-primary">
-              {Math.floor(stats.hours / 60)}<span className="text-sm ml-1 mr-1">h</span>
-              {stats.hours % 60}<span className="text-sm ml-1">m</span>
+        <div className="bg-white rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
+          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.1em] mb-1 flex items-center gap-1.5"><Clock size={14} className="text-blue-500"/> Online Time</span>
+          <div className="flex items-baseline gap-1 mt-0.5">
+            <span className="text-[22px] font-black text-slate-800 tracking-tight">
+              {Math.floor(stats.hours / 60)}<span className="text-[12px] font-bold text-slate-400 ml-0.5 mr-1">h</span>
+              {stats.hours % 60}<span className="text-[12px] font-bold text-slate-400 ml-0.5">m</span>
             </span>
           </div>
         </div>
-        <Link href="/floating-cash" className={`bg-[#8B4513]/5 rounded-2xl p-4 border shadow-sm flex flex-col justify-center transition-transform hover:scale-[1.02] active:scale-[0.98] ${stats.floatingCash >= 2000 ? 'border-red-500 bg-red-500/10' : 'border-[#8B4513]/20'}`}>
-          <div className="flex justify-between items-center mb-1">
-            <span className={`text-xs font-bold uppercase tracking-wider ${stats.floatingCash >= 2000 ? 'text-red-600' : 'text-[#8B4513]'}`}>Floating Cash</span>
-            <span className="text-xs text-[#8B4513] opacity-60">Limit: ₹2000</span>
+        <Link href="/floating-cash" className={`bg-white rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-all hover:-translate-y-0.5 active:scale-95 ${stats.floatingCash >= 2000 ? 'border-2 border-red-500 bg-red-50/50' : 'border border-slate-100 relative overflow-hidden'}`}>
+          {stats.floatingCash < 2000 && <div className="absolute top-0 right-0 w-12 h-12 bg-orange-500/5 rounded-bl-[24px] -z-0"></div>}
+          <div className="flex justify-between items-center mb-1 relative z-10">
+            <span className={`text-[10px] font-bold uppercase tracking-[0.1em] ${stats.floatingCash >= 2000 ? 'text-red-600' : 'text-slate-400'}`}>Float Cash</span>
           </div>
-          <span className={`text-2xl font-heading font-bold ${stats.floatingCash >= 2000 ? 'text-red-600' : 'text-[#8B4513]'}`}>₹{stats.floatingCash}</span>
-          {stats.floatingCash >= 2000 && (
-            <span className="text-[10px] text-red-600 font-bold uppercase mt-1">Deposit Required</span>
-          )}
+          <span className={`text-[26px] font-black tracking-tighter relative z-10 leading-none ${stats.floatingCash >= 2000 ? 'text-red-600' : 'text-orange-500'}`}>₹{stats.floatingCash}</span>
+          <div className="flex items-center gap-1.5 mt-1.5">
+             <span className="text-[9px] font-semibold text-slate-400">Limit: ₹2000</span>
+             {stats.floatingCash >= 2000 && (
+               <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Deposit!</span>
+             )}
+          </div>
         </Link>
       </div>
 
       {/* Main Illustration Area */}
-      <div className="flex-1 flex flex-col items-center justify-center mt-4">
+      <div className="flex-1 flex flex-col items-center justify-center mt-2 relative min-h-[140px]">
         {isOnline ? (
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="w-32 h-32 rounded-full border-4 border-primary/20 flex items-center justify-center relative">
-              <div className="w-24 h-24 rounded-full border-4 border-primary/40 flex items-center justify-center">
-                 <MapPin size={40} className="text-primary animate-bounce" />
-              </div>
+          <div className="relative flex flex-col items-center justify-center h-32 w-full">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[#10B981]/10 rounded-full animate-ping"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-[#10B981]/20 rounded-full animate-pulse"></div>
+            <div className="w-14 h-14 bg-white rounded-full border-[3px] border-[#10B981]/30 flex items-center justify-center relative z-10 shadow-[0_4px_16px_rgba(16,185,129,0.4)]">
+               <MapPin size={24} className="text-[#10B981] animate-bounce mt-1" strokeWidth={2.5} />
             </div>
-            <p className="text-center text-primary font-bold mt-6">Looking for nearby orders...</p>
+            <p className="text-center text-[#10B981] text-[13px] font-bold mt-4 tracking-wide relative z-10">Searching for nearby orders...</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center opacity-70">
-            <div className="w-24 h-24 rounded-full bg-border-subtle flex items-center justify-center mb-4">
-              <Navigation size={40} className="text-text-muted" />
+          <div className="flex flex-col items-center text-center opacity-80 justify-center w-full">
+            <div className="w-14 h-14 rounded-[16px] bg-slate-200/60 flex items-center justify-center mb-3 rotate-3 transition-transform hover:rotate-0 shadow-sm border border-slate-200">
+              <Navigation size={24} className="text-slate-400" strokeWidth={2.5} />
             </div>
-            <h3 className="text-lg font-heading font-bold text-text-primary">You're Offline</h3>
-            <p className="text-sm text-text-muted mt-2 max-w-[250px]">Go online to start receiving delivery requests in your area.</p>
+            <h3 className="text-[20px] font-black text-slate-800 tracking-tight leading-none">You're Offline</h3>
+            <p className="text-[12px] font-medium text-slate-500 mt-2 max-w-[200px] leading-snug">Go online to start receiving delivery requests.</p>
           </div>
         )}
       </div>
@@ -446,89 +490,105 @@ export default function Home() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed inset-0 z-50 bg-primary flex flex-col justify-center items-center p-6"
+            className="fixed inset-0 z-50 bg-[#F8FAFC] flex flex-col justify-center items-center p-6"
           >
+            <div className="absolute inset-0 bg-[#10B981]/5 backdrop-blur-3xl -z-10"></div>
+            
             <motion.div 
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 1 }}
-              className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-2xl"
+              animate={{ scale: [1, 1.1, 1], rotate: [0, -10, 10, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center mb-6 shadow-[0_8px_32px_rgba(16,185,129,0.4)] relative"
             >
-              <BellRing size={40} className="text-primary" />
+              <div className="absolute inset-0 rounded-full border-4 border-[#10B981]/30 animate-ping"></div>
+              <BellRing size={36} className="text-white relative z-10" />
             </motion.div>
             
-            <h2 className="text-3xl font-heading font-bold text-white mb-2 text-center">New Delivery!</h2>
-            <p className="text-white/80 mb-8 text-center text-lg">Accept within {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}</p>
+            <h2 className="text-[28px] font-black tracking-tight text-slate-900 mb-1 text-center leading-none">New Delivery!</h2>
+            <p className="text-slate-500 mb-8 text-center text-sm font-bold tracking-wide">Review order details below</p>
             
-            <div className="bg-white rounded-2xl w-full p-6 shadow-xl mb-8 space-y-4">
-              <div className="flex items-center gap-3">
-                <Store className="text-text-muted" size={20} />
-                <span className="font-bold text-text-primary text-lg">{newJob.stallName || "Ramu's Chaat Corner"}</span>
-              </div>
-              <div className="flex justify-between items-center bg-bg-main p-3 rounded-xl border border-border-subtle">
-                <div className="flex items-center gap-2 text-text-muted">
-                  <MapPin size={16} />
-                  <span className="text-sm font-bold">Pickup</span>
+            <div className="bg-white rounded-[24px] w-full p-6 shadow-[0_8px_40px_rgba(0,0,0,0.08)] mb-8 space-y-4 border border-slate-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#10B981]/10 rounded-bl-full -z-0"></div>
+              
+              <div className="flex items-center gap-3 relative z-10 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
+                  <Store className="text-slate-700" size={20} />
                 </div>
-                <span className="font-bold text-text-primary">{(newJob.pickupDistance && newJob.pickupDistance !== 999999) ? `${newJob.pickupDistance} km` : "Calculating..."}</span>
-              </div>
-              <div className="flex justify-between items-center bg-bg-main p-3 rounded-xl border border-border-subtle">
-                <div className="flex items-center gap-2 text-text-muted">
-                  <Navigation size={16} />
-                  <span className="text-sm font-bold">Drop-off</span>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Pickup From</p>
+                  <span className="font-black text-slate-800 text-[16px] leading-none block">{newJob.stallName || "Restaurant"}</span>
                 </div>
-                <span className="font-bold text-text-primary">{newJob.dropoffDistance ? `${newJob.dropoffDistance} km` : "Calculating..."}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 relative z-10 py-2">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 text-slate-500 mb-1.5">
+                    <MapPin size={14} />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Pickup</span>
+                  </div>
+                  <span className="font-black text-slate-800 text-lg leading-none">{(newJob.pickupDistance && newJob.pickupDistance !== 999999) ? `${newJob.pickupDistance} km` : "---"}</span>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 text-slate-500 mb-1.5">
+                    <Navigation size={14} />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Drop-off</span>
+                  </div>
+                  <span className="font-black text-slate-800 text-lg leading-none">{newJob.dropoffDistance ? `${newJob.dropoffDistance} km` : "---"}</span>
+                </div>
               </div>
 
               {/* Itemized Payout Section */}
-              <div className="flex flex-col gap-2 mt-2 border-t border-border-subtle pt-4">
+              <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-100 relative z-10">
                 {/* Pickup Payout */}
                 {newJob.pickupPayout !== undefined && newJob.pickupPayout > 0 && (
-                  <div className="flex justify-between items-center bg-green-50 p-3 rounded-xl border border-green-100">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <span className="text-sm font-bold">Pickup Distance Pay</span>
-                    </div>
-                    <span className="font-bold text-green-700">+ ₹{newJob.pickupPayout}</span>
+                  <div className="flex justify-between items-center bg-emerald-50/50 p-2.5 rounded-[12px]">
+                    <span className="text-[12px] font-bold text-emerald-800">Pickup Pay</span>
+                    <span className="font-black text-emerald-700">₹{newJob.pickupPayout}</span>
                   </div>
                 )}
                 
                 {/* Delivery Base Payout */}
-                <div className="flex justify-between items-center bg-orange-50 p-3 rounded-xl border border-orange-100">
-                  <div className="flex items-center gap-2 text-orange-800">
-                    <span className="text-sm font-bold">Delivery Pay</span>
-                  </div>
-                  <span className="font-bold text-orange-700">₹{newJob.earnings || 45}</span>
+                <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-[12px]">
+                  <span className="text-[12px] font-bold text-slate-600">Delivery Pay</span>
+                  <span className="font-black text-slate-700">₹{newJob.earnings || 45}</span>
                 </div>
 
                 {/* Return Payout */}
                 {newJob.returnPayout !== undefined && newJob.returnPayout > 0 && (
-                  <div className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-2 text-blue-800">
-                      <span className="text-sm font-bold">Return Earning</span>
-                    </div>
-                    <span className="font-bold text-blue-700">+ ₹{newJob.returnPayout}</span>
+                  <div className="flex justify-between items-center bg-blue-50/50 p-2.5 rounded-[12px]">
+                    <span className="text-[12px] font-bold text-blue-800">Return Pay</span>
+                    <span className="font-black text-blue-700">₹{newJob.returnPayout}</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between items-center border-t border-border-subtle pt-4 mt-2">
-                <span className="text-text-muted font-bold text-lg">Total Earning</span>
-                <span className="text-3xl font-heading font-black text-green-600">₹{(newJob.earnings || 45) + (newJob.pickupPayout || 0) + (newJob.returnPayout || 0)}</span>
+              <div className="flex justify-between items-end pt-4 mt-2 relative z-10">
+                <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Total Payout</span>
+                <span className="text-[32px] font-black tracking-tighter text-[#10B981] leading-none">₹{(newJob.earnings || 45) + (newJob.pickupPayout || 0) + (newJob.returnPayout || 0)}</span>
               </div>
             </div>
 
-            <div className="w-full space-y-4">
-              <button 
-                onClick={() => acceptJob()}
-                className="w-full bg-white text-primary py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform"
-              >
-                Accept Delivery
-              </button>
-              <button 
-                onClick={() => rejectJob()}
-                className="flex-1 bg-white/10 text-white py-4 rounded-2xl font-bold text-lg active:scale-95 transition-transform backdrop-blur-md border border-white/20"
-              >
-                Decline
-              </button>
+            <div className="w-full">
+              <div ref={acceptSliderRef} className="relative w-full h-[68px] bg-white rounded-[24px] overflow-hidden flex items-center border border-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+                <span className="absolute inset-0 flex items-center justify-center font-black text-slate-300 tracking-[0.2em] text-[13px] z-0 pointer-events-none">
+                  SLIDE TO ACCEPT
+                </span>
+                <motion.div
+                  drag="x"
+                  dragConstraints={acceptSliderRef}
+                  dragSnapToOrigin={!isAccepted}
+                  dragElastic={0.05}
+                  onDragEnd={(e, info) => {
+                    if (info.offset.x > window.innerWidth * 0.4) {
+                      setIsAccepted(true);
+                      acceptJob();
+                    }
+                  }}
+                  className="w-[56px] h-[56px] ml-1.5 bg-[#10B981] rounded-[20px] flex items-center justify-center shadow-[0_4px_16px_rgba(16,185,129,0.3)] relative z-10 cursor-grab active:cursor-grabbing"
+                >
+                  <ChevronRight className="text-white ml-1" size={28} strokeWidth={3} />
+                  <ChevronRight className="text-white/40 -ml-4" size={28} strokeWidth={3} />
+                </motion.div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -541,17 +601,26 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-6 right-6"
+            className="fixed bottom-24 left-6 right-6 z-40"
           >
             <button 
               onClick={() => setIsOnline(true)}
-              className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_30px_rgb(226,64,28,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] text-white py-4 rounded-[20px] font-black tracking-wide text-lg shadow-[0_12px_32px_rgba(16,185,129,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/20"
             >
-              Go Online Now
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+              GO ONLINE NOW
             </button>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

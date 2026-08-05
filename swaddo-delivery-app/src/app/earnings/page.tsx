@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { RefreshCw, PackageX } from "lucide-react";
+import AppLoader from "@/components/AppLoader";
 
 export default function Earnings() {
   useAuth();
@@ -35,46 +36,54 @@ export default function Earnings() {
   const maxEarnings = Math.max(...chartData, 1);
   const deliveries = data?.deliveryHistory || [];
 
+  if (loading && !data) {
+    return <AppLoader type="earnings" />;
+  }
+
   return (
-    <div className="px-6 pt-8 pb-24 max-w-md mx-auto min-h-screen">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-heading font-bold text-text-primary">Earnings</h1>
+    <div className="px-5 pt-3 pb-24 max-w-md mx-auto min-h-screen bg-[#F8FAFC]">
+      <div className="flex justify-between items-center mb-3">
+        <h1 className="text-[24px] font-black tracking-tight text-slate-900 leading-none mt-1">Earnings</h1>
         <button 
           onClick={fetchEarnings}
-          className={`p-2 rounded-full bg-bg-alt border border-border-subtle shadow-sm ${loading ? 'animate-spin text-primary' : 'text-text-muted hover:text-primary'}`}
+          className={`p-2 rounded-full bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md active:scale-95 ${loading ? 'animate-spin text-[#10B981]' : 'text-slate-500 hover:text-[#10B981]'}`}
         >
-          <RefreshCw size={20} />
+          <RefreshCw size={20} strokeWidth={2.5} />
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-bg-alt border border-border-subtle rounded-2xl p-5 shadow-sm">
-          <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">This Week</p>
-          <h2 className="text-3xl font-heading font-bold text-accent">₹{data?.weekEarnings || 0}</h2>
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="bg-white border border-slate-100 rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">This Week</p>
+          <h2 className="text-3xl font-black tracking-tighter text-slate-800">₹{data?.weekEarnings || 0}</h2>
         </div>
-        <div className="bg-bg-alt border border-border-subtle rounded-2xl p-5 shadow-sm">
-          <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">This Month</p>
-          <h2 className="text-3xl font-heading font-bold text-primary">₹{data?.monthEarnings || 0}</h2>
+        <div className="bg-white border border-slate-100 rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">This Month</p>
+          <h2 className="text-3xl font-black tracking-tighter text-[#10B981]">₹{data?.monthEarnings || 0}</h2>
         </div>
       </div>
 
       {/* Simple Bar Chart */}
-      <div className="bg-bg-alt border border-border-subtle rounded-2xl p-5 mb-8 shadow-sm">
-        <h3 className="text-sm font-bold text-text-primary mb-4">Past 7 Days</h3>
-        <div className="flex items-end justify-between h-32 gap-2">
+      <div className="bg-white border border-slate-100 rounded-[20px] p-4 mb-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-20 h-20 bg-[#10B981]/5 rounded-bl-full -z-0"></div>
+        <h3 className="text-[13px] font-black tracking-tight text-slate-800 mb-2 relative z-10">Past 7 Days</h3>
+        <div className="flex items-end justify-between h-28 gap-2 relative z-10 pt-4">
           {chartData.map((val: number, idx: number) => {
             const heightPct = (val / maxEarnings) * 100;
             const isToday = idx === chartData.length - 1;
             return (
-              <div key={idx} className="flex flex-col items-center flex-1 gap-2">
-                <div className="w-full relative h-full flex items-end">
+              <div key={idx} className="flex flex-col items-center flex-1 gap-1.5 group h-full">
+                <div className="w-full relative h-full flex flex-col justify-end items-center">
+                  <span className={`text-[9px] font-black tracking-tighter mb-1 ${isToday ? 'text-[#10B981]' : 'text-slate-400'}`}>
+                    {val > 0 ? `₹${val}` : ''}
+                  </span>
                   <div 
-                    className={`w-full rounded-sm transition-all duration-1000 ${isToday ? 'bg-primary' : 'bg-border-subtle'}`} 
-                    style={{ height: `${heightPct}%` }}
+                    className={`w-full max-w-[14px] rounded-t-[6px] transition-all duration-1000 ${isToday ? 'bg-[#10B981] shadow-[0_4px_12px_rgba(16,185,129,0.4)]' : 'bg-slate-200 group-hover:bg-slate-300'}`} 
+                    style={{ height: `${Math.max(5, heightPct)}%` }}
                   />
                 </div>
-                <span className="text-[10px] text-text-muted font-medium">{dailyBreakdown[idx].dayName}</span>
+                <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-[#10B981]' : 'text-slate-400'}`}>{dailyBreakdown[idx].dayName}</span>
               </div>
             );
           })}
@@ -82,54 +91,50 @@ export default function Earnings() {
       </div>
 
       {/* History List */}
-      <h3 className="text-lg font-heading font-bold text-text-primary mb-4">Recent Deliveries</h3>
+      {/* History List */}
+      <h3 className="text-[16px] font-black tracking-tight text-slate-800 mb-3 px-1">Recent Deliveries</h3>
       <div className="space-y-3">
-        {loading && deliveries.length === 0 ? (
-          <div className="text-center py-10 opacity-50">
-            <RefreshCw size={24} className="mx-auto animate-spin mb-2" />
-            <p>Loading your earnings...</p>
-          </div>
-        ) : deliveries.length === 0 ? (
-          <div className="text-center py-12 opacity-50 bg-bg-alt rounded-2xl border border-border-subtle">
-            <PackageX size={48} className="mx-auto mb-4 text-text-muted" />
-            <p className="font-bold text-text-primary">No deliveries yet</p>
-            <p className="text-sm text-text-muted mt-1">Complete an order to see earnings!</p>
+        {deliveries.length === 0 ? (
+          <div className="text-center py-10 bg-white rounded-[20px] border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            <PackageX size={48} strokeWidth={1.5} className="mx-auto mb-3 text-slate-300" />
+            <p className="font-black text-[15px] text-slate-800">No deliveries yet</p>
+            <p className="text-[12px] font-medium text-slate-500 mt-1">Complete an order to see earnings!</p>
           </div>
         ) : (
           deliveries.map((delivery: any) => (
-            <div key={delivery.id} className="bg-bg-alt border border-border-subtle rounded-2xl p-4 flex flex-col shadow-sm">
-              <div className="flex justify-between items-center mb-3 pb-3 border-b border-border-subtle/50">
+            <div key={delivery.id} className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.02)] transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+              <div className="flex justify-between items-start mb-2.5 pb-2.5 border-b border-slate-100">
                 <div>
-                  <h4 className="font-heading font-bold text-text-primary">{delivery.stall}</h4>
-                  <p className="text-xs text-text-muted">{delivery.date} • {delivery.distance}</p>
+                  <h4 className="font-black text-slate-800 text-[15px]">{delivery.stall}</h4>
+                  <p className="text-[11px] font-bold text-slate-400 mt-1 tracking-wide">{delivery.date} • {delivery.distance}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] uppercase font-bold text-text-muted mb-0.5">Your Payout</p>
-                  <span className="font-bold text-primary text-lg">₹{delivery.amount}</span>
+                  <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Your Payout</p>
+                  <span className="font-black text-[#10B981] text-[22px] leading-none">₹{delivery.amount}</span>
                 </div>
               </div>
               
-              <div className="mt-2 pt-3 border-t border-border-subtle/30 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-text-muted">Pickup Pay</span>
-                  <span className="font-medium">₹{delivery.breakdown?.pickup || 0}</span>
+              <div className="pt-1 space-y-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span className="font-semibold text-slate-500">Pickup Pay</span>
+                  <span className="font-bold text-slate-700">₹{delivery.breakdown?.pickup || 0}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-text-muted">Drop Pay</span>
-                  <span className="font-medium">₹{delivery.breakdown?.drop || 0}</span>
+                <div className="flex justify-between text-[12px]">
+                  <span className="font-semibold text-slate-500">Drop Pay</span>
+                  <span className="font-bold text-slate-700">₹{delivery.breakdown?.drop || 0}</span>
                 </div>
                 {delivery.breakdown?.return > 0 && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-text-muted">Return Pay</span>
-                    <span className="font-medium">₹{delivery.breakdown.return}</span>
+                  <div className="flex justify-between text-[12px]">
+                    <span className="font-semibold text-slate-500">Return Pay</span>
+                    <span className="font-bold text-[#10B981]">₹{delivery.breakdown.return}</span>
                   </div>
                 )}
               </div>
 
               {delivery.codAmount > 0 && (
-                <div className="bg-[#8B4513]/10 border border-[#8B4513]/20 rounded-lg p-2 flex justify-between items-center mt-1">
-                  <span className="text-xs font-bold text-[#8B4513]">COD Collected</span>
-                  <span className="text-sm font-bold text-[#8B4513]">₹{delivery.codAmount}</span>
+                <div className="bg-orange-50 border border-orange-100 rounded-[10px] px-3 py-2 flex justify-between items-center mt-3 shadow-inner">
+                  <span className="text-[11px] font-bold text-orange-600 uppercase tracking-wide">COD Collected</span>
+                  <span className="text-[14px] font-black text-orange-600 tracking-tight">₹{delivery.codAmount}</span>
                 </div>
               )}
             </div>
