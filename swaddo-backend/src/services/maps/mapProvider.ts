@@ -75,6 +75,28 @@ export const geocode = async (address: string) => {
 
 export const reverseGeocode = async (lat: number, lng: number) => {
   if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+        headers: {
+          'User-Agent': 'SwaddoApp/1.0 (Development)'
+        }
+      });
+      const data: any = await res.json();
+      if (data && data.display_name) {
+        return {
+          lat,
+          lng,
+          address: data.display_name,
+          placeId: 'dummy',
+          city: data.address?.city || data.address?.town || data.address?.village || 'Dummy City',
+          state: data.address?.state || 'Dummy State',
+          pincode: data.address?.postcode || '000000'
+        };
+      }
+    } catch (err) {
+      console.error("Nominatim reverse geocode failed, falling back to dummy", err);
+    }
     return { lat, lng, address: 'Dummy Reverse Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
   }
   const cacheKey = `rev_geocode_${lat}_${lng}`;
@@ -112,10 +134,7 @@ export const reverseGeocode = async (lat: number, lng: number) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] reverseGeocode failed | ${Date.now() - start}ms | ${lat},${lng}`);
-    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
-        return { lat, lng, address: 'Dummy Reverse Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
-    }
-    throw err;
+    return { lat, lng, address: 'Dummy Reverse Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
   }
 };
 

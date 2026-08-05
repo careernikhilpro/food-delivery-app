@@ -522,7 +522,7 @@ export default function Checkout() {
               clearCart();
               setShowSuccessModal(true);
               setTimeout(() => {
-                router.push(`/track?id=${orderRes.data.order_id}`);
+                router.push(`/`);
               }, 2000);
             } catch (err: any) {
               console.error(err);
@@ -554,7 +554,7 @@ export default function Checkout() {
     }
   };
 
-  if (!cart.stallId || cart.items.length === 0) {
+  if ((!cart.stallId || cart.items.length === 0) && !showSuccessModal) {
     return (
       <div className="min-h-screen bg-bg-main flex flex-col items-center justify-center p-6 text-center">
         <h2 className="text-xl font-heading font-bold mb-4">Your cart is empty!</h2>

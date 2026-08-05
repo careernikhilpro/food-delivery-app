@@ -41,7 +41,7 @@ const categories = [
 
 export default function Home() {
   const router = useRouter();
-  const { currentLocation } = useLocation();
+  const { currentLocation, fullAddress } = useLocation();
   const { updateQuantity, cart } = useCart();
   const [activeCategory, setActiveCategory] = useState("All");
   const [isVegMode, setIsVegMode] = useState(false);
@@ -86,7 +86,9 @@ export default function Home() {
           deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
           categories: stall.tags || "Food",
           deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
+          isPureVeg: !!stall.is_pure_veg && stall.is_pure_veg !== 'false' && stall.is_pure_veg !== '0',
         }));
+        console.log("Fetched Stalls:", backendStalls);
         setStalls(backendStalls);
       }
     }).catch((err) => console.error("Error fetching stalls:", err));
@@ -196,7 +198,7 @@ export default function Home() {
                     <ChevronDown size={18} className={`transition-colors ${isScrolled ? 'text-gray-900' : 'text-white'}`} />
                  </div>
                  <span className={`text-[12px] font-medium truncate pr-4 mt-1 transition-colors ${isScrolled ? 'text-gray-500' : 'text-white/90'}`}>
-                    Sangamvadi, Pune, Maharashtra, India
+                    {fullAddress || "Select a location to see full address"}
                  </span>
               </div>
             )} />
@@ -660,8 +662,10 @@ export default function Home() {
 
         {/* Restaurant Cards List */}
         <div className="flex flex-col gap-5">
-          {stalls.map((restaurant, idx) => (
-            <RestaurantCard key={idx} data={restaurant} onOpenVariantModal={setVariantModal} />
+          {stalls
+            .filter(restaurant => (isVegMode && vegChoice === 'pure_veg') ? restaurant.isPureVeg : true)
+            .map((restaurant, idx) => (
+              <RestaurantCard key={idx} data={restaurant} onOpenVariantModal={setVariantModal} />
           ))}
         </div>
       </div>

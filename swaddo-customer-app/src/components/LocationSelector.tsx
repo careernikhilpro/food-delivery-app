@@ -7,8 +7,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 
-export default function LocationSelector({ isMobile = false, customTrigger }: { isMobile?: boolean, customTrigger?: (onClick: () => void) => React.ReactNode }) {
-  const { currentLocation, setCurrentLocation, setCoordinates, hasSetLocation } = useLocation();
+interface LocationSelectorProps {
+  isMobile?: boolean;
+  customTrigger?: (onClick: () => void) => React.ReactNode;
+}
+
+export default function LocationSelector({ isMobile = false, customTrigger }: LocationSelectorProps) {
+  const { currentLocation, setCurrentLocation, fullAddress, setFullAddress, setCoordinates, hasSetLocation } = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -66,6 +71,7 @@ export default function LocationSelector({ isMobile = false, customTrigger }: { 
         setCoordinates(geocodeData.data.lat, geocodeData.data.lng);
         let locationName = result.mainText || (result.description ? result.description.split(",")[0] : (result.title || "Location"));
         setCurrentLocation(locationName);
+        setFullAddress(result.description || locationName);
         localStorage.setItem("swaddo_location_type", "manual");
         setIsOpen(false);
       } else {
@@ -95,19 +101,22 @@ export default function LocationSelector({ isMobile = false, customTrigger }: { 
               body: JSON.stringify({ lat: latitude, lng: longitude })
             });
             const data = await res.json();
-            if (data && data.data) {
-              let locationName = data.data.city || "Location found";
-              if (data.data.address) {
-                const parts = data.data.address.split(',').map((s: string) => s.trim()).filter((s: string) => !s.includes('+') && !s.match(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}/));
-                if (parts.length > 0) {
-                  locationName = parts[0] + (parts[1] && parts[1] !== data.data.city ? ", " + parts[1] : "");
+              if (data && data.data) {
+                let locationName = data.data.city || "Location found";
+                let fAddr = data.data.address || locationName;
+                if (data.data.address) {
+                  const parts = data.data.address.split(',').map((s: string) => s.trim()).filter((s: string) => !s.includes('+') && !s.match(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}/));
+                  if (parts.length > 0) {
+                    locationName = parts[0] + (parts[1] && parts[1] !== data.data.city ? ", " + parts[1] : "");
+                  }
                 }
-              }
-              setCurrentLocation(locationName);
-              localStorage.setItem("swaddo_location_type", "live");
-            } else {
-              setCurrentLocation("Current Location"); // Fallback text so UI doesn't break
-              localStorage.setItem("swaddo_location_type", "live");
+                setCurrentLocation(locationName);
+                setFullAddress(fAddr);
+                localStorage.setItem("swaddo_location_type", "live");
+              } else {
+                setCurrentLocation("Current Location"); // Fallback text so UI doesn't break
+                setFullAddress("Current Location");
+                localStorage.setItem("swaddo_location_type", "live");
             }
           } catch (err) {
             console.error(err);
@@ -211,6 +220,7 @@ export default function LocationSelector({ isMobile = false, customTrigger }: { 
                         onClick={() => {
                           setCoordinates(addr.lat, addr.lng);
                           setCurrentLocation(addr.full_address || addr.name);
+                          setFullAddress(addr.full_address || addr.name);
                           localStorage.setItem("swaddo_location_type", "saved");
                           setIsOpen(false);
                         }}
@@ -242,8 +252,8 @@ export default function LocationSelector({ isMobile = false, customTrigger }: { 
                     <Clock size={18} strokeWidth={1.5} className="text-gray-800" />
                   </div>
                   <div className="flex-1 flex flex-col justify-center pt-0.5">
-                    <span className="font-bold text-[15px] text-gray-900 line-clamp-1 pr-2">Pune Railway Station (Platform 6 si...</span>
-                    <span className="text-[13px] text-gray-500 leading-snug mt-1 line-clamp-1">Sangamvadi, Pune, Maharashtra, India</span>
+                    <span className="font-bold text-[15px] text-gray-900 line-clamp-1 pr-2">{currentLocation || "Location Search"}</span>
+                    <span className="text-[13px] text-gray-500 leading-snug mt-1 line-clamp-1">{fullAddress || "Select a location to see address"}</span>
                   </div>
                 </div>
 

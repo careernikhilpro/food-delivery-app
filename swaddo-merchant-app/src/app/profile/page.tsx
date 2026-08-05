@@ -298,7 +298,7 @@ export default function ProfilePage() {
           is_pure_veg: !!myStall.is_pure_veg
         };
         setStall(stallData);
-        setEditForm({ ...stallData, is_pure_veg: false });
+        setEditForm({ ...stallData });
         setMerchantSettings({
           merchant_id: myStall.merchant_id || "",
           business_name: myStall.business_name || "",

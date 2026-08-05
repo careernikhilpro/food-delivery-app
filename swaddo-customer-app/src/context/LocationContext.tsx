@@ -5,6 +5,8 @@ import { createContext, useContext, useState, useEffect } from "react";
 type LocationContextType = {
   currentLocation: string;
   setCurrentLocation: (loc: string) => void;
+  fullAddress: string;
+  setFullAddress: (addr: string) => void;
   latitude: number | null;
   longitude: number | null;
   setCoordinates: (lat: number, lng: number, saveToStorage?: boolean) => void;
@@ -19,6 +21,7 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [currentLocation, setCurrentLocation] = useState("");
+  const [fullAddress, setFullAddress] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [liveLatitude, setLiveLatitude] = useState<number | null>(null);
@@ -30,6 +33,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     // Try to load from localStorage first
     const savedLoc = localStorage.getItem("swaddo_location");
+    const savedFullAddr = localStorage.getItem("swaddo_full_address");
     const savedLat = localStorage.getItem("swaddo_lat");
     const savedLng = localStorage.getItem("swaddo_lng");
     const savedLiveLat = localStorage.getItem("swaddo_live_lat");
@@ -42,6 +46,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     // Show cached location immediately to prevent UI flicker
     if (savedLoc && savedLoc !== "Locating..." && savedLat && savedLng) {
       setCurrentLocation(savedLoc);
+      if (savedFullAddr) setFullAddress(savedFullAddr);
       setHasSetLocation(true);
       setLatitude(parseFloat(savedLat));
       setLongitude(parseFloat(savedLng));
@@ -72,6 +77,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               
               if (data && data.data) {
                 let locationName = data.data.city || "Location found";
+                let fullAddr = data.data.address || locationName;
                 if (data.data.address) {
                   const parts = data.data.address.split(',').map((s: string) => s.trim()).filter((s: string) => !s.includes('+') && !s.match(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}/));
                   if (parts.length > 0) {
@@ -79,7 +85,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
                   }
                 }
                 setCurrentLocation(locationName);
+                setFullAddress(fullAddr);
                 localStorage.setItem("swaddo_location", locationName);
+                localStorage.setItem("swaddo_full_address", fullAddr);
                 setHasSetLocation(true);
                 localStorage.setItem("swaddo_location_type", "live");
               } else {
@@ -121,6 +129,11 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("swaddo_location", loc);
   };
 
+  const handleSetFullAddress = (addr: string) => {
+    setFullAddress(addr);
+    localStorage.setItem("swaddo_full_address", addr);
+  };
+
   const resetToLiveLocation = () => {
     localStorage.removeItem("swaddo_location_type");
     setIsLocationLoading(true);
@@ -146,6 +159,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             
             if (data && data.data) {
               let locationName = data.data.city || "Location found";
+              let fullAddr = data.data.address || locationName;
               if (data.data.address) {
                 const parts = data.data.address.split(',').map((s: string) => s.trim()).filter((s: string) => !s.includes('+') && !s.match(/^[A-Z0-9]{4}\+[A-Z0-9]{2,}/));
                 if (parts.length > 0) {
@@ -153,7 +167,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
                 }
               }
               setCurrentLocation(locationName);
+              setFullAddress(fullAddr);
               localStorage.setItem("swaddo_location", locationName);
+              localStorage.setItem("swaddo_full_address", fullAddr);
               setHasSetLocation(true);
               localStorage.setItem("swaddo_location_type", "live");
             }
@@ -174,7 +190,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <LocationContext.Provider value={{ currentLocation, setCurrentLocation: handleSetLocation, latitude, longitude, setCoordinates, hasSetLocation, isLocationLoading, resetToLiveLocation, liveLatitude, liveLongitude }}>
+    <LocationContext.Provider value={{ currentLocation, setCurrentLocation: handleSetLocation, fullAddress, setFullAddress: handleSetFullAddress, latitude, longitude, setCoordinates, hasSetLocation, isLocationLoading, resetToLiveLocation, liveLatitude, liveLongitude }}>
       {children}
     </LocationContext.Provider>
   );

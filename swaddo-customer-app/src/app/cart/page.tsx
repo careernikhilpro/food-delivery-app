@@ -330,21 +330,7 @@ export default function Cart() {
           if (haversineDist >= 3.2) newMarkup = 20;
         }
 
-        if (cart.items.length > 0) {
-          const hasMismatchedMarkup = cart.items.some(
-            (item) => (item.markup || 0) !== newMarkup,
-          );
-          if (hasMismatchedMarkup) {
-            import("react-hot-toast").then(({ default: toast }) => {
-              toast.error(
-                "Location changed. Cart cleared due to new pricing. Please re-add items.",
-                { id: "markup_mismatch" },
-              );
-            });
-            clearCart();
-            return;
-          }
-        }
+
         setFoodMarkup(newMarkup);
       }
     };
@@ -577,7 +563,7 @@ export default function Cart() {
                 resetToLiveLocation();
                 setTimeout(() => {
                   clearCart();
-                  router.push(`/track?id=${orderRes.data.order_id}`);
+                  router.push(`/`);
                 }, 2500);
               } else {
                 clearCart();
@@ -718,7 +704,7 @@ export default function Cart() {
                 ]
         ).filter((i) => !cart.items.find((ci) => ci.id === i.id));
 
-  if (!cart.items || cart.items.length === 0) {
+  if ((!cart.items || cart.items.length === 0) && !showSuccessAnim) {
     return (
       <div className="min-h-screen bg-[#F5F6F8] flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-sm flex flex-col items-center justify-center p-8 bg-white rounded-[24px] shadow-sm border border-gray-100 text-center">
