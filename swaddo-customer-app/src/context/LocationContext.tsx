@@ -44,7 +44,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     if (savedLiveLng) setLiveLongitude(parseFloat(savedLiveLng));
 
     // Show cached location immediately to prevent UI flicker
-    if (savedLoc && savedLoc !== "Locating..." && savedLat && savedLng) {
+    if (savedLoc && savedLoc !== "Locating..." && !savedLoc.includes("Dummy") && savedLat && savedLng) {
       setCurrentLocation(savedLoc);
       if (savedFullAddr) setFullAddress(savedFullAddr);
       setHasSetLocation(true);
@@ -53,8 +53,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       setIsLocationLoading(false);
     }
 
-    // Auto-fetch live GPS if they haven't set a manual address, or if nothing is saved
-    if (!savedLoc || savedLoc === "Locating..." || locationType !== "manual") {
+    // Auto-fetch live GPS if they haven't set a manual address, or if nothing is saved, or if it's stuck on Dummy
+    if (!savedLoc || savedLoc === "Locating..." || locationType !== "manual" || savedLoc.includes("Dummy")) {
       if ("geolocation" in navigator) {
         if (!savedLoc || savedLoc === "Locating...") setIsLocationLoading(true);
         navigator.geolocation.getCurrentPosition(

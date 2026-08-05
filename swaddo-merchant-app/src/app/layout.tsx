@@ -7,6 +7,7 @@ import SWRProvider from "@/components/SWRProvider";
 import FCMListener from "@/components/FCMListener";
 
 import PageTransitionWrapper from "@/components/PageTransitionWrapper";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Swaddo Merchant App",
@@ -40,6 +41,12 @@ export default function RootLayout({
             <BottomNav />
           </div>
         </SWRProvider>
+        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+          <Script 
+            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=geometry,places`}
+            strategy="beforeInteractive"
+          />
+        )}
       </body>
     </html>
   );

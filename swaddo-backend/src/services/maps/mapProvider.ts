@@ -28,7 +28,7 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 2): Promise<T> => {
 };
 
 export const geocode = async (address: string) => {
-  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+  if (getApiKey() === 'dummy_key_for_dev') {
     return { lat: 20.5937, lng: 78.9629, address: 'Dummy Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
   }
   const cacheKey = `geocode_${address.toLowerCase()}`;
@@ -66,7 +66,7 @@ export const geocode = async (address: string) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] geocode failed | ${Date.now() - start}ms | ${address}`);
-    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+    if (getApiKey() === 'dummy_key_for_dev') {
         return { lat: 20.5937, lng: 78.9629, address: 'Dummy Location', placeId: 'dummy', city: 'Dummy City', state: 'Dummy State', pincode: '000000' };
     }
     throw err;
@@ -74,15 +74,15 @@ export const geocode = async (address: string) => {
 };
 
 export const reverseGeocode = async (lat: number, lng: number) => {
-  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+  if (getApiKey() === 'dummy_key_for_dev') {
     try {
-      const fetch = (await import('node-fetch')).default;
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+      const axios = require('axios');
+      const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
         headers: {
           'User-Agent': 'SwaddoApp/1.0 (Development)'
         }
       });
-      const data: any = await res.json();
+      const data = res.data;
       if (data && data.display_name) {
         return {
           lat,
@@ -139,7 +139,7 @@ export const reverseGeocode = async (lat: number, lng: number) => {
 };
 
 export const autosuggest = async (query: string, location?: string) => {
-  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+  if (getApiKey() === 'dummy_key_for_dev') {
     return [{ placeId: 'dummy', description: 'Dummy Suggestion', mainText: 'Dummy Suggestion', secondaryText: '' }];
   }
   const start = Date.now();
@@ -167,7 +167,7 @@ export const autosuggest = async (query: string, location?: string) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] autosuggest failed | ${Date.now() - start}ms | ${query}`);
-    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+    if (getApiKey() === 'dummy_key_for_dev') {
         return [{ placeId: 'dummy', description: 'Dummy Suggestion', mainText: 'Dummy Suggestion', secondaryText: '' }];
     }
     throw err;
@@ -175,7 +175,7 @@ export const autosuggest = async (query: string, location?: string) => {
 };
 
 export const distance = async (coordinates: string) => {
-  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+  if (getApiKey() === 'dummy_key_for_dev') {
     return { distanceKm: 5, durationMin: 15 };
   }
   const start = Date.now();
@@ -204,7 +204,7 @@ export const distance = async (coordinates: string) => {
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] distance failed | ${Date.now() - start}ms | ${coordinates}`);
-    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+    if (getApiKey() === 'dummy_key_for_dev') {
         return { distanceKm: 5, durationMin: 15 };
     }
     throw err;
@@ -212,7 +212,7 @@ export const distance = async (coordinates: string) => {
 };
 
 export const routeETA = async (originLat: number, originLng: number, destLat: number, destLng: number) => {
-  if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+  if (getApiKey() === 'dummy_key_for_dev') {
     return { distanceKm: 5, durationMin: 15, polyline: 'dummy_polyline' };
   }
   const start = Date.now();
@@ -238,7 +238,7 @@ export const routeETA = async (originLat: number, originLng: number, destLat: nu
     return result;
   } catch (err: any) {
     logger.error(`[MapProvider] routeETA failed | ${Date.now() - start}ms`);
-    if (getApiKey() === 'dummy_key_for_dev' || process.env.NODE_ENV !== 'production') {
+    if (getApiKey() === 'dummy_key_for_dev') {
         return { distanceKm: 5, durationMin: 15, polyline: 'dummy_polyline' };
     }
     throw err;
