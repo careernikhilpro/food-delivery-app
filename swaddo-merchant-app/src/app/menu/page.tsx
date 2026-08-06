@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Check, X, Camera, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Plus, Edit2, Check, X, Camera, ChevronDown, ChevronUp, Trash2, Loader2, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import useSWR from "swr";
@@ -37,8 +37,9 @@ export default function MenuPage() {
     prepTime: "",
     tags: [] as string[],
     discountPercentage: "",
-    photos: [] as string[] // mock array of urls
+    image_url: "" 
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: stallData } = useSWR('/stalls/merchant/my-stall', async (url) => {
     const res = await api.get(url);
@@ -109,7 +110,8 @@ export default function MenuPage() {
           is_available: form.inStock,
           category: finalCategory,
           has_variants: hasVariants,
-          variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
+          variants: hasVariants ? form.variants.filter(v => v.name && v.price) : [],
+          image_url: form.image_url
         };
         console.log("PUT Payload sent to backend:", payload);
         const res = await api.put(`/stalls/${stallId}/menu/${editingItemFullId}`, payload);
@@ -124,7 +126,8 @@ export default function MenuPage() {
           is_available: form.inStock,
           category: finalCategory,
           has_variants: hasVariants,
-          variants: hasVariants ? form.variants.filter(v => v.name && v.price) : []
+          variants: hasVariants ? form.variants.filter(v => v.name && v.price) : [],
+          image_url: form.image_url
         };
         console.log("POST Payload sent to backend:", payload);
         const res = await api.post(`/stalls/${stallId}/menu`, payload);
@@ -139,11 +142,49 @@ export default function MenuPage() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY || "e583e164f1c859f3d3f681a797a931d7";
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setForm(prev => ({ ...prev, image_url: data.data.url }));
+      } else {
+        alert("Image upload failed");
+      }
+    } catch (error) {
+      console.error("Upload error", error);
+      alert("Error uploading image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteItem = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    try {
+      await api.delete(`/stalls/${stallId}/menu/${id}`);
+      setItems(items.filter(i => i.id !== id));
+    } catch (err: any) {
+      alert("Failed to delete item");
+    }
+  };
+
   const resetForm = () => {
     setForm({
       name: "", description: "", basePrice: "", category: "Starters", customCategory: "",
       dietaryType: "veg", inStock: true, variants: [{ name: "", price: "" }],
-      addons: [{ name: "", price: "" }], prepTime: "", tags: [], discountPercentage: "", photos: []
+      addons: [{ name: "", price: "" }], prepTime: "", tags: [], discountPercentage: "", image_url: ""
     });
     setEditingItemFullId(null);
     setHasVariants(false);
@@ -266,9 +307,9 @@ export default function MenuPage() {
                   {/* Image Section */}
                   <div className="w-[100px] flex flex-col shrink-0 relative">
                     <div className="w-[100px] h-[100px] rounded-2xl overflow-hidden bg-slate-100 relative shadow-inner">
-                      {item.photo_urls && item.photo_urls.length > 0 ? (
+                      {item.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.photo_urls[0]} alt={item.name} className="w-full h-full object-cover" />
+                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center font-extrabold text-slate-300 text-3xl">
                           {item.name.charAt(0)}
@@ -293,30 +334,35 @@ export default function MenuPage() {
                           </div>
                           <h3 className="font-extrabold text-slate-800 text-base leading-tight pr-1 truncate max-w-[130px]">{item.name}</h3>
                         </div>
-                        {/* Edit Button */}
-                        <button onClick={() => { 
-                          setForm({
-                            name: item.name,
-                            description: item.description || "",
-                            basePrice: item.price.toString(),
-                            category: ["Starters", "Main Course", "Breads", "Desserts", "Beverages"].includes(item.category) ? item.category : "Custom",
-                            customCategory: ["Starters", "Main Course", "Breads", "Desserts", "Beverages"].includes(item.category) ? "" : item.category,
-                            dietaryType: item.is_veg ? "veg" : "non-veg",
-                            inStock: item.is_available,
-                            variants: item.has_variants && item.variants ? item.variants : [{ name: "", price: "" }],
-                            addons: item.has_addons && item.addons ? item.addons : [{ name: "", price: "" }],
-                            prepTime: item.prep_time_minutes ? item.prep_time_minutes.toString() : "",
-                            tags: item.tags || [],
-                            discountPercentage: item.discount_percentage ? item.discount_percentage.toString() : "",
-                            photos: item.photo_urls || []
-                          });
-                          setEditingItemFullId(item.id.toString());
-                          setHasVariants(item.has_variants || false);
-                          setHasAddons(item.has_addons || false);
-                          setIsAdding(true);
-                        }} className="p-1.5 text-slate-400 hover:text-accent hover:bg-orange-50 rounded-lg transition-colors -mt-1 -mr-1">
-                          <Edit2 size={16} />
-                        </button>
+                        {/* Edit & Delete Buttons */}
+                        <div className="flex items-center gap-1 -mt-1 -mr-1">
+                          <button onClick={() => { 
+                            setForm({
+                              name: item.name,
+                              description: item.description || "",
+                              basePrice: item.price.toString(),
+                              category: ["Starters", "Main Course", "Breads", "Desserts", "Beverages"].includes(item.category) ? item.category : "Custom",
+                              customCategory: ["Starters", "Main Course", "Breads", "Desserts", "Beverages"].includes(item.category) ? "" : item.category,
+                              dietaryType: item.is_veg ? "veg" : "non-veg",
+                              inStock: item.is_available,
+                              variants: item.has_variants && item.variants ? item.variants : [{ name: "", price: "" }],
+                              addons: item.has_addons && item.addons ? item.addons : [{ name: "", price: "" }],
+                              prepTime: item.prep_time_minutes ? item.prep_time_minutes.toString() : "",
+                              tags: item.tags || [],
+                              discountPercentage: item.discount_percentage ? item.discount_percentage.toString() : "",
+                              image_url: item.image_url || ""
+                            });
+                            setEditingItemFullId(item.id.toString());
+                            setHasVariants(item.has_variants || false);
+                            setHasAddons(item.has_addons || false);
+                            setIsAdding(true);
+                          }} className="p-1.5 text-slate-400 hover:text-accent hover:bg-orange-50 rounded-lg transition-colors">
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteItem(item.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                       
                       <div className="flex items-center gap-2 mt-0.5">
@@ -431,23 +477,27 @@ export default function MenuPage() {
                   <textarea placeholder="e.g. Delicious grilled cottage cheese marinated in spices..." rows={2} value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full border border-border-subtle p-3.5 rounded-xl text-sm outline-none focus:border-accent bg-white resize-none transition-colors" />
                 </div>
 
-                {/* Multiple Photos */}
+                {/* Single Photo Upload */}
                 <div>
-                  <label className="block text-xs font-bold text-text-muted mb-2">Photos (up to 3)</label>
+                  <label className="block text-xs font-bold text-text-muted mb-2">Item Photo</label>
                   <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                    {form.photos.map((url, idx) => (
-                      <div key={idx} className="w-24 h-24 rounded-xl border border-border-subtle bg-gray-100 shrink-0 relative overflow-hidden group shadow-sm">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Photo ${idx}`} className="w-full h-full object-cover" />
-                        <button onClick={() => setForm({...form, photos: form.photos.filter((_, i) => i !== idx)})} className="absolute top-1.5 right-1.5 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md"><Trash2 size={12}/></button>
-                        {idx === 0 && <div className="absolute bottom-0 inset-x-0 bg-accent/90 text-white text-[9px] font-bold text-center py-1 tracking-wider">COVER</div>}
+                    {form.image_url ? (
+                      <div className="w-24 h-24 rounded-xl border border-border-subtle bg-gray-100 shrink-0 relative overflow-hidden group shadow-sm">
+                        <img src={form.image_url} alt="Item Photo" className="w-full h-full object-cover" />
+                        <button onClick={() => setForm({ ...form, image_url: "" })} className="absolute top-1.5 right-1.5 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+                          <Trash2 size={12} />
+                        </button>
                       </div>
-                    ))}
-                    {form.photos.length < 3 && (
-                      <button onClick={() => setForm({...form, photos: [...form.photos, `https://picsum.photos/seed/${Math.random()}/200/200`]} )} className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-gray-500 flex flex-col items-center justify-center shrink-0 hover:border-accent hover:text-accent transition-colors hover:bg-orange-50">
-                        <Camera size={24} className="mb-1.5 opacity-80" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Add Photo</span>
-                      </button>
+                    ) : (
+                      <label className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-gray-500 flex flex-col items-center justify-center shrink-0 hover:border-accent hover:text-accent transition-colors hover:bg-orange-50 cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploading} />
+                        {isUploading ? (
+                          <Loader2 size={24} className="mb-1.5 opacity-80 animate-spin" />
+                        ) : (
+                          <Camera size={24} className="mb-1.5 opacity-80" />
+                        )}
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{isUploading ? 'Uploading' : 'Add Photo'}</span>
+                      </label>
                     )}
                   </div>
                 </div>
