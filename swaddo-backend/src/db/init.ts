@@ -127,6 +127,9 @@ const runSchema = async () => {
       DO $$ BEGIN
         ALTER TABLE stalls ADD COLUMN active_offer_is_active BOOLEAN DEFAULT false;
       EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE stalls ADD COLUMN is_cutlery_enabled BOOLEAN DEFAULT false;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
     
     await client.query(`CREATE INDEX IF NOT EXISTS idx_stalls_location ON stalls(location);`);
@@ -182,6 +185,8 @@ const runSchema = async () => {
         delivery_address TEXT,
         delivery_lat DECIMAL(10,8),
         delivery_lng DECIMAL(11,8),
+        cooking_request TEXT,
+        cutlery_needed BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -214,6 +219,12 @@ const runSchema = async () => {
       EXCEPTION WHEN duplicate_column THEN null; END $$;
       DO $$ BEGIN
         ALTER TABLE orders ADD COLUMN restaurant_share DECIMAL(10,2) DEFAULT 0.00;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN cooking_request TEXT;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE orders ADD COLUMN cutlery_needed BOOLEAN DEFAULT false;
       EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 

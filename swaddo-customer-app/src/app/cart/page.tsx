@@ -22,6 +22,11 @@ import {
   Home,
   Briefcase,
   ReceiptText,
+  Mic,
+  DoorOpen,
+  PhoneOff,
+  BellOff,
+  Shield,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -151,7 +156,7 @@ export default function Cart() {
 
   // States
   const [isBillExpanded, setIsBillExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Cart & Suggestion States
@@ -160,15 +165,20 @@ export default function Cart() {
     lng: number;
   } | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(20);
+  const [distanceKms, setDistanceKms] = useState<string | null>(null);
   const [foodMarkup, setFoodMarkup] = useState(0);
   const [suggestedItems, setSuggestedItems] = useState<any[]>([]);
 
   // Order Options
-  const [deliveryInstructions, setDeliveryInstructions] = useState("");
+  const [deliveryInstructions, setDeliveryInstructions] = useState<string[]>([]);
+  const [activeDeliveryTab, setActiveDeliveryTab] = useState<"modes" | "instructions">("modes");
   const [restaurantInstructions, setRestaurantInstructions] = useState("");
+  const [isDirectionsModalOpen, setIsDirectionsModalOpen] = useState(false);
+  const [customDirections, setCustomDirections] = useState("");
+  const [tempDirections, setTempDirections] = useState("");
 
   // Redesign UI States
-  const [deliveryMode, setDeliveryMode] = useState<"quick" | "basic">("quick");
+  const [deliveryMode, setDeliveryMode] = useState<"quick" | "basic">("basic");
   const [activeTab, setActiveTab] = useState<
     "popular" | "beverages" | "desserts" | "sides"
   >("popular");
@@ -243,11 +253,15 @@ export default function Cart() {
       api
         .get(`/stalls/${cart.stallId}`)
         .then((res) => {
-          if (res.data && res.data.latitude && res.data.longitude) {
-            setStallCoords({
-              lat: parseFloat(res.data.latitude),
-              lng: parseFloat(res.data.longitude),
-            });
+          if (res.data) {
+            setIsCutleryEnabled(res.data.is_cutlery_enabled === true);
+            setStallOfferTitle(res.data.active_offer_title || null);
+            if (res.data.latitude && res.data.longitude) {
+              setStallCoords({
+                lat: parseFloat(res.data.latitude),
+                lng: parseFloat(res.data.longitude),
+              });
+            }
           }
         })
         .catch(console.error);
@@ -264,6 +278,12 @@ export default function Cart() {
         .catch(console.error);
     }
   }, [cart.stallId, cart.items]);
+
+  const [isCookingRequestActive, setIsCookingRequestActive] = useState(false);
+  const [cookingRequest, setCookingRequest] = useState("");
+  const [cutleryNeeded, setCutleryNeeded] = useState(false);
+  const [isCutleryEnabled, setIsCutleryEnabled] = useState(false);
+  const [stallOfferTitle, setStallOfferTitle] = useState<string | null>(null);
 
   // Delivery Fee Calculation
   useEffect(() => {
@@ -303,6 +323,7 @@ export default function Cart() {
         }
         fee = Math.round(fee * 100) / 100;
         setDeliveryFee(fee);
+        setDistanceKms(haversineDist.toFixed(1));
 
         let newMarkup = 0;
         try {
@@ -319,6 +340,9 @@ export default function Cart() {
             }),
           });
           const data = await routeRes.json();
+          if (data.status === "success" && data.data && data.data.distanceKm) {
+             setDistanceKms(data.data.distanceKm.toFixed(1));
+          }
           if (
             data.status === "success" &&
             data.data &&
@@ -457,6 +481,8 @@ export default function Cart() {
   const itemTotal = cartTotal + foodMarkup * cartItemCount;
   const GST = Math.round(itemTotal * 0.05);
   const finalTotal = itemTotal + GST + deliveryFee;
+  
+  const totalSaved = cart.items.reduce((sum, item) => sum + (Math.round(item.price * 1.20) - item.price) * item.quantity, 0);
 
   const handlePlaceOrder = async () => {
     if (!cart.stallId || cart.items.length === 0) return;
@@ -490,9 +516,14 @@ export default function Cart() {
         deliveryLat: selectedAddr.latitude,
         deliveryLng: selectedAddr.longitude,
         customerPhone: selectedAddr.customerPhone || undefined,
-        deliveryInstructions,
+        deliveryInstructions: [
+          ...deliveryInstructions,
+          customDirections ? `Directions: ${customDirections}` : null
+        ].filter(Boolean).join(", ") || null,
         restaurantInstructions,
         paymentMethod,
+        cookingRequest: cookingRequest || null,
+        cutleryNeeded: cutleryNeeded,
         items: cart.items.map((item: any) => ({
           ...item,
           price: item.price + foodMarkup,
@@ -611,98 +642,7 @@ export default function Cart() {
     }
   };
 
-  const displayedSuggestedItems =
-    suggestedItems.length > 0
-      ? suggestedItems
-      : (cart.stallId === "rest_2"
-          ? [
-              {
-                id: "s1",
-                name: "Whopper",
-                price: 149,
-                img: "/categories/burger.png",
-                isVeg: false,
-              },
-              {
-                id: "s2",
-                name: "Fries (M)",
-                price: 109,
-                img: "/categories/burger.png",
-                isVeg: true,
-              },
-            ]
-          : cart.stallId === "rest_1"
-            ? [
-                {
-                  id: "s1",
-                  name: "Crispy Paneer Patty Burger",
-                  price: 114,
-                  img: "/categories/burger.png",
-                  isVeg: true,
-                },
-                {
-                  id: "s2",
-                  name: "Peri Peri Fries",
-                  price: 105,
-                  img: "/categories/burger.png",
-                  isVeg: true,
-                },
-                {
-                  id: "s3",
-                  name: "Veggie Sandwich",
-                  price: 175,
-                  img: "/categories/sandwich.png",
-                  isVeg: true,
-                },
-              ]
-            : cart.stallId === "meals_99_stall"
-              ? [
-                  {
-                    id: "s3",
-                    name: "Chole Bhature",
-                    price: 89,
-                    img: "/categories/burger.png",
-                    isVeg: true,
-                  },
-                  {
-                    id: "s4",
-                    name: "Rajma Chawal",
-                    price: 99,
-                    img: "/categories/pizza.png",
-                    isVeg: true,
-                  },
-                ]
-              : [
-                  {
-                    id: "s1",
-                    name: "Sprite",
-                    price: 103,
-                    img: "/categories/all.png",
-                    isVeg: true,
-                  },
-                  {
-                    id: "s2",
-                    name: "Veg Pizza...",
-                    price: 55,
-                    img: "/categories/pizza.png",
-                    isVeg: true,
-                  },
-                  {
-                    id: "s3",
-                    name: "Fries (Large)",
-                    price: 125,
-                    img: "/categories/burger.png",
-                    isVeg: true,
-                  },
-                  {
-                    id: "s4",
-                    name: "Piri Piri Spice Mix",
-                    price: 23,
-                    img: "/categories/all.png",
-                    isVeg: true,
-                  },
-                ]
-        ).filter((i) => !cart.items.find((ci) => ci.id === i.id));
+  const displayedSuggestedItems = suggestedItems;
 
   if ((!cart.items || cart.items.length === 0) && !showSuccessAnim) {
     return (
@@ -809,7 +749,7 @@ export default function Cart() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-2 max-w-[55%]">
                     <div className="mt-[3px] shrink-0">
-                      {item.isVeg ? <VegIcon /> : <NonVegIcon />}
+                      {item.isVeg !== false ? <VegIcon /> : <NonVegIcon />}
                     </div>
                     <h3 className="font-bold text-[14px] text-gray-800 leading-tight">
                       {item.name}
@@ -848,7 +788,7 @@ export default function Cart() {
                     </div>
                     <div className="flex flex-col items-end w-[40px]">
                       <span className="text-[12px] text-gray-400 line-through font-medium mb-0.5">
-                        ₹{Math.round(item.price * 1.15)}
+                        ₹{Math.round(item.price * 1.20)}
                       </span>
                       <span className="text-[14px] font-bold text-gray-800">
                         ₹{item.price}
@@ -860,39 +800,87 @@ export default function Cart() {
             ))}
 
             {/* Action Pills */}
-            <div className="flex items-center gap-2 mt-4 overflow-x-auto hide-scrollbar pb-1">
-              <button
-                onClick={() => router.push("/")}
+            <div className="flex flex-wrap gap-2 py-1">
+              <button 
+                onClick={() => router.push(`/stall/${cart.stallId}`)}
                 className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-500 shrink-0 hover:bg-gray-50"
               >
                 <Plus size={14} className="text-gray-400" /> Add Items
               </button>
-              <button className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-500 shrink-0 hover:bg-gray-50">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-gray-400"
+
+              {!cookingRequest && !isCookingRequestActive && (
+                <button 
+                  onClick={() => setIsCookingRequestActive(true)}
+                  className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-500 shrink-0 hover:bg-gray-50"
                 >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                  </svg>
+                  Cooking requests
+                </button>
+              )}
+
+              {isCutleryEnabled && (
+                <label className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-500 shrink-0 hover:bg-gray-50 cursor-pointer">
+                  <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${cutleryNeeded ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
+                    {cutleryNeeded && <Check size={10} className="text-white" strokeWidth={3} />}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={cutleryNeeded} onChange={(e) => setCutleryNeeded(e.target.checked)} />
+                  Cutlery Needed
+                </label>
+              )}
+            </div>
+
+            {isCookingRequestActive && !cookingRequest && (
+              <div className="mt-3 flex items-center gap-2">
+                <input 
+                  type="text" 
+                  autoFocus
+                  id="cooking-request-input"
+                  placeholder="Any cooking requests? (e.g. Make it spicy)" 
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-[12px] outline-none focus:border-green-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setCookingRequest(e.currentTarget.value);
+                      setIsCookingRequestActive(false);
+                    }
+                  }}
+                />
+                <button 
+                  onClick={() => {
+                    const input = document.getElementById('cooking-request-input') as HTMLInputElement;
+                    if (input && input.value.trim()) {
+                      setCookingRequest(input.value.trim());
+                    }
+                    setIsCookingRequestActive(false);
+                  }}
+                  className="px-4 py-1.5 bg-[#00A14F] text-white text-[12px] font-bold rounded-lg shrink-0"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            {cookingRequest && (
+              <div className="mt-3 flex items-start gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 relative">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 mt-0.5 shrink-0">
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                 </svg>
-                Cooking requests
-              </button>
-              <label className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-500 shrink-0 hover:bg-gray-50 cursor-pointer">
-                <div className="w-3.5 h-3.5 rounded-sm border border-gray-300"></div>
-                Cutlery Needed
-              </label>
-            </div>
+                <p className="text-[13px] text-gray-700 pr-6">{cookingRequest}</p>
+                <button 
+                  onClick={() => setCookingRequest("")}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-red-500 bg-white rounded-full p-0.5 shadow-sm border border-gray-100"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
           </div>
 
 
 
           {/* Complete Your Meal */}
+          {displayedSuggestedItems.length > 0 && (
           <div className="bg-white rounded-[24px] p-4 shadow-sm border border-gray-100 overflow-hidden">
             <h3 className="text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-4">
               COMPLETE YOUR MEAL
@@ -934,7 +922,7 @@ export default function Cart() {
                             id: sitem.id,
                             name: sitem.name,
                             price: sitem.price,
-                            isVeg: sitem.isVeg,
+                            isVeg: sitem.is_veg ?? true,
                           },
                           1,
                         )
@@ -950,7 +938,7 @@ export default function Cart() {
                   </div>
                   <div className="flex items-start gap-1">
                     <div className="mt-[2px] shrink-0">
-                      {sitem.isVeg ? <VegIcon /> : <NonVegIcon />}
+                      {(sitem.isVeg ?? sitem.is_veg) !== false ? <VegIcon /> : <NonVegIcon />}
                     </div>
                     <h4 className="font-medium text-[13px] text-gray-800 leading-tight line-clamp-2 w-full">
                       {sitem.name}
@@ -963,91 +951,152 @@ export default function Cart() {
               ))}
             </div>
           </div>
+          )}
 
-          {/* Delivery Modes */}
+          {/* Delivery Modes & Instructions */}
           <div className="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-1 bg-[#F5F6F8] rounded-full p-1 mb-5">
-              <button className="flex-1 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-full py-2.5 flex items-center justify-center gap-1.5 text-[13px] font-bold text-green-800">
+              <button 
+                onClick={() => setActiveDeliveryTab("modes")}
+                className={`flex-1 rounded-full py-2.5 flex items-center justify-center gap-1.5 text-[13px] transition-all ${activeDeliveryTab === "modes" ? "bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] font-bold text-green-800" : "text-gray-500 font-medium hover:bg-gray-200/50"}`}
+              >
                 Delivery Modes{" "}
                 <span className="bg-[#00A14F] text-white text-[9px] px-1.5 py-0.5 rounded-sm tracking-wider">
                   NEW
                 </span>
               </button>
-              <button className="flex-1 text-gray-500 text-[13px] font-medium py-2.5">
+              <button 
+                onClick={() => setActiveDeliveryTab("instructions")}
+                className={`flex-1 rounded-full py-2.5 flex items-center justify-center text-[13px] transition-all ${activeDeliveryTab === "instructions" ? "bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] font-bold text-green-800" : "text-gray-500 font-medium hover:bg-gray-200/50"}`}
+              >
                 Instructions
               </button>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${deliveryMode === "quick" ? "border-[#FF007F]" : "border-gray-300"}`}
-                >
-                  {deliveryMode === "quick" && (
-                    <div className="w-2.5 h-2.5 bg-[#FF007F] rounded-full"></div>
-                  )}
-                </div>
-                <input
-                  type="radio"
-                  name="deliveryMode"
-                  className="hidden"
-                  checked={deliveryMode === "quick"}
-                  onChange={() => setDeliveryMode("quick")}
-                />
-                <div className="flex flex-col flex-1">
-                  <div className="flex justify-between items-center w-full mb-0.5">
-                    <span
-                      className={`font-medium text-[15px] flex items-center gap-1 transition-colors ${deliveryMode === "quick" ? "text-gray-400" : "text-gray-300"}`}
-                    >
-                      Quick <span className="text-[#FF007F]">⚡</span>
-                    </span>
-                    <span
-                      className={`font-medium text-[14px] transition-colors ${deliveryMode === "quick" ? "text-gray-500" : "text-gray-300"}`}
-                    >
-                      +₹7
+            {activeDeliveryTab === "modes" && (
+              <div className="flex flex-col gap-4">
+                <label style={{ display: 'none' }} className="flex items-start gap-3 cursor-pointer group">
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${deliveryMode === "quick" ? "border-[#FF007F]" : "border-gray-300"}`}
+                  >
+                    {deliveryMode === "quick" && (
+                      <div className="w-2.5 h-2.5 bg-[#FF007F] rounded-full"></div>
+                    )}
+                  </div>
+                  <input
+                    type="radio"
+                    name="deliveryMode"
+                    className="hidden"
+                    checked={deliveryMode === "quick"}
+                    onChange={() => setDeliveryMode("quick")}
+                  />
+                  <div className="flex flex-col flex-1">
+                    <div className="flex justify-between items-center w-full mb-0.5">
+                      <span
+                        className={`font-medium text-[15px] flex items-center gap-1 transition-colors ${deliveryMode === "quick" ? "text-gray-400" : "text-gray-300"}`}
+                      >
+                        Quick <span className="text-[#FF007F]">⚡</span>
+                      </span>
+                      <span
+                        className={`font-medium text-[14px] transition-colors ${deliveryMode === "quick" ? "text-gray-500" : "text-gray-300"}`}
+                      >
+                        +₹7
+                      </span>
+                    </div>
+                    <span className="text-[12px] text-gray-300 font-medium">
+                      Add address to check delivery time
                     </span>
                   </div>
-                  <span className="text-[12px] text-gray-300 font-medium">
-                    Add address to check delivery time
-                  </span>
-                </div>
-              </label>
+                </label>
 
-              <div className="w-full h-[1px] border-t border-dashed border-gray-200"></div>
+                <div style={{ display: 'none' }} className="w-full h-[1px] border-t border-dashed border-gray-200"></div>
 
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${deliveryMode === "basic" ? "border-[#FF007F]" : "border-gray-300"}`}
-                >
-                  {deliveryMode === "basic" && (
-                    <div className="w-2.5 h-2.5 bg-[#FF007F] rounded-full"></div>
-                  )}
-                </div>
-                <input
-                  type="radio"
-                  name="deliveryMode"
-                  className="hidden"
-                  checked={deliveryMode === "basic"}
-                  onChange={() => setDeliveryMode("basic")}
-                />
-                <div className="flex flex-col flex-1">
-                  <div className="flex justify-between items-center w-full mb-0.5">
-                    <span
-                      className={`font-medium text-[15px] transition-colors ${deliveryMode === "basic" ? "text-gray-400" : "text-gray-300"}`}
-                    >
-                      Basic
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${deliveryMode === "basic" ? "border-[#FF007F]" : "border-gray-300"}`}
+                  >
+                    {deliveryMode === "basic" && (
+                      <div className="w-2.5 h-2.5 bg-[#FF007F] rounded-full"></div>
+                    )}
+                  </div>
+                  <input
+                    type="radio"
+                    name="deliveryMode"
+                    className="hidden"
+                    checked={deliveryMode === "basic"}
+                    onChange={() => setDeliveryMode("basic")}
+                  />
+                  <div className="flex flex-col flex-1">
+                    <div className="flex justify-between items-center w-full mb-0.5">
+                      <span
+                        className={`font-bold text-[15px] transition-colors ${deliveryMode === "basic" ? "text-gray-900" : "text-gray-600"}`}
+                      >
+                        Premium
+                      </span>
+                    </div>
+                    <span className="text-[12px] text-gray-500 font-medium">
+                      Fast door step delivery
                     </span>
                   </div>
-                  <span className="text-[12px] text-gray-300 font-medium">
-                    Add address to check delivery time
-                  </span>
-                </div>
-              </label>
-            </div>
+                </label>
+              </div>
+            )}
+
+            {activeDeliveryTab === "instructions" && (
+              <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 snap-x pt-1 -mx-2 px-2">
+                {[
+                  { id: 'Directions to reach', icon: <Mic size={22} className="mb-2.5" /> },
+                  { id: 'Leave at the door', icon: <DoorOpen size={22} className="mb-2.5" /> },
+                  { id: 'Avoid calling', icon: <PhoneOff size={22} className="mb-2.5" /> },
+                  { id: 'Avoid ringing bell', icon: <BellOff size={22} className="mb-2.5" /> },
+                  { id: 'Leave with security', icon: <Shield size={22} className="mb-2.5" /> },
+                ].map((instruction) => {
+                  let isDisabled = false;
+                  if (instruction.id === 'Leave at the door') {
+                    isDisabled = deliveryInstructions.includes('Leave with security');
+                  } else if (instruction.id === 'Leave with security') {
+                    isDisabled = deliveryInstructions.includes('Leave at the door');
+                  }
+                  
+                  const isSelected = deliveryInstructions.includes(instruction.id) || (instruction.id === 'Directions to reach' && customDirections.length > 0);
+                  return (
+                    <button
+                      key={instruction.id}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (instruction.id === 'Directions to reach') {
+                          setTempDirections(customDirections);
+                          setIsDirectionsModalOpen(true);
+                        } else {
+                          if (isSelected) {
+                            setDeliveryInstructions(deliveryInstructions.filter(i => i !== instruction.id));
+                          } else {
+                            setDeliveryInstructions([...deliveryInstructions, instruction.id]);
+                          }
+                        }
+                      }}
+                      className={`flex flex-col shrink-0 w-[95px] h-[100px] snap-start border rounded-[16px] p-3 transition-all text-left relative ${isDisabled ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-100' : isSelected ? 'border-[#00A14F] bg-green-50/50 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-2.5 right-2.5 bg-[#00A14F] text-white rounded-full p-0.5 shadow-sm">
+                          <Check size={10} strokeWidth={4} />
+                        </div>
+                      )}
+                      <div className={`${isDisabled ? 'text-gray-400' : isSelected ? 'text-[#00A14F]' : 'text-gray-500'}`}>
+                        {instruction.icon}
+                      </div>
+                      <span className={`text-[12px] leading-[1.2] ${isDisabled ? 'text-gray-400 font-medium' : isSelected ? 'text-gray-900 font-bold' : 'text-gray-600 font-medium'}`}>
+                        {instruction.id}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Offers */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
+          <div style={{ display: 'none' }} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-green-700 text-white rounded-[10px] flex items-center justify-center">
                 <svg
@@ -1098,7 +1147,7 @@ export default function Cart() {
                 </svg>
               </div>
               <span className="font-bold text-[14px] text-gray-800">
-                ₹9 saved with 'Items at ₹49'
+                ₹{totalSaved} saved with 'Items at ₹{cartTotal}'
               </span>
             </div>
             <span className="text-green-700 text-[13px] font-bold flex items-center gap-0.5">
@@ -1111,7 +1160,7 @@ export default function Cart() {
               Select Payment Method
             </h3>
 
-            <label className="flex items-center gap-3 cursor-pointer group">
+            <label style={{ display: 'none' }} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${paymentMethod === "upi" ? "border-[#FF007F]" : "border-gray-300"}`}
               >
@@ -1136,7 +1185,7 @@ export default function Cart() {
               </div>
             </label>
 
-            <div className="w-full h-[1px] border-t border-dashed border-gray-200"></div>
+            <div style={{ display: 'none' }} className="w-full h-[1px] border-t border-dashed border-gray-200"></div>
 
             <label className="flex items-center gap-3 cursor-pointer group">
               <div
@@ -1182,14 +1231,14 @@ export default function Cart() {
                       To Pay
                     </span>
                     <span className="text-[14px] text-gray-400 line-through font-medium">
-                      ₹{finalTotal + 9}
+                      ₹{finalTotal + totalSaved}
                     </span>
                     <span className="font-bold text-[15px] text-gray-800">
                       ₹{finalTotal}
                     </span>
                   </div>
                   <span className="text-green-600 text-[13px] font-bold mt-0.5">
-                    ₹9 saved on the total!
+                    ₹{totalSaved} saved on the total!
                   </span>
                 </div>
               </div>
@@ -1218,7 +1267,7 @@ export default function Cart() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500 line-through font-medium">
-                        ₹{itemTotal + 9}
+                        ₹{itemTotal + totalSaved}
                       </span>
                       <span className="text-[#00A14F] font-bold">
                         ₹{itemTotal}
@@ -1230,7 +1279,7 @@ export default function Cart() {
 
                   <div className="flex items-center justify-between text-[14px]">
                     <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none">
-                      Delivery Fee | 2.6 kms
+                      Delivery Fee | {distanceKms ? distanceKms : "..."} kms
                     </span>
                     <span className="text-gray-600 font-medium">
                       ₹{deliveryFee}
@@ -1669,6 +1718,73 @@ export default function Cart() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Directions Modal */}
+      {isDirectionsModalOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+          <div
+            className="absolute inset-0 bg-black/50 transition-opacity"
+            onClick={() => setIsDirectionsModalOpen(false)}
+          ></div>
+          <div className="relative w-full max-w-md mx-auto bg-white rounded-t-[24px] shadow-2xl flex flex-col pt-2 pb-6 px-5 transition-transform translate-y-0">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5"></div>
+            
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-lg font-bold text-gray-900">Directions to reach</h2>
+              <button onClick={() => setIsDirectionsModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 rounded-full">
+                <X size={16} />
+              </button>
+            </div>
+            
+            {savedAddresses.find(a => a.id === selectedAddressId) && (
+              <p className="text-[13px] text-gray-500 mb-6 line-clamp-1">
+                {savedAddresses.find(a => a.id === selectedAddressId)?.fullAddress}
+              </p>
+            )}
+
+            {customDirections ? (
+              <div className="bg-white border border-gray-200 rounded-[12px] p-3 mb-6 flex justify-between items-center shadow-sm">
+                <span className="text-[13px] text-gray-700 font-medium">
+                  {customDirections}
+                </span>
+                <button 
+                  onClick={() => {
+                    setCustomDirections("");
+                    setTempDirections("");
+                  }}
+                  className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="relative mb-6">
+                <textarea
+                  value={tempDirections}
+                  onChange={(e) => setTempDirections(e.target.value.slice(0, 200))}
+                  placeholder="e.g. Ring the bell on the red gate"
+                  className="w-full border border-gray-200 rounded-xl p-4 text-[14px] text-gray-800 outline-none focus:border-green-500 min-h-[120px] resize-none"
+                ></textarea>
+                <span className="absolute bottom-3 left-4 text-[12px] text-gray-400">
+                  {tempDirections.length}/200
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                if (!customDirections) {
+                  setCustomDirections(tempDirections.trim());
+                }
+                setIsDirectionsModalOpen(false);
+              }}
+              className="w-full bg-[#00A14F] text-white font-bold text-[15px] py-4 rounded-xl hover:bg-[#009146] transition-colors"
+            >
+              {customDirections ? "Done" : "Save Instructions"}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -404,6 +404,18 @@ function DashboardContent() {
                         <p className="text-sm font-medium text-yellow-900">{activeOrderDetails.restaurantInstructions}</p>
                       </div>
                     )}
+                    {activeOrderDetails.cooking_request && (
+                      <div className="p-3 bg-red-50 rounded-lg border border-red-200 mt-2">
+                        <p className="text-xs font-bold text-red-800 uppercase mb-1">Cooking Request</p>
+                        <p className="text-sm font-medium text-red-900">{activeOrderDetails.cooking_request}</p>
+                      </div>
+                    )}
+                    {activeOrderDetails.cutlery_needed && (
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 mt-2 flex items-center justify-between">
+                        <p className="text-sm font-bold text-blue-900">Cutlery Requested</p>
+                        <span className="text-xs font-extrabold text-blue-700 bg-blue-100 px-2 py-1 rounded">YES</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -63,7 +63,9 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
       paymentMethod,
       customerPhone,
       deliveryInstructions,
-      restaurantInstructions
+      restaurantInstructions,
+      cookingRequest,
+      cutleryNeeded
     } = req.body;
     
     // 1. Validate payload
@@ -106,12 +108,12 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     const orderRes = await client.query(
       `INSERT INTO orders (
         customer_id, stall_id, total_amount, item_total, delivery_charge, gst_amount, platform_fee, restaurant_share, 
-        delivery_address, delivery_lat, delivery_lng, status, payment_method, customer_phone, delivery_instructions, restaurant_instructions
+        delivery_address, delivery_lat, delivery_lng, status, payment_method, customer_phone, delivery_instructions, restaurant_instructions, cooking_request, cutlery_needed
        ) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
       [
         req.user!.id, stallId, totalAmount, itemTotal || 0, deliveryCharge || 0, gstAmount || 0, platformFee || 0, restaurantShare || 0,
-        deliveryAddress, deliveryLat, deliveryLng, initialStatus, paymentMethod || 'upi', customerPhone || null, deliveryInstructions || null, restaurantInstructions || null
+        deliveryAddress, deliveryLat, deliveryLng, initialStatus, paymentMethod || 'upi', customerPhone || null, deliveryInstructions || null, restaurantInstructions || null, cookingRequest || null, cutleryNeeded || false
       ]
     );
     const order = orderRes.rows[0];

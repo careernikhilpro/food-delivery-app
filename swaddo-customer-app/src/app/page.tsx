@@ -10,6 +10,7 @@ import LocationSelector from "@/components/LocationSelector";
 import { useLocation } from "@/context/LocationContext";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import SearchOverlay from "@/components/SearchOverlay";
 
 const categories = [
   { name: "Burgers", image: "/categories/burger.png", price: "49" },
@@ -50,6 +51,29 @@ export default function Home() {
   const [rememberVegChoice, setRememberVegChoice] = useState(false);
   const searchPlaceholderItems = ["'Pizza'", "'Biryani'", "'Burger'", "'Noodles'"];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isSearchOpen]);
+
+  const openSearch = () => {
+    setIsSearchOpen(true);
+    window.history.pushState(null, '', '#search');
+  };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    if (window.location.hash === '#search') {
+      window.history.back();
+    }
+  };
 
   const [stalls, setStalls] = useState<any[]>([]);
   const [mealsUnder99, setMealsUnder99] = useState<any[]>([]);
@@ -144,7 +168,7 @@ export default function Home() {
         style={{ top: 0 }}
       >
         <div className="flex items-center gap-3">
-          <div className="relative flex-1 bg-white rounded-full shadow-sm border border-gray-200 h-[44px] cursor-text overflow-hidden flex items-center px-4" onClick={() => router.push("/search")}>
+          <div className="relative flex-1 bg-white rounded-full shadow-sm border border-gray-200 h-[44px] cursor-text overflow-hidden flex items-center px-4" onClick={openSearch}>
             <Search className="text-[#FF007F] shrink-0" size={18} />
             <div className="ml-3 flex-1 overflow-hidden relative h-full">
               <AnimatePresence mode="popLayout">
@@ -212,7 +236,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className={`relative flex-1 rounded-full shadow-md h-[52px] cursor-text overflow-hidden flex items-center px-4 border transition-colors ${isScrolled ? 'bg-gray-50 border-gray-200' : 'bg-white border-transparent'}`} onClick={() => router.push("/search")}>
+          <div className={`relative flex-1 rounded-full shadow-md h-[52px] cursor-text overflow-hidden flex items-center px-4 border transition-colors ${isScrolled ? 'bg-gray-50 border-gray-200' : 'bg-white border-transparent'}`} onClick={openSearch}>
             <Search className={`shrink-0 transition-colors ${isScrolled ? 'text-[#FF007F]' : 'text-gray-400'}`} size={20} />
             <div className="ml-3 flex-1 overflow-hidden relative h-full">
               <AnimatePresence mode="popLayout">
@@ -400,15 +424,36 @@ export default function Home() {
                   </div>
                   
                   {/* Plus Button */}
-                  {quantity > 0 && !item.has_variants ? (
+                  {quantity > 0 ? (
                     <div className="absolute -bottom-4 right-3 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                       <button 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(item.stall_id, item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, -1); }}
+                        onClick={(e) => { 
+                          e.preventDefault(); 
+                          e.stopPropagation(); 
+                          if (item.has_variants) {
+                            const variantsInCart = cart.items.filter((i: any) => String(i.id).startsWith(String(item.id) + '_'));
+                            if (variantsInCart.length === 1) {
+                              updateQuantity(item.stall_id.toString(), item.stall_name, variantsInCart[0], -1);
+                            } else {
+                              alert("Multiple variants added. Please go to cart to remove.");
+                            }
+                          } else {
+                            updateQuantity(item.stall_id.toString(), item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, -1); 
+                          }
+                        }}
                         className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
                       ><Minus size={14} /></button>
                       <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{quantity}</span>
                       <button 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(item.stall_id, item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, 1); }}
+                        onClick={(e) => { 
+                          e.preventDefault(); 
+                          e.stopPropagation(); 
+                          if (item.has_variants) {
+                            setVariantModal({ isOpen: true, stallId: item.stall_id.toString(), stallName: item.stall_name, item });
+                          } else {
+                            updateQuantity(item.stall_id.toString(), item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url }, 1); 
+                          }
+                        }}
                         className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
                       ><Plus size={14} /></button>
                     </div>
@@ -763,6 +808,11 @@ export default function Home() {
           updateQuantity={updateQuantity}
         />
       )}
+
+      {/* Search Overlay Modal */}
+      <AnimatePresence>
+        {isSearchOpen && <SearchOverlay onClose={closeSearch} />}
+      </AnimatePresence>
     </div>
   );
 }
@@ -849,15 +899,36 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                        <span className="text-[#00A14F] font-bold text-[10px]">Popular</span>
                      </div>
                    )}
-                   {quantity > 0 && !item.has_variants ? (
+                   {quantity > 0 ? (
                       <div className="absolute bottom-2 right-2 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, -1); }}
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            if (item.has_variants) {
+                              const variantsInCart = cart.items.filter((i: any) => String(i.id).startsWith(String(item.id || idx) + '_'));
+                              if (variantsInCart.length === 1) {
+                                updateQuantity(data.id, data.name, variantsInCart[0], -1);
+                              } else {
+                                alert("Multiple variants added. Please go to cart to remove.");
+                              }
+                            } else {
+                              updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, -1); 
+                            }
+                          }}
                           className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
                         ><Minus size={14} /></button>
                         <span className="text-[12px] font-bold text-gray-800 w-4 text-center">{quantity}</span>
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, 1); }}
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            if (item.has_variants && onOpenVariantModal) {
+                              onOpenVariantModal({ isOpen: true, stallId: data.id, stallName: data.name, item });
+                            } else {
+                              updateQuantity(data.id, data.name, { id: String(item.id || idx), name: item.name, price: parsedPrice, image: item.image }, 1); 
+                            }
+                          }}
                           className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
                         ><Plus size={14} /></button>
                       </div>
@@ -926,7 +997,6 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
             )})}
          </div>
          )}
-
       </div>
     </div>
   );
@@ -941,6 +1011,7 @@ function ChevronRight({ size, className, strokeWidth = 2 }: { size: number, clas
 }
 
 function VariantModalComponent({ modalState, setModalState, updateQuantity }: any) {
+  const { cartItemCount } = useCart();
   const { item, stallId, stallName } = modalState;
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [modalQty, setModalQty] = useState(1);
@@ -968,7 +1039,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
         <X size={18} strokeWidth={2.5} />
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full bg-[#f3f4f6] rounded-t-3xl z-50 overflow-hidden flex flex-col max-h-[80vh]">
+      <div className={`fixed ${cartItemCount > 0 ? 'bottom-[85px]' : 'bottom-0'} left-0 w-full bg-[#f3f4f6] rounded-t-3xl z-50 overflow-hidden flex flex-col max-h-[80vh] transition-all duration-300`}>
         {/* Header */}
         <div className="bg-white p-4 rounded-t-3xl flex items-center gap-3 shadow-sm z-10 shrink-0 border-b border-gray-100">
           <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 relative bg-gray-50 border border-gray-100">

@@ -63,7 +63,8 @@ export default function ProfilePage() {
     prep_time: 15,
     tags: "North Indian, Biryani",
     offer_text: "",
-    is_pure_veg: false
+    is_pure_veg: false,
+    is_cutlery_enabled: false
   });
   const [editForm, setEditForm] = useState({ 
     name: "", 
@@ -76,7 +77,8 @@ export default function ProfilePage() {
     prep_time: 15,
     tags: "North Indian, Biryani",
     offer_text: "",
-    is_pure_veg: false
+    is_pure_veg: false,
+    is_cutlery_enabled: false
   });
 
   // Advanced Merchant Settings State
@@ -295,7 +297,8 @@ export default function ProfilePage() {
           prep_time: myStall.prep_time || 15,
           tags: myStall.tags || "North Indian, Biryani",
           offer_text: myStall.offer_text || "",
-          is_pure_veg: !!myStall.is_pure_veg
+          is_pure_veg: !!myStall.is_pure_veg,
+          is_cutlery_enabled: !!myStall.is_cutlery_enabled
         };
         setStall(stallData);
         setEditForm({ ...stallData });
@@ -423,6 +426,21 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-1.5 whitespace-nowrap"><ChefHat size={14} className="text-slate-400"/> Prep: {stall.prep_time || 15}m</div>
               </div>
 
+              {(stall.is_pure_veg || stall.is_cutlery_enabled) && (
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {stall.is_pure_veg && (
+                    <span className="text-[10px] font-extrabold px-2 py-1 bg-green-50 text-green-700 rounded border border-green-200">
+                      PURE VEG
+                    </span>
+                  )}
+                  {stall.is_cutlery_enabled && (
+                    <span className="text-[10px] font-extrabold px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-200">
+                      CUTLERY REQUESTS ENABLED
+                    </span>
+                  )}
+                </div>
+              )}
+
               <button 
                 onClick={() => { setEditForm(stall); setIsEditing(true); }} 
                 className="w-full py-2.5 bg-slate-100 text-slate-900 font-extrabold text-[13px] rounded-full flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors shadow-sm"
@@ -491,10 +509,41 @@ export default function ProfilePage() {
                   <span className="text-xs text-gray-500">Only vegetarian food is prepared here</span>
                 </div>
                 <div 
-                  onClick={() => setEditForm({...editForm, is_pure_veg: !editForm.is_pure_veg})}
+                  onClick={async () => {
+                    const newValue = !editForm.is_pure_veg;
+                    setEditForm({...editForm, is_pure_veg: newValue});
+                    if (stall.id) {
+                      try {
+                        await api.put(`/stalls/${stall.id}`, { ...editForm, is_pure_veg: newValue });
+                        setStall(prev => ({ ...prev, is_pure_veg: newValue }));
+                      } catch (e) { console.error(e); }
+                    }
+                  }}
                   className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${editForm.is_pure_veg ? 'bg-green-600' : 'bg-gray-300'}`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${editForm.is_pure_veg ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2">
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm">Enable Cutlery Requests</span>
+                  <span className="text-xs text-gray-500">Allow customers to request cutlery with their order</span>
+                </div>
+                <div 
+                  onClick={async () => {
+                    const newValue = !editForm.is_cutlery_enabled;
+                    setEditForm({...editForm, is_cutlery_enabled: newValue});
+                    if (stall.id) {
+                      try {
+                        await api.put(`/stalls/${stall.id}`, { ...editForm, is_cutlery_enabled: newValue });
+                        setStall(prev => ({ ...prev, is_cutlery_enabled: newValue }));
+                      } catch (e) { console.error(e); }
+                    }
+                  }}
+                  className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${editForm.is_cutlery_enabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${editForm.is_cutlery_enabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                 </div>
               </div>
 

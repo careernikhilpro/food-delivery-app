@@ -410,7 +410,8 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       activeOfferDiscount: stall.active_offer_discount,
       activeOfferMin: stall.active_offer_min,
       activeOfferMax: stall.active_offer_max,
-      activeOfferIsActive: stall.active_offer_is_active
+      activeOfferIsActive: stall.active_offer_is_active,
+      is_cutlery_enabled: stall.is_cutlery_enabled
     });
   } catch (err) {
     next(err);
@@ -443,7 +444,7 @@ router.post('/', authenticate, requireVendor, async (req: AuthRequest, res: Resp
 router.put('/:id', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, location, latitude, longitude, is_open, cover_image, opening_time, closing_time, prep_time, tags, offer_text, is_pure_veg } = req.body;
+    const { name, location, latitude, longitude, is_open, cover_image, opening_time, closing_time, prep_time, tags, offer_text, is_pure_veg, is_cutlery_enabled } = req.body;
     
     // Verify ownership
     const check = await pool.query('SELECT s.* FROM stalls s JOIN vendors v ON s.vendor_id = v.id WHERE s.id = $1 AND v.user_id = $2', [id, req.user!.id]);
@@ -452,21 +453,22 @@ router.put('/:id', authenticate, requireVendor, async (req: AuthRequest, res: Re
     }
 
     const result = await pool.query(
-      'UPDATE stalls SET name = COALESCE($1, name), location = COALESCE($2, location), latitude = COALESCE($3, latitude), longitude = COALESCE($4, longitude), is_open = COALESCE($5, is_open), cover_image = COALESCE($6, cover_image), opening_time = COALESCE($7, opening_time), closing_time = COALESCE($8, closing_time), prep_time = COALESCE($10, prep_time), tags = COALESCE($11, tags), offer_text = COALESCE($12, offer_text), is_pure_veg = COALESCE($13, is_pure_veg) WHERE id = $9 RETURNING *',
+      'UPDATE stalls SET name = COALESCE($1, name), location = COALESCE($2, location), latitude = COALESCE($3, latitude), longitude = COALESCE($4, longitude), is_open = COALESCE($5, is_open), cover_image = COALESCE($6, cover_image), opening_time = COALESCE($7, opening_time), closing_time = COALESCE($8, closing_time), prep_time = COALESCE($10, prep_time), tags = COALESCE($11, tags), offer_text = COALESCE($12, offer_text), is_pure_veg = COALESCE($13, is_pure_veg), is_cutlery_enabled = COALESCE($14, is_cutlery_enabled) WHERE id = $9 RETURNING *',
       [
-        name ?? null, 
-        location ?? null, 
-        latitude ?? null, 
-        longitude ?? null, 
-        is_open ?? null, 
-        cover_image ?? null, 
-        opening_time ?? null, 
-        closing_time ?? null, 
+        name !== undefined ? name : check.rows[0].name, 
+        location !== undefined ? location : check.rows[0].location, 
+        latitude !== undefined ? latitude : check.rows[0].latitude, 
+        longitude !== undefined ? longitude : check.rows[0].longitude, 
+        is_open !== undefined ? is_open : check.rows[0].is_open, 
+        cover_image !== undefined ? cover_image : check.rows[0].cover_image, 
+        opening_time !== undefined ? opening_time : check.rows[0].opening_time, 
+        closing_time !== undefined ? closing_time : check.rows[0].closing_time, 
         id, 
-        prep_time ?? null, 
-        tags ?? null,
-        offer_text ?? null,
-        is_pure_veg ?? null
+        prep_time !== undefined ? prep_time : check.rows[0].prep_time, 
+        tags !== undefined ? tags : check.rows[0].tags,
+        offer_text !== undefined ? offer_text : check.rows[0].offer_text,
+        is_pure_veg !== undefined ? is_pure_veg : check.rows[0].is_pure_veg,
+        is_cutlery_enabled !== undefined ? is_cutlery_enabled : check.rows[0].is_cutlery_enabled
       ]
     );
     

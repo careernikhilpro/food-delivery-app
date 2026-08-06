@@ -100,7 +100,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (newQty === 0) {
           newItems.splice(existingItemIndex, 1);
         } else {
-          newItems[existingItemIndex] = { ...newItems[existingItemIndex], quantity: newQty };
+          newItems[existingItemIndex] = { ...newItems[existingItemIndex], ...item, quantity: newQty };
         }
       } else if (delta > 0) {
         newItems.push({ ...item, quantity: delta });
