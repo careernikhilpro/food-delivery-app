@@ -25,8 +25,15 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Swaddo - Street Food Delivery",
-  description: "Live tracking for your local street food orders.",
+  title: "Swaddo: Best Food Delivery App in Bihar Sharif | Lowest Price Guarantee",
+  description: "Order from Bihar Sharif ka apna food app! Get the best food delivered at your doorstep with our lowest price guarantee. Swaddo - Bihar Sharif's fastest local street food delivery.",
+  keywords: "food delivery bihar sharif, best food delivery app bihar sharif, lowest price food delivery, bihar sharif ka apna food app, swaddo bihar sharif, local food delivery, online food order bihar sharif, street food delivery",
+  openGraph: {
+    title: "Swaddo: Best Food Delivery App in Bihar Sharif",
+    description: "Order from Bihar Sharif ka apna food app! Get the best food delivered at your doorstep with our lowest price guarantee.",
+    siteName: "Swaddo",
+    type: "website",
+  },
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192x192.png",
