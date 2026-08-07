@@ -1145,7 +1145,7 @@ export default function Cart() {
               Select Payment Method
             </h3>
 
-            <label style={{ display: 'none' }} className="flex items-center gap-3 cursor-pointer group">
+            <label className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${paymentMethod === "upi" ? "border-[#FF007F]" : "border-gray-300"}`}
               >
