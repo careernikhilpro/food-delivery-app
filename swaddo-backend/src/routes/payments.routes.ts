@@ -4,15 +4,15 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { orderQueue } from '../services/queue';
 import { emitOrderStatusUpdate } from '../utils/socketEmitters';
 import { logger } from '../utils/logger';
-import { Cashfree } from "cashfree-pg";
+import { Cashfree, CFEnvironment } from "cashfree-pg";
 
 const router = Router();
 
 Cashfree.XClientId = process.env.CASHFREE_APP_ID || 'mock';
 Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY || 'mock';
 Cashfree.XEnvironment = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
-  ? Cashfree.Environment.PRODUCTION 
-  : Cashfree.Environment.SANDBOX;
+  ? CFEnvironment.PRODUCTION 
+  : CFEnvironment.SANDBOX;
 
 // 1. Create Order (Swaddo Order + Cashfree Order)
 router.post('/create-order', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
