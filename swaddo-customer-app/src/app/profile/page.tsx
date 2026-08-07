@@ -236,7 +236,7 @@ export default function ProfilePage() {
                       <button onClick={() => { openEditProfile(); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-white hover:bg-white/5 text-[12px] font-medium transition-colors border-b border-white/10">
                         Edit Profile
                       </button>
-                      <button className="w-full text-left px-3 py-2 text-white hover:bg-white/5 text-[12px] font-medium transition-colors border-b border-white/10">
+                      <button onClick={() => { router.push('/settings'); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-white hover:bg-white/5 text-[12px] font-medium transition-colors border-b border-white/10">
                         Settings
                       </button>
                       <button onClick={() => { setIsLogoutModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-white bg-black hover:bg-gray-900 text-[12px] font-bold transition-colors">
