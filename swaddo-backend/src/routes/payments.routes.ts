@@ -9,13 +9,13 @@ import crypto from 'crypto';
 
 const router = Router();
 
-const getCfApiUrl = () => process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
+const getCfApiUrl = () => (process.env.CASHFREE_ENVIRONMENT?.trim() || '') === 'PRODUCTION' 
   ? 'https://api.cashfree.com/pg' 
   : 'https://sandbox.cashfree.com/pg';
 
 const getCashfreeHeaders = () => ({
-  'x-client-id': process.env.CASHFREE_APP_ID || '',
-  'x-client-secret': process.env.CASHFREE_SECRET_KEY || '',
+  'x-client-id': process.env.CASHFREE_APP_ID?.trim() || '',
+  'x-client-secret': process.env.CASHFREE_SECRET_KEY?.trim() || '',
   'x-api-version': '2023-08-01',
   'Content-Type': 'application/json'
 });

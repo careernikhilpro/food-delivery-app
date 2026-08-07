@@ -557,7 +557,7 @@ export default function Cart() {
 
         try {
           const cashfree = await load({
-            mode: "production", // change to "sandbox" for testing
+            mode: "sandbox",
           });
 
           setIsPlacingOrder(true);
