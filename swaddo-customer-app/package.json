@@ -12,6 +12,7 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.4.1",
+    "@cashfreepayments/cashfree-js": "^1.0.7",
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.18.1",
     "date-fns": "^4.4.0",

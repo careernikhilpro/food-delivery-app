@@ -4,17 +4,17 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { orderQueue } from '../services/queue';
 import { emitOrderStatusUpdate } from '../utils/socketEmitters';
 import { logger } from '../utils/logger';
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
+import { Cashfree } from "cashfree-pg";
 
 const router = Router();
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'mock',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'mock'
-});
+Cashfree.XClientId = process.env.CASHFREE_APP_ID || 'mock';
+Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY || 'mock';
+Cashfree.XEnvironment = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
+  ? Cashfree.Environment.PRODUCTION 
+  : Cashfree.Environment.SANDBOX;
 
-// 1. Create Order (Swaddo Order + Razorpay Order)
+// 1. Create Order (Swaddo Order + Cashfree Order)
 router.post('/create-order', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect();
   try {
@@ -41,7 +41,7 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
     const orderRes = await client.query(
       `INSERT INTO orders (customer_id, stall_id, total_amount, delivery_address, status, payment_method) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [req.user!.id, stallId, totalAmount, deliveryAddress, 'payment_pending', 'upi']
+      [req.user!.id, stallId, totalAmount, deliveryAddress, 'payment_pending', 'online']
     );
     const swaddoOrder = orderRes.rows[0];
 
@@ -62,33 +62,45 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
 
     await client.query(`INSERT INTO order_items (order_id, menu_item_id, quantity, price_at_time) VALUES ${placeholders.join(',')}`, itemValuesList);
 
-    let rzpOrderId = `mock_order_${swaddoOrder.id}`;
+    // Get User Details for Cashfree
+    const userRes = await client.query('SELECT name, phone FROM users WHERE id = $1', [req.user!.id]);
+    const customerPhone = userRes.rows[0]?.phone || '9999999999';
+
+    let gatewayOrderId = `mock_order_${swaddoOrder.id}`;
+    let paymentSessionId = '';
     
     try {
-      const options = {
-        amount: Math.round(Number(totalAmount) * 100), // amount in the smallest currency unit (paise)
-        currency: "INR",
-        receipt: `rcpt_${swaddoOrder.id}`
+      const request = {
+        order_amount: Math.round(Number(totalAmount)),
+        order_currency: "INR",
+        order_id: `order_${swaddoOrder.id}_${Date.now()}`,
+        customer_details: {
+          customer_id: `cust_${req.user!.id}`,
+          customer_phone: customerPhone,
+        }
       };
-      const rzpOrder = await razorpay.orders.create(options);
-      rzpOrderId = rzpOrder.id;
-    } catch (razorpayError: any) {
-      logger.warn('Razorpay create order failed (possibly invalid test keys), falling back to mock order ID', { error: razorpayError.message });
+      
+      const cfResponse = await Cashfree.PGCreateOrder("2023-08-01", request);
+      gatewayOrderId = cfResponse.data.order_id || gatewayOrderId;
+      paymentSessionId = cfResponse.data.payment_session_id || '';
+    } catch (cfError: any) {
+      logger.warn('Cashfree create order failed', { error: cfError.message, data: cfError.response?.data });
+      throw new Error(`Cashfree error: ${cfError.response?.data?.message || cfError.message}`);
     }
 
     // Save to payments table
     await client.query(
       `INSERT INTO payments (order_id, razorpay_order_id, amount, status) 
        VALUES ($1, $2, $3, $4)`,
-      [swaddoOrder.id, rzpOrderId, totalAmount, 'created']
+      [swaddoOrder.id, gatewayOrderId, totalAmount, 'created']
     );
 
     await client.query('COMMIT');
 
     res.status(201).json({
       order_id: swaddoOrder.id,
-      razorpay_order_id: rzpOrderId,
-      key_id: process.env.RAZORPAY_KEY_ID
+      gateway_order_id: gatewayOrderId,
+      payment_session_id: paymentSessionId
     });
   } catch (err: any) {
     await client.query('ROLLBACK');
@@ -107,19 +119,30 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
 router.post('/verify', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   const client = await pool.connect();
   try {
-    const { swaddo_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { swaddo_order_id, gateway_order_id } = req.body;
 
-    if (!swaddo_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    if (!swaddo_order_id || !gateway_order_id) {
       return res.status(400).json({ message: 'Missing payment verification details' });
     }
 
-    // Verify HMAC signature securely
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'mock';
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto.createHmac('sha256', secret).update(body.toString()).digest('hex');
+    // Verify using Cashfree SDK
+    let paymentVerified = false;
+    let paymentId = '';
+    try {
+      const response = await Cashfree.PGOrderFetchPayments("2023-08-01", gateway_order_id);
+      // Find a successful payment
+      const successfulPayment = response.data.find((p: any) => p.payment_status === 'SUCCESS');
+      if (successfulPayment) {
+        paymentVerified = true;
+        paymentId = successfulPayment.cf_payment_id?.toString() || '';
+      }
+    } catch (error: any) {
+       logger.error('Cashfree Verification Failed', { error: error.message });
+       return res.status(400).json({ message: 'Failed to verify payment with gateway' });
+    }
 
-    if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ message: 'Invalid payment signature' });
+    if (!paymentVerified) {
+      return res.status(400).json({ message: 'Payment is not successful or still pending' });
     }
 
     await client.query('BEGIN');
@@ -128,7 +151,7 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
     await client.query(
       `UPDATE payments SET razorpay_payment_id = $1, status = $2, verified_at = CURRENT_TIMESTAMP 
        WHERE razorpay_order_id = $3`,
-      [razorpay_payment_id, 'captured', razorpay_order_id]
+      [paymentId, 'captured', gateway_order_id]
     );
 
     // Update orders table
@@ -172,7 +195,7 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
     res.status(200).json({ message: 'Payment verified successfully' });
   } catch (err: any) {
     await client.query('ROLLBACK');
-    logger.error('Payment Verification Failed', { error: err.message, stack: err.stack, body: req.body });
+    logger.error('Payment Verification Error', { error: err.message, stack: err.stack, body: req.body });
     res.status(500).json({ message: 'Internal server error', error: err.message });
   } finally {
     client.release();
@@ -182,29 +205,12 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
 // 3. Webhook (Async backup)
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET || 'mock';
-    const signature = req.headers['x-razorpay-signature'] as string;
-    
-    if (signature) {
-      const expectedSignature = crypto.createHmac('sha256', secret).update(JSON.stringify(req.body)).digest('hex');
-      if (expectedSignature !== signature) {
-        return res.status(400).send('Invalid signature');
-      }
-    }
-
-    if (req.body.event === 'payment.captured') {
-      const paymentEntity = req.body.payload.payment.entity;
-      // const razorpay_order_id = paymentEntity.order_id;
-      const razorpay_payment_id = paymentEntity.id;
-
-      // Note: Full logic for updating order would go here if not already verified by frontend
-      logger.info(`Webhook received captured payment: ${razorpay_payment_id}`);
-    }
-
+    // Basic catch-all to prevent errors if webhook hits it
+    logger.info(`Webhook received`);
     res.status(200).send('OK');
   } catch (err: any) {
     logger.error('Webhook Error', { error: err.message });
-    res.status(500).send('Webhook Error');
+    res.status(400).send('Webhook Error');
   }
 });
 
@@ -219,14 +225,17 @@ router.post('/:id/refund', authenticate, async (req: AuthRequest, res: Response)
     }
 
     const payment = paymentRes.rows[0];
-    const refund = await razorpay.payments.refund(payment.razorpay_payment_id, {
-      amount: req.body.amount ? Math.round(Number(req.body.amount) * 100) : undefined // optional partial amount
-    });
+    const refundRequest = {
+      refund_amount: req.body.amount ? Number(req.body.amount) : Number(payment.amount),
+      refund_id: `refund_${payment.id}_${Date.now()}`
+    };
+
+    const refund = await Cashfree.PGOrderCreateRefund("2023-08-01", payment.razorpay_order_id, refundRequest);
 
     await pool.query('UPDATE payments SET status = $1 WHERE id = $2', ['refunded', payment.id]);
     await pool.query('UPDATE orders SET status = $1 WHERE id = $2', ['cancelled', id]);
 
-    res.status(200).json({ message: 'Refund initiated successfully', refund });
+    res.status(200).json({ message: 'Refund initiated successfully', refund: refund.data });
   } catch (err: any) {
     logger.error('Refund Failed', { error: err.message });
     res.status(500).json({ message: 'Internal server error', error: err.message });

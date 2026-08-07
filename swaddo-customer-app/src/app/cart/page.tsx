@@ -38,6 +38,7 @@ import { LocationPickerMap } from "@/components/maps/LocationPickerMap";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/context/LocationContext";
 import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
+import { load } from '@cashfreepayments/cashfree-js';
 
 const libraries: ("places" | "geometry")[] = ["places", "geometry"];
 
@@ -550,79 +551,63 @@ export default function Cart() {
         }
       } else {
         const orderRes = await api.post("/payments/create-order", payload);
-        if (!orderRes.data || !orderRes.data.razorpay_order_id) {
+        if (!orderRes.data || !orderRes.data.payment_session_id) {
           throw new Error("Failed to initialize payment");
         }
 
-        const res = await new Promise((resolve) => {
-          if ((window as any).Razorpay) {
-            resolve(true);
-            return;
-          }
-          const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.body.appendChild(script);
-        });
+        try {
+          const cashfree = await load({
+            mode: "production", // change to "sandbox" for testing
+          });
 
-        if (!res) {
-          alert("Razorpay SDK failed to load. Are you online?");
+          setIsPlacingOrder(true);
+          let checkoutOptions = {
+            paymentSessionId: orderRes.data.payment_session_id,
+            redirectTarget: "_modal",
+          };
+
+          cashfree.checkout(checkoutOptions).then(async (result: any) => {
+            if(result.error){
+              alert("Payment failed: " + result.error.message);
+              setIsPlacingOrder(false);
+            }
+            if(result.redirect){
+              // Redirected for payment
+              console.log("Redirected");
+            }
+            if(result.paymentDetails){
+              // Payment completed, verify on backend
+              try {
+                await api.post("/payments/verify", {
+                  swaddo_order_id: orderRes.data.order_id,
+                  gateway_order_id: orderRes.data.gateway_order_id,
+                });
+
+                setShowSuccessAnim(true);
+                if (typeof window !== "undefined") {
+                  resetToLiveLocation();
+                  setTimeout(() => {
+                    clearCart();
+                    router.push(`/`);
+                  }, 2500);
+                } else {
+                  clearCart();
+                }
+              } catch (err: any) {
+                console.error(err);
+                alert(
+                  "Payment verification failed: " +
+                    (err.response?.data?.message || err.message),
+                );
+                setIsPlacingOrder(false);
+              }
+            }
+          });
+        } catch (err) {
+          alert("Cashfree SDK failed to load. Are you online?");
           setIsPlacingOrder(false);
           return;
         }
-
-        const options = {
-          key: orderRes.data.key_id,
-          amount: Math.round(finalTotal * 100),
-          currency: "INR",
-          name: "SwaDDo",
-          description: "Food Order",
-          order_id: orderRes.data.razorpay_order_id,
-          handler: async function (response: any) {
-            try {
-              setIsPlacingOrder(true);
-              await api.post("/payments/verify", {
-                swaddo_order_id: orderRes.data.order_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              });
-
-              setShowSuccessAnim(true);
-              if (typeof window !== "undefined") {
-                resetToLiveLocation();
-                setTimeout(() => {
-                  clearCart();
-                  router.push(`/`);
-                }, 2500);
-              } else {
-                clearCart();
-              }
-            } catch (err: any) {
-              console.error(err);
-              alert(
-                "Payment verification failed: " +
-                  (err.response?.data?.message || err.message),
-              );
-              setIsPlacingOrder(false);
-            }
-          },
-          theme: { color: "#D32F2F" },
-          modal: {
-            ondismiss: function () {
-              alert("Payment cancelled. You can try again.");
-              setIsPlacingOrder(false);
-            },
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on("payment.failed", function (response: any) {
-          alert("Payment failed: " + response.error.description);
-          setIsPlacingOrder(false);
-        });
-        rzp.open();
       }
     } catch (err: any) {
       console.error(err);
@@ -1180,7 +1165,7 @@ export default function Cart() {
                 <span
                   className={`font-medium text-[15px] transition-colors ${paymentMethod === "upi" ? "text-gray-800" : "text-gray-500"}`}
                 >
-                  Pay Online (Razorpay)
+                  Pay Online (Cashfree)
                 </span>
               </div>
             </label>
