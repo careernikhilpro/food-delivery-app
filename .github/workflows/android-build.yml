@@ -50,15 +50,21 @@ jobs:
 
       - name: Build Debug APK
         working-directory: ./${{ matrix.app }}/android
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
       - name: Build Release APK
         working-directory: ./${{ matrix.app }}/android
-        run: ./gradlew assembleRelease
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
 
       - name: Build Release AAB
         working-directory: ./${{ matrix.app }}/android
-        run: ./gradlew bundleRelease
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bundleRelease
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
