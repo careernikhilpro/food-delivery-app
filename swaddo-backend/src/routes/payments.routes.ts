@@ -9,7 +9,7 @@ import crypto from 'crypto';
 
 const router = Router();
 
-const CF_API_URL = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
+const getCfApiUrl = () => process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
   ? 'https://api.cashfree.com/pg' 
   : 'https://sandbox.cashfree.com/pg';
 
@@ -86,7 +86,7 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
         }
       };
       
-      const cfResponse = await axios.post(`${CF_API_URL}/orders`, requestPayload, {
+      const cfResponse = await axios.post(`${getCfApiUrl()}/orders`, requestPayload, {
         headers: getCashfreeHeaders()
       });
       
@@ -138,7 +138,7 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
     let paymentVerified = false;
     let paymentId = '';
     try {
-      const response = await axios.get(`${CF_API_URL}/orders/${gateway_order_id}/payments`, {
+      const response = await axios.get(`${getCfApiUrl()}/orders/${gateway_order_id}/payments`, {
         headers: getCashfreeHeaders()
       });
       
@@ -245,7 +245,7 @@ router.post('/:id/refund', authenticate, async (req: AuthRequest, res: Response)
       refund_id: `refund_${payment.id}_${Date.now()}`
     };
 
-    const response = await axios.post(`${CF_API_URL}/orders/${payment.razorpay_order_id}/refunds`, refundRequest, {
+    const response = await axios.post(`${getCfApiUrl()}/orders/${payment.razorpay_order_id}/refunds`, refundRequest, {
       headers: getCashfreeHeaders()
     });
 
