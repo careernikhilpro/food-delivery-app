@@ -4,15 +4,21 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { orderQueue } from '../services/queue';
 import { emitOrderStatusUpdate } from '../utils/socketEmitters';
 import { logger } from '../utils/logger';
-import { Cashfree, CFEnvironment } from "cashfree-pg";
+import axios from 'axios';
+import crypto from 'crypto';
 
 const router = Router();
 
-Cashfree.XClientId = process.env.CASHFREE_APP_ID || 'mock';
-Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY || 'mock';
-Cashfree.XEnvironment = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
-  ? CFEnvironment.PRODUCTION 
-  : CFEnvironment.SANDBOX;
+const CF_API_URL = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
+  ? 'https://api.cashfree.com/pg' 
+  : 'https://sandbox.cashfree.com/pg';
+
+const getCashfreeHeaders = () => ({
+  'x-client-id': process.env.CASHFREE_APP_ID || '',
+  'x-client-secret': process.env.CASHFREE_SECRET_KEY || '',
+  'x-api-version': '2023-08-01',
+  'Content-Type': 'application/json'
+});
 
 // 1. Create Order (Swaddo Order + Cashfree Order)
 router.post('/create-order', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -70,7 +76,7 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
     let paymentSessionId = '';
     
     try {
-      const request = {
+      const requestPayload = {
         order_amount: Math.round(Number(totalAmount)),
         order_currency: "INR",
         order_id: `order_${swaddoOrder.id}_${Date.now()}`,
@@ -80,7 +86,10 @@ router.post('/create-order', authenticate, async (req: AuthRequest, res: Respons
         }
       };
       
-      const cfResponse = await Cashfree.PGCreateOrder("2023-08-01", request);
+      const cfResponse = await axios.post(`${CF_API_URL}/orders`, requestPayload, {
+        headers: getCashfreeHeaders()
+      });
+      
       gatewayOrderId = cfResponse.data.order_id || gatewayOrderId;
       paymentSessionId = cfResponse.data.payment_session_id || '';
     } catch (cfError: any) {
@@ -125,19 +134,26 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
       return res.status(400).json({ message: 'Missing payment verification details' });
     }
 
-    // Verify using Cashfree SDK
+    // Verify using Cashfree REST API
     let paymentVerified = false;
     let paymentId = '';
     try {
-      const response = await Cashfree.PGOrderFetchPayments("2023-08-01", gateway_order_id);
+      const response = await axios.get(`${CF_API_URL}/orders/${gateway_order_id}/payments`, {
+        headers: getCashfreeHeaders()
+      });
+      
+      const payments = response.data;
       // Find a successful payment
-      const successfulPayment = response.data.find((p: any) => p.payment_status === 'SUCCESS');
+      const successfulPayment = Array.isArray(payments) 
+        ? payments.find((p: any) => p.payment_status === 'SUCCESS')
+        : (payments.payment_status === 'SUCCESS' ? payments : null);
+
       if (successfulPayment) {
         paymentVerified = true;
         paymentId = successfulPayment.cf_payment_id?.toString() || '';
       }
     } catch (error: any) {
-       logger.error('Cashfree Verification Failed', { error: error.message });
+       logger.error('Cashfree Verification Failed', { error: error.message, data: error.response?.data });
        return res.status(400).json({ message: 'Failed to verify payment with gateway' });
     }
 
@@ -205,8 +221,7 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
 // 3. Webhook (Async backup)
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
-    // Basic catch-all to prevent errors if webhook hits it
-    logger.info(`Webhook received`);
+    logger.info(`Webhook received`, { body: req.body });
     res.status(200).send('OK');
   } catch (err: any) {
     logger.error('Webhook Error', { error: err.message });
@@ -230,14 +245,16 @@ router.post('/:id/refund', authenticate, async (req: AuthRequest, res: Response)
       refund_id: `refund_${payment.id}_${Date.now()}`
     };
 
-    const refund = await Cashfree.PGOrderCreateRefund("2023-08-01", payment.razorpay_order_id, refundRequest);
+    const response = await axios.post(`${CF_API_URL}/orders/${payment.razorpay_order_id}/refunds`, refundRequest, {
+      headers: getCashfreeHeaders()
+    });
 
     await pool.query('UPDATE payments SET status = $1 WHERE id = $2', ['refunded', payment.id]);
     await pool.query('UPDATE orders SET status = $1 WHERE id = $2', ['cancelled', id]);
 
-    res.status(200).json({ message: 'Refund initiated successfully', refund: refund.data });
+    res.status(200).json({ message: 'Refund initiated successfully', refund: response.data });
   } catch (err: any) {
-    logger.error('Refund Failed', { error: err.message });
+    logger.error('Refund Failed', { error: err.message, data: err.response?.data });
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
