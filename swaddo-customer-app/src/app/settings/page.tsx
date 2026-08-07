@@ -3,6 +3,7 @@
 import { ArrowLeft, Bell, Moon, Languages, Shield, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Settings() {
   const router = useRouter();
@@ -89,6 +90,54 @@ export default function Settings() {
               </div>
               <ChevronRight size={20} className="text-gray-300" />
             </button>
+          </div>
+        </div>
+
+        {/* Legal & Policies */}
+        <div>
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Legal & Policies</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+            
+            <Link href="/about" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">About Us</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/contact" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Contact Us</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/terms-and-conditions" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Terms & Conditions</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/privacy-policy" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Privacy Policy</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/refund-policy" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Refund Policy</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/cancellation-policy" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Cancellation Policy</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/cookie-policy" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Cookie Policy</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
+            <Link href="/disclaimer" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+              <span className="font-bold text-text-primary">Disclaimer</span>
+              <ChevronRight size={20} className="text-gray-300" />
+            </Link>
+
           </div>
         </div>
 
