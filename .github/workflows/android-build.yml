@@ -40,6 +40,9 @@ jobs:
 
       - name: Build Next.js App
         working-directory: ./${{ matrix.app }}
+        env:
+          NEXT_PUBLIC_API_URL: https://food-delivery-app-wfv0.onrender.com/api
+          NEXT_PUBLIC_SOCKET_URL: https://food-delivery-app-wfv0.onrender.com
         run: npm run build
 
       - name: Sync Capacitor
