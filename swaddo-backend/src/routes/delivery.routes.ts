@@ -7,6 +7,19 @@ import { assignmentManager } from '../services/assignment';
 import { routeETA } from '../services/maps/mapProvider';
 import { emitOrderStatusUpdate } from '../utils/socketEmitters';
 
+function calculatePickupPayout(distance: number): number {
+  if (distance <= 0.4) return 0;
+  if (distance <= 0.6) return 1;
+  if (distance <= 0.8) return 2;
+  if (distance <= 1.2) return 3;
+  if (distance <= 1.8) return 4;
+  if (distance <= 2.4) return 5;
+  if (distance <= 3.0) return 6;
+  if (distance <= 3.5) return 7;
+  if (distance <= 4.0) return 8;
+  return 10;
+}
+
 const router = Router();
 
 router.post('/profile/fcm-token', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -233,12 +246,44 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       }
     }
 
+    // Calculate Payouts
+    let totalPayout = 0;
+    try {
+      const orderCoordsRes = await pool.query(
+        `SELECT o.delivery_lat, o.delivery_lng, o.payment_method, s.latitude as stall_lat, s.longitude as stall_lng 
+         FROM orders o 
+         JOIN stalls s ON o.stall_id = s.id 
+         WHERE o.id = $1`, [orderId]
+      );
+      if (orderCoordsRes.rows.length > 0) {
+        const coords = orderCoordsRes.rows[0];
+        
+        let actualPickupDist = pickupDistance || 0;
+        let actualDeliveryDist = deliveryDistance || 0;
+        
+        const pickupFee = calculatePickupPayout(actualPickupDist);
+        
+        let dropFee = 25;
+        const extraDropDist = actualDeliveryDist > 3 ? actualDeliveryDist - 3 : 0;
+        if (extraDropDist > 0) dropFee += extraDropDist * 10;
+        
+        let returnFee = 0;
+        if (coords.payment_method === 'cod') {
+          returnFee = 3 + (extraDropDist * 10);
+        }
+        
+        totalPayout = Math.round((pickupFee + dropFee + returnFee) * 100) / 100;
+      }
+    } catch (e) {
+      console.error("Error calculating totalPayout:", e);
+    }
+
     // INSERT into delivery_assignments to track earnings and distances
     await pool.query(
-      `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km)
-       VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), 'accepted', $3, $4)
+      `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount)
+       VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), 'accepted', $3, $4, $5)
        ON CONFLICT DO NOTHING`,
-      [orderId, req.user!.id, pickupDistance, deliveryDistance]
+      [orderId, req.user!.id, pickupDistance, deliveryDistance, totalPayout > 0 ? totalPayout : null]
     );
 
     // Update database status
