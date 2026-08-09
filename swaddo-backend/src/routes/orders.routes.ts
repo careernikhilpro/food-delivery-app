@@ -200,7 +200,14 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
           vendorId, 
           'New Order Received! 🚀', 
           `${customerFirstName} just placed an order for ₹${totalAmount}`,
-          { orderId: order.id.toString(), type: 'new_order' }
+          { 
+            orderId: order.id.toString(), 
+            type: 'new_order',
+            items: itemsDescription,
+            customerName: customerFullName,
+            customerAddress: deliveryAddress || "Customer Location",
+            totalAmount: totalAmount.toString()
+          }
         );
       }
 
@@ -308,6 +315,25 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
       const stallRes = await pool.query('SELECT name, location, latitude, longitude FROM stalls WHERE id = $1', [order.stall_id]);
       const stall = stallRes.rows[0];
       
+      // Fetch customer name and item count
+      const orderMetaRes = await pool.query(`
+        SELECT 
+          u.name as customer_name,
+          (SELECT COUNT(*) FROM order_items WHERE order_id = $1) as item_count,
+          (
+            SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+            FROM order_items oi
+            LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+            WHERE oi.order_id = $1
+          ) as items_summary
+        FROM users u
+        WHERE u.id = $2
+      `, [order.id, order.customer_id]);
+      
+      const customerName = orderMetaRes.rows[0]?.customer_name || 'Customer';
+      const itemCount = parseInt(orderMetaRes.rows[0]?.item_count || '0');
+      const itemsSummary = orderMetaRes.rows[0]?.items_summary || '';
+      
       let dropoffDistance = 3.5; // fallback
       let dropoffText = "3.5 km";
       if (stall && stall.latitude && stall.longitude && order.delivery_lat && order.delivery_lng) {
@@ -363,7 +389,10 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
         stallLat: stall?.latitude,
         stallLng: stall?.longitude,
         pickupDistance: null, // This will be injected by AssignmentManager based on exact GPS
+        customerName: customerName,
         customerAddress: order.delivery_address || "Customer Location",
+        itemCount: itemCount,
+        itemsSummary: itemsSummary,
         deliveryInstructions: order.delivery_instructions,
         restaurantInstructions: order.restaurant_instructions,
         dropoffDistance: parseFloat(dropoffDistance.toFixed(1)),

@@ -196,7 +196,14 @@ export class AssignmentManager {
         parseInt(nearestRider.riderId),
         'New Delivery Assignment! 🛵',
         `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${pickupPayout}`,
-        { orderId: jobPayload.id.toString(), type: 'new_job' }
+        { 
+          orderId: jobPayload.id.toString(), 
+          type: 'new_job',
+          customerName: jobPayload.customerName,
+          customerAddress: jobPayload.customerAddress,
+          itemCount: jobPayload.itemCount?.toString() || "0",
+          itemsSummary: jobPayload.itemsSummary
+        }
       );
     }
     
