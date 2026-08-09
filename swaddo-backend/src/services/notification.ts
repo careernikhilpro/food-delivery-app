@@ -80,12 +80,12 @@ export const notificationService = {
       
       const token = result.rows[0]?.fcm_token;
       if (!token) {
-        logger.info(`No Web Push token found for vendor ${vendorId}`);
+        logger.info(`No FCM token found for vendor ${vendorId}`);
         return false;
       }
       
-      const { sendPushNotification } = require('./push');
-      return await sendPushNotification(token, title, body, data);
+      // FIX: Use Firebase Admin SDK (Native FCM) instead of Web Push for Merchants!
+      return await this.sendNativePush(token, title, body, data);
     } catch (error) {
       logger.error(`Error sending push to vendor ${vendorId}:`, error);
       return false;
@@ -118,13 +118,12 @@ export const notificationService = {
       
       const token = result.rows[0]?.fcm_token;
       if (!token) {
-        logger.info(`No Web Push token found for rider ${riderId}`);
+        logger.info(`No FCM token found for rider ${riderId}`);
         return false;
       }
       
-      // Import the new web push service dynamically to avoid circular dependencies
-      const { sendPushNotification } = require('./push');
-      return await sendPushNotification(token, title, body, data);
+      // FIX: Use Firebase Admin SDK (Native FCM) instead of Web Push for Riders!
+      return await this.sendNativePush(token, title, body, data);
     } catch (error) {
       logger.error(`Error sending push to rider ${riderId}:`, error);
       return false;
@@ -184,6 +183,38 @@ export const notificationService = {
       return true;
     } catch (error) {
       logger.error('Error sending message:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Internal method to send a DATA-ONLY message via Firebase Admin.
+   * This is REQUIRED for Android to allow background processes to wake up and ring.
+   * If we include a "notification" block, Android OS swallows it and keeps it silent!
+   */
+  async sendNativePush(token: string, title: string, body: string, data?: any) {
+    if (!getApps().length) return false;
+    
+    try {
+      const message = {
+        // NO 'notification' block here! This forces Android to deliver it to MyFirebaseMessagingService
+        data: {
+          title,
+          body,
+          ...data,
+          android_channel_id: 'swaddo_alerts_v3'
+        },
+        android: {
+          priority: 'high' as const // CRITICAL: Wakes up the app from Doze mode
+        },
+        token
+      };
+
+      const response = await getMessaging().send(message);
+      logger.info(`Successfully sent NATIVE background push: ${response}`);
+      return true;
+    } catch (error) {
+      logger.error('Error sending NATIVE push:', error);
       return false;
     }
   }
