@@ -110,8 +110,9 @@ export const notificationService = {
       }
 
       const result = await client.query(`
-        SELECT dp.fcm_token 
-        FROM delivery_partners dp 
+        SELECT u.fcm_token 
+        FROM users u 
+        JOIN delivery_partners dp ON u.id = dp.user_id 
         WHERE dp.id = $1
       `, [riderId]);
       client.release();
