@@ -181,6 +181,10 @@ export class AssignmentManager {
     
     // Calculate pickup payout based on actual shortest road distance
     const pickupPayout = calculatePickupPayout(actualPickupDistance);
+    
+    const deliveryPay = jobPayload.earnings || 0;
+    const returnPay = jobPayload.returnPayout || 0;
+    const totalPayout = deliveryPay + pickupPayout + returnPay;
 
     // Inject exact pickup distance and payout
     const jobWithDistance = { 
@@ -195,14 +199,19 @@ export class AssignmentManager {
       notificationService.sendToRider(
         parseInt(nearestRider.riderId),
         'New Delivery Assignment! 🛵',
-        `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${pickupPayout}`,
+        `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${totalPayout}`,
         { 
           orderId: jobPayload.id.toString(), 
           type: 'new_job',
           customerName: jobPayload.customerName,
           customerAddress: jobPayload.customerAddress,
           itemCount: jobPayload.itemCount?.toString() || "0",
-          itemsSummary: jobPayload.itemsSummary
+          itemsSummary: jobPayload.itemsSummary,
+          stallName: jobPayload.stallName || "Restaurant",
+          pickupDistance: actualPickupDistance.toFixed(1),
+          dropoffDistance: (jobPayload.dropoffDistance || 0).toString(),
+          deliveryPay: deliveryPay.toString(),
+          totalPayout: totalPayout.toString()
         }
       );
     }
