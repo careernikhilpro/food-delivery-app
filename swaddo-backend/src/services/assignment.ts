@@ -132,19 +132,19 @@ export class AssignmentManager {
 
     let allRiders = [...ridersWithDistance];
 
-    // 1. Max Radius (4.0 km)
-    ridersWithDistance = ridersWithDistance.filter(r => r.distance <= 4.0);
+    // 1. Max Radius (2.0 km)
+    ridersWithDistance = ridersWithDistance.filter(r => r.distance <= 2.0);
 
-    // Fallback: If no rider is within 4.0km but someone is online, guarantee assignment to the nearest rider so no order is stuck
+    // Fallback: If no rider is within 2.0km but someone is online, guarantee assignment to the nearest rider so no order is stuck
     if (ridersWithDistance.length === 0 && allRiders.length > 0) {
       allRiders.sort((a, b) => a.distance - b.distance);
       ridersWithDistance = [allRiders[0]];
     }
 
-    // 2. Under 1.8 km Priority
-    const hasRiderUnder1_8km = ridersWithDistance.some(r => r.distance <= 1.8);
-    if (hasRiderUnder1_8km) {
-      ridersWithDistance = ridersWithDistance.filter(r => r.distance <= 1.8);
+    // 2. Under 1.0 km Priority
+    const hasRiderUnder1_0km = ridersWithDistance.some(r => r.distance <= 1.0);
+    if (hasRiderUnder1_0km) {
+      ridersWithDistance = ridersWithDistance.filter(r => r.distance <= 1.0);
     }
 
     if (ridersWithDistance.length === 0) {
