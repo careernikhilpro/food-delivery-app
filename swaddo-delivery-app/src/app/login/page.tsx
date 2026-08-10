@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Preferences } from '@capacitor/preferences';
 import { api } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/firebase";
 import { Phone, Lock, ArrowRight, Loader2, KeyRound, ShieldCheck, UserPlus } from "lucide-react";
@@ -64,7 +65,7 @@ export default function Login() {
 
     try {
       const res = await api.post("/auth/login-pin", { phone, pin, role: "delivery" });
-      await handleSuccessfulAuth(res.data.token);
+      await handleSuccessfulAuth(res.data.token, res.data.user);
     } catch (err) {
       const errorMessage = err instanceof Error && 'response' in err ? (err as any).response?.data?.message : "Invalid PIN. Please try again.";
       setError(errorMessage || "Invalid PIN. Please try again.");
@@ -87,7 +88,7 @@ export default function Login() {
 
     try {
       const res = await api.post("/auth/register-pin", { phone, pin, role: "delivery" });
-      await handleSuccessfulAuth(res.data.token);
+      await handleSuccessfulAuth(res.data.token, res.data.user);
     } catch (err) {
       const errorMessage = err instanceof Error && 'response' in err ? (err as any).response?.data?.message : "Registration failed. Please try again.";
       setError(errorMessage || "Registration failed. Please try again.");
@@ -95,8 +96,15 @@ export default function Login() {
     }
   };
 
-  const handleSuccessfulAuth = async (token: string) => {
+  const handleSuccessfulAuth = async (token: string, user?: any) => {
     localStorage.setItem("swaddo_delivery_token", token);
+    Preferences.set({ key: 'swaddo_delivery_token', value: token });
+    
+    if (user && user.id) {
+        localStorage.setItem("riderId", user.id.toString());
+        Preferences.set({ key: 'riderId', value: user.id.toString() });
+    }
+    
     document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
     document.cookie = `role=delivery; path=/; max-age=86400; SameSite=Lax`;
     

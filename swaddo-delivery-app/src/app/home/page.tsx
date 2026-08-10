@@ -4,8 +4,12 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
-import { MapPin, Navigation, Clock, CheckCircle2, XCircle, BellRing, Store, Siren, Volume2, Package, ChevronRight } from "lucide-react";
+import { Navigation, Menu, Settings, LogOut, CheckCircle, Clock, MapPin, Store, ChevronRight, X, User, Volume2, Siren, CheckCircle2, XCircle, Package, BellRing } from "lucide-react";
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { useRouter, useSearchParams } from "next/navigation";
+import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebPush } from "@/hooks/usePushNotifications";
 
@@ -22,7 +26,7 @@ function HomeContent() {
     }
     return false;
   });
-  const [watchId, setWatchId] = useState<number | null>(null);
+  const [watchId, setWatchId] = useState<string | number | null>(null);
   const [newJob, setNewJob] = useState<any>(null);
   const [timer, setTimer] = useState(300);
   const [stats, setStats] = useState({ deliveries: 0, earnings: 0, floatingCash: 0, hours: 0 });
@@ -47,15 +51,32 @@ function HomeContent() {
     alarmAudio.current.volume = 1.0;
     alarmAudio.current.loop = true;
 
-    // Generate a persistent mock rider ID for testing concurrency across multiple tabs
-    const storedRiderId = localStorage.getItem("mockRiderId");
-    if (!storedRiderId) {
-      const newRiderId = `rider_${Math.floor(Math.random() * 10000)}`;
-      localStorage.setItem("mockRiderId", newRiderId);
-      riderIdRef.current = newRiderId;
-    } else {
-      riderIdRef.current = storedRiderId;
-    }
+      const storedRiderId = localStorage.getItem("riderId");
+      let currentRiderId = storedRiderId;
+      
+      if (!currentRiderId) {
+          try {
+              const token = localStorage.getItem("swaddo_delivery_token");
+              if (token) {
+                  const base64Url = token.split('.')[1];
+                  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                  const payload = JSON.parse(window.atob(base64));
+                  if (payload && payload.id) {
+                      currentRiderId = payload.id.toString();
+                      localStorage.setItem("riderId", currentRiderId);
+                  }
+              }
+          } catch (e) {
+              console.error("Failed to parse token for riderId", e);
+          }
+      }
+      
+      if (currentRiderId) {
+          riderIdRef.current = currentRiderId;
+          Preferences.set({ key: 'riderId', value: currentRiderId });
+      } else {
+          console.error("NO RIDER ID FOUND!");
+      }
 
     const savedOnline = localStorage.getItem("isOnline");
     if (savedOnline === "true") {
@@ -120,7 +141,7 @@ function HomeContent() {
       const socket = connectSocket();
       
       const emitOnline = () => {
-          const riderId = localStorage.getItem("mockRiderId");
+          const riderId = riderIdRef.current || localStorage.getItem("riderId");
           socket?.emit("rider_online", { riderId, lat: currentLocation?.lat, lng: currentLocation?.lng });
           console.log(`Socket connected for job updates as ${riderId}`);
         };
@@ -165,38 +186,62 @@ function HomeContent() {
         }
 
       // Start pinging GPS
-      if ("geolocation" in navigator) {
-        const id = navigator.geolocation.watchPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
+      const startWatch = async () => {
+        try {
+          const check = async () => {
+            if (Capacitor.isNativePlatform()) {
+               const perm = await Geolocation.requestPermissions();
+               if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') return false;
+               return true;
+            }
+            return "geolocation" in navigator;
+          };
+
+          const hasPermission = await check();
+          if (!hasPermission) {
+            alert("Location access is required to go online.");
+            setIsOnline(false);
+            localStorage.setItem("isOnline", "false");
+            return;
+          }
+
+          const callback = (position: any, error?: any) => {
+            if (error || !position) {
+              if (error?.code === error?.TIMEOUT) return;
+              console.error("GPS Error:", error);
+              return;
+            }
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
             setCurrentLocation({ lat: latitude, lng: longitude });
             
-            // Sync with backend via API & Socket for Dijkstra assignment
             api.post("/delivery/ping", { lat: latitude, lng: longitude }).catch(() => {});
             const currentSocket = getSocket();
             if (currentSocket) {
-              const riderId = localStorage.getItem("mockRiderId");
+              const riderId = riderIdRef.current || localStorage.getItem("riderId");
               currentSocket.emit("rider_sync_location", { riderId, lat: latitude, lng: longitude });
             }
-          },
-          (error) => {
-            // GPS Timeouts (Code 3) are extremely common in desktop browsers / emulators. Just silently ignore.
-            if (error.code === error.TIMEOUT) return; 
-            
-            console.error("GPS Error:", error.message, `(Code: ${error.code})`);
-            if (error.code === error.PERMISSION_DENIED) {
-              alert("Location access is required to go online.");
-              setIsOnline(false);
-              localStorage.setItem("isOnline", "false");
-            }
-          },
-          { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }
-        );
-        setWatchId(id);
-      }
+          };
+
+          let id;
+          if (Capacitor.isNativePlatform()) {
+            id = await Geolocation.watchPosition({ enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }, callback);
+          } else {
+            id = navigator.geolocation.watchPosition(callback as any, callback as any, { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 });
+          }
+          setWatchId(id);
+        } catch (err) {
+          console.error("GPS init failed", err);
+        }
+      };
+      
+      startWatch();
     } else {
       localStorage.setItem("isOnline", "false");
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (watchId !== null) {
+        if (Capacitor.isNativePlatform()) Geolocation.clearWatch({ id: watchId as string });
+        else navigator.geolocation.clearWatch(watchId as number);
+      }
       disconnectSocket();
     }
 
@@ -212,7 +257,7 @@ function HomeContent() {
             const { latitude, longitude } = position.coords;
             const currentSocket = getSocket();
             if (currentSocket) {
-              const riderId = localStorage.getItem("mockRiderId");
+              const riderId = riderIdRef.current || localStorage.getItem("riderId");
               currentSocket.emit("rider_sync_location", { riderId, lat: latitude, lng: longitude });
             }
           }, () => {}, { enableHighAccuracy: false, maximumAge: 10000, timeout: 5000 });
@@ -221,7 +266,10 @@ function HomeContent() {
     }
 
     return () => {
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (watchId !== null) {
+        if (Capacitor.isNativePlatform()) Geolocation.clearWatch({ id: watchId as string });
+        else navigator.geolocation.clearWatch(watchId as number);
+      }
       disconnectSocket();
       if (pingTimer) clearInterval(pingTimer);
       // Remove listener inside the useEffect cleanup, but since we defined it conditionally in if(isOnline),
@@ -328,6 +376,23 @@ function HomeContent() {
       }
     };
   }, [acceptJob, rejectJob]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const checkNativeAutoAccept = async () => {
+      try {
+        const { value } = await Preferences.get({ key: 'auto_accept_order' });
+        if (value === 'true') {
+          if (newJob) {
+            await Preferences.remove({ key: 'auto_accept_order' });
+            await acceptJob(newJob.id);
+          }
+        }
+      } catch (e) {}
+    };
+    const interval = setInterval(checkNativeAutoAccept, 1500);
+    return () => clearInterval(interval);
+  }, [mounted, newJob, acceptJob]);
 
   if (!mounted) return null; // Prevent UI flicker on mount
 

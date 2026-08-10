@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useLocation } from './LocationContext';
+import { triggerHaptic } from '@/lib/haptics';
 
 export type CartItem = {
   id: string;
@@ -99,11 +100,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const newQty = Math.max(0, newItems[existingItemIndex].quantity + delta);
         if (newQty === 0) {
           newItems.splice(existingItemIndex, 1);
+          triggerHaptic('medium');
         } else {
           newItems[existingItemIndex] = { ...newItems[existingItemIndex], ...item, quantity: newQty };
+          triggerHaptic(delta > 0 ? 'light' : 'medium');
         }
       } else if (delta > 0) {
         newItems.push({ ...item, quantity: delta });
+        triggerHaptic('success');
       }
 
       // If cart is empty after update, clear stall info

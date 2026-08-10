@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { Preferences } from '@capacitor/preferences';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://food-delivery-app-wfv0.onrender.com/api'
 });
 
 api.interceptors.request.use(function (config) {
@@ -14,7 +15,13 @@ api.interceptors.request.use(function (config) {
       if (match) {
         token = match[2];
         localStorage.setItem('swaddo_merchant_token', token);
+        Preferences.set({ key: 'swaddo_merchant_token', value: token });
       }
+    }
+    
+    // Always ensure token is synced to Capacitor Storage for native RingingActivity
+    if (token && !token.startsWith('mock_')) {
+        Preferences.set({ key: 'swaddo_merchant_token', value: token });
     }
 
     if (token && config.headers) {
@@ -32,6 +39,7 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('swaddo_merchant_token');
+        Preferences.remove({ key: 'swaddo_merchant_token' });
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }

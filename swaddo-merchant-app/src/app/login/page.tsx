@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { requestNotificationPermission } from "@/lib/firebase";
+import { Preferences } from '@capacitor/preferences';
 import { ChevronDown, ArrowRight, Loader2, Lock, UserPlus, KeyRound, ShieldCheck, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -95,6 +96,7 @@ export default function Login() {
 
   const handleSuccessfulAuth = async (token: string, userPhone: string) => {
     localStorage.setItem("swaddo_merchant_token", token);
+    Preferences.set({ key: 'swaddo_merchant_token', value: token });
     document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
     document.cookie = `role=vendor; path=/; max-age=86400; SameSite=Lax`;
     

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { Preferences } from '@capacitor/preferences';
 
 export function useAuth() {
   const router = useRouter();
@@ -14,13 +15,20 @@ export function useAuth() {
       if (match) {
         token = match[2];
         localStorage.setItem('swaddo_merchant_token', token);
+        Preferences.set({ key: 'swaddo_merchant_token', value: token });
       }
     }
 
     if (!token || token.startsWith('mock_')) {
-      if (token) localStorage.removeItem('swaddo_merchant_token');
+      if (token) {
+        localStorage.removeItem('swaddo_merchant_token');
+        Preferences.remove({ key: 'swaddo_merchant_token' });
+      }
       localStorage.setItem('swaddo_redirect_to', pathname);
       router.push('/login');
+    } else {
+      // Always sync to Capacitor Storage to ensure native code has access
+      Preferences.set({ key: 'swaddo_merchant_token', value: token });
     }
   }, [router, pathname]);
 }
@@ -35,11 +43,15 @@ export function requireAuth(router: any, intendedPath: string): boolean {
       if (match) {
         token = match[2];
         localStorage.setItem('swaddo_merchant_token', token);
+        Preferences.set({ key: 'swaddo_merchant_token', value: token });
       }
     }
 
     if (!token || token.startsWith('mock_')) {
-      if (token) localStorage.removeItem('swaddo_merchant_token');
+      if (token) {
+        localStorage.removeItem('swaddo_merchant_token');
+        Preferences.remove({ key: 'swaddo_merchant_token' });
+      }
       localStorage.setItem('swaddo_redirect_to', intendedPath);
       router.push('/login');
       return false;

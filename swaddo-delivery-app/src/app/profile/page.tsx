@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { useState, useEffect } from "react";
 import AppLoader from "@/components/AppLoader";
+import { Preferences } from '@capacitor/preferences';
 
 export default function Profile() {
   useAuth();
@@ -97,6 +98,7 @@ export default function Profile() {
   const handleLogout = () => {
     if (confirm("Are you sure you want to log out?")) {
       localStorage.removeItem("swaddo_delivery_token");
+      Preferences.remove({ key: 'swaddo_delivery_token' });
       document.cookie = 'token=; Max-Age=-99999999; path=/';
       document.cookie = 'role=; Max-Age=-99999999; path=/';
       router.push("/login");

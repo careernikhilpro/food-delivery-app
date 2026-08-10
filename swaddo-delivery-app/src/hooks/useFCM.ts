@@ -2,14 +2,40 @@ import { useEffect } from 'react';
 import { requestNotificationPermission, onForegroundMessage } from '../lib/firebase';
 import { api } from '../lib/api';
 
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
+import { triggerHaptic } from '../lib/haptics';
+
 export const useFCM = () => {
   useEffect(() => {
     const setupFCM = async () => {
       try {
-        const token = await requestNotificationPermission();
+        let token = null;
+        if (Capacitor.isNativePlatform()) {
+          const permStatus = await PushNotifications.requestPermissions();
+          if (permStatus.receive === 'granted') {
+            await PushNotifications.register();
+            PushNotifications.addListener('registration', async (fcmToken) => {
+              console.log('Native FCM Token:', fcmToken.value);
+              const authToken = typeof window !== 'undefined' ? localStorage.getItem('swaddo_delivery_token') : null;
+              if (authToken) {
+                await api.post('/auth/fcm-token', { token: fcmToken.value }).catch(() => {});
+              }
+            });
+            PushNotifications.addListener('pushNotificationReceived', (notification) => {
+              triggerHaptic('warning'); // Vibrate for new assignment
+              if (notification.data) {
+                window.dispatchEvent(new CustomEvent('swaddo_new_job', { detail: notification.data }));
+              }
+            });
+            return;
+          }
+        } else {
+          token = await requestNotificationPermission();
+        }
+
         if (token) {
-          console.log('FCM Token generated:', token);
-          // Send to backend only if authenticated
+          console.log('Web FCM Token:', token);
           const authToken = typeof window !== 'undefined' ? localStorage.getItem('swaddo_delivery_token') : null;
           if (authToken) {
             await api.post('/auth/fcm-token', { token }).catch(() => {});
@@ -31,8 +57,6 @@ export const useFCM = () => {
       if (payload.notification) {
         if ('Notification' in window && Notification.permission === 'granted') {
            new Notification(payload.notification.title, { body: payload.notification.body });
-        } else {
-           alert(`${payload.notification.title}\n${payload.notification.body}`);
         }
       }
     });

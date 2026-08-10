@@ -10,6 +10,8 @@ import { App } from "@capacitor/app";
 import { io, Socket } from "socket.io-client";
 import { LiveTrackingMap } from "@/components/maps/LiveTrackingMap";
 import { MarkerF } from '@react-google-maps/api';
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
 const libraries: any = ["geometry"];
 
@@ -242,6 +244,7 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
       }
     };
     fetchLocations();
+    const orderPollInterval = setInterval(fetchLocations, 3000);
 
     // Intercept and disable Android hardware back button
     const backListener = App.addListener('backButton', () => {
@@ -254,31 +257,53 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
     const socket: Socket = io(socketUrl);
 
     // Setup Geolocation Watch
-    let watchId: number;
-    if ("geolocation" in navigator) {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
+    let watchId: any;
+    const startWatch = async () => {
+      try {
+        const check = async () => {
+          if (Capacitor.isNativePlatform()) {
+             const perm = await Geolocation.requestPermissions();
+             if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') return false;
+             return true;
+          }
+          return "geolocation" in navigator;
+        };
+
+        const hasPermission = await check();
+        if (!hasPermission) {
+          console.error("Location permission denied or not supported.");
+          return;
+        }
+
+        const callback = (position: any, err?: any) => {
+          if (err || !position) {
+             console.error("Error fetching location:", err);
+             return;
+          }
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
           setRiderLocation({ lat: latitude, lng: longitude });
           riderLocRef.current = { lat: latitude, lng: longitude };
           localStorage.setItem(`rider_loc_${orderId}`, JSON.stringify({ lat: latitude, lng: longitude }));
           
-          // Emit location to backend
           socket.emit("rider_location_update", {
             orderId,
             latitude,
             longitude
           });
-        },
-        (error) => {
-          console.error("Error fetching location:", error);
-          // Removed hardcoded fallback that caused the rider marker to jump randomly on GPS timeout
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-      );
-    } else {
-      console.error("Geolocation is not supported by this browser.");
-    }
+        };
+
+        if (Capacitor.isNativePlatform()) {
+          watchId = await Geolocation.watchPosition({ enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 }, callback);
+        } else {
+          watchId = navigator.geolocation.watchPosition(callback as any, (err) => console.error(err), { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
+        }
+      } catch (err) {
+        console.error("Geolocation watch setup failed", err);
+      }
+    };
+
+    startWatch();
 
     const pingInterval = setInterval(() => {
       if (riderLocRef.current) {
@@ -306,8 +331,12 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
 
     return () => {
       clearInterval(pingInterval);
+      clearInterval(orderPollInterval);
       backListener.then(listener => listener.remove());
-      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (watchId) {
+        if (Capacitor.isNativePlatform()) Geolocation.clearWatch({ id: watchId });
+        else navigator.geolocation.clearWatch(watchId);
+      }
       socket.disconnect();
     };
   }, [orderId]);

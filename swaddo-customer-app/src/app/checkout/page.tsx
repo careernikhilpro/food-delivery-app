@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { motion, AnimatePresence } from 'framer-motion';
 import { LocationPickerMap } from '@/components/maps/LocationPickerMap';
 import { useCart } from "@/context/CartContext";
-import { useLocation } from "@/context/LocationContext";
+import { useLocation, getNativeOrWebPosition } from "@/context/LocationContext";
 import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 import Script from "next/script";
 
@@ -318,8 +318,8 @@ export default function Checkout() {
   const handleUseCurrentLocation = () => {
     if ("geolocation" in navigator) {
       setIsSearchingMap(true);
-      setMapSearchError("");
-      navigator.geolocation.getCurrentPosition(
+     if (true) {
+      getNativeOrWebPosition(
         async (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;

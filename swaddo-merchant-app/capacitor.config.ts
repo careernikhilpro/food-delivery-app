@@ -7,6 +7,16 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     hostname: 'swaddo.in'
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: "#16A34A",
+      showSpinner: false,
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP"
+    }
   }
 };
 

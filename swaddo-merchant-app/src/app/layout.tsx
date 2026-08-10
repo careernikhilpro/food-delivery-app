@@ -5,6 +5,7 @@ import SplashScreen from "@/components/SplashScreen";
 import PWARegister from "@/components/PWARegister";
 import SWRProvider from "@/components/SWRProvider";
 import FCMListener from "@/components/FCMListener";
+import CapacitorBackButton from "@/components/CapacitorBackButton";
 
 import PageTransitionWrapper from "@/components/PageTransitionWrapper";
 import Script from "next/script";
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -31,6 +33,7 @@ export default function RootLayout({
         <SWRProvider>
           <div className="app-container">
             <SplashScreen />
+            <CapacitorBackButton />
             <main className="pb-20">
               <PageTransitionWrapper>
                 {children}

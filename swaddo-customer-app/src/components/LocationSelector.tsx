@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLocation } from "@/context/LocationContext";
+import { useLocation, getNativeOrWebPosition } from "@/context/LocationContext";
 import { ChevronDown, MapPin, Search, X, Navigation, ArrowLeft, LocateFixed, Plus, Briefcase, Home as HomeIcon, MoreVertical, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -86,10 +86,10 @@ export default function LocationSelector({ isMobile = false, customTrigger }: Lo
   };
 
   const handleUseCurrentLocation = () => {
-    if ("geolocation" in navigator) {
+    if (true) {
       setCurrentLocation("Locating...");
       setIsOpen(false);
-      navigator.geolocation.getCurrentPosition(
+      getNativeOrWebPosition(
         async (position) => {
           try {
             const { latitude, longitude } = position.coords;

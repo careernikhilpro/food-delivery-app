@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { motion, useDragControls } from "framer-motion";
+import { Capacitor } from '@capacitor/core';
 
 export default function PWARegister() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -50,6 +51,7 @@ export default function PWARegister() {
     }
   };
 
+  if (Capacitor.isNativePlatform()) return null;
   if (!showInstallBtn || isStandalone) return null;
 
   return (

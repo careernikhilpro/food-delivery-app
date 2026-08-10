@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1083737771617",
+    "project_id": "swaddo-pwa",
+    "storage_bucket": "swaddo-pwa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083737771617:android:c9d68585d5598b271c2420",
+        "android_client_info": {
+          "package_name": "com.swaddo.delivery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_NTokyScaCe86FK12RpmMJgBVfesuAJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083737771617:android:445d5dd9ee53ba1f1c2420",
+        "android_client_info": {
+          "package_name": "com.swaddo.merchant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_NTokyScaCe86FK12RpmMJgBVfesuAJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

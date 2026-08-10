@@ -6,7 +6,10 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import useSWR from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SWRConfig } from "swr";
 import Link from "next/link";
+import { Preferences } from "@capacitor/preferences";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { CheckCircle2, Clock, XCircle, Store, ChefHat, PackageCheck, AlertCircle, MapPin, Navigation, BellRing, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -172,28 +175,35 @@ function DashboardContent() {
       setIncomingOrder(null);
     }
     
+    // OPTIMISTIC UPDATE: Instantly update the local state so the ring stops IMMEDIATELY
+    mutateOrders((currentData: any) => {
+      if (!currentData || !currentData.data) return currentData;
+      return {
+        ...currentData,
+        data: currentData.data.map((o: any) => o.id === orderId ? { ...o, status: newStatus } : o)
+      };
+    }, false);
+    
     // Call backend first if PIN is required to avoid false optimistic updates
     try {
       await api.patch(`/orders/${orderId}/status`, { status: newStatus, pin });
       
-      // Update UI after success
-      mutateOrders((currentData: any) => {
-        if (!currentData || !currentData.data) return currentData;
-        return {
-          ...currentData,
-          data: currentData.data.map((o: any) => o.id === orderId ? { ...o, status: newStatus } : o)
-        };
-      }, false);
-      
-      // Close handover modal on success
-      if (pin) {
-        setHandoverOrderId(null);
-        setPickupPin("");
+      // Clear native push notification when order is handled from inside the app
+      if (typeof window !== 'undefined') {
+        PushNotifications.removeAllDeliveredNotifications().catch(() => {});
       }
+      
+      // Update UI after success (trigger re-fetch to ensure sync)
+      mutateOrders();
     } catch (err: any) {
-      console.error("Failed to update status", err);
-      alert("Error: " + (err.response?.data?.message || "Failed to update order status. Please check your connection."));
+      console.error('Failed to update status', err);
+      alert(err.response?.data?.message || 'Failed to update order status');
+      mutateOrders(); // Revert on failure
     }
+    
+    setHandoverOrderId(null);
+    setPickupPin("");
+    setActiveOrderDetails(null);
   }, [incomingOrder, mutateOrders]);
 
   // Handle Push Notification Actions (from URL or active Window)
@@ -227,6 +237,32 @@ function DashboardContent() {
       }
     };
   }, [updateOrderStatus]);
+
+    // Auto-Accept Native Check (from CapacitorStorage)
+    useEffect(() => {
+      if (isInitializing) return;
+      const checkNativeAutoAccept = async () => {
+        try {
+          const { value } = await Preferences.get({ key: 'auto_accept_order' });
+          if (value === 'true') {
+            // Auto accept the first pending order if it exists
+            const pendingOrders = orders.filter((o: any) => o.status === 'pending');
+            if (pendingOrders.length > 0) {
+              await Preferences.remove({ key: 'auto_accept_order' });
+              await updateOrderStatus(pendingOrders[0].id, 'preparing');
+            } else if (incomingOrder) {
+              await Preferences.remove({ key: 'auto_accept_order' });
+              await updateOrderStatus(incomingOrder.id, 'preparing');
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      };
+      
+      const interval = setInterval(checkNativeAutoAccept, 1500);
+      return () => clearInterval(interval);
+    }, [orders, incomingOrder, updateOrderStatus, isInitializing]);
 
   if (isInitializing) {
     return (

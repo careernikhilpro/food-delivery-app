@@ -95,12 +95,9 @@ export const notificationService = {
   /**
    * Send a notification to a specific delivery partner (Rider)
    */
-  async sendToRider(riderId: number, title: string, body: string, data?: any) {
+  async sendToRider(userId: number, title: string, body: string, data?: any) {
     try {
       const client = await pool.connect();
-
-      const riderRes = await client.query('SELECT user_id FROM delivery_partners WHERE id = $1', [riderId]);
-      const userId = riderRes.rows[0]?.user_id;
 
       if (userId) {
         await client.query(`
@@ -110,23 +107,37 @@ export const notificationService = {
       }
 
       const result = await client.query(`
-        SELECT u.fcm_token 
-        FROM users u 
-        JOIN delivery_partners dp ON u.id = dp.user_id 
-        WHERE dp.id = $1
-      `, [riderId]);
+        SELECT fcm_token 
+        FROM users 
+        WHERE id = $1
+      `, [userId]);
       client.release();
       
       const token = result.rows[0]?.fcm_token;
       if (!token) {
-        logger.info(`No FCM token found for rider ${riderId}`);
+        logger.info(`DIAGNOSTIC: No FCM token found for rider (user_id: ${userId}). Cannot send FCM.`);
         return false;
       }
       
-      // FIX: Use Firebase Admin SDK (Native FCM) instead of Web Push for Riders!
-      return await this.sendNativePush(token, title, body, data);
+      logger.info(`DIAGNOSTIC: Backend successfully retrieved FCM token for rider ${userId}, attempting to send FCM message...`);
+      
+      const payload = {
+        token: token,
+        notification: {
+          title,
+          body
+        },
+        data: {
+          ...data,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      };
+
+      const response = await getMessaging().send(payload);
+      logger.info(`DIAGNOSTIC: Backend successfully sent delivery FCM message. Response: ${response}`);
+      return true;
     } catch (error) {
-      logger.error(`Error sending push to rider ${riderId}:`, error);
+      logger.error('DIAGNOSTIC: Backend Error sending push notification to rider:', error);
       return false;
     }
   },

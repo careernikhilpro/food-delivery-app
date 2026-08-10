@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { Preferences } from '@capacitor/preferences';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://food-delivery-app-wfv0.onrender.com/api',
 });
 
 api.interceptors.request.use((config) => {
@@ -14,6 +15,7 @@ api.interceptors.request.use((config) => {
       if (match) {
         token = match[2];
         localStorage.setItem('swaddo_delivery_token', token);
+        Preferences.set({ key: 'swaddo_delivery_token', value: token });
       }
     }
 
@@ -35,6 +37,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('swaddo_delivery_token');
+        Preferences.remove({ key: 'swaddo_delivery_token' });
         localStorage.removeItem('swaddo_delivery_phone');
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';

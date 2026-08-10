@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, X } from "lucide-react";
+import { Capacitor } from '@capacitor/core';
 
 export default function PWARegister() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -55,6 +56,8 @@ export default function PWARegister() {
 
   if (!mounted) return null;
   
+  if (Capacitor.isNativePlatform()) return null;
+
   // If the app is already installed natively, show nothing
   if (isStandalone) return null;
 

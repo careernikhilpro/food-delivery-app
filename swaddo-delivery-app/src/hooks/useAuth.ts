@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { Preferences } from '@capacitor/preferences';
 
 export function useAuth() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function useAuth() {
       if (match) {
         token = match[2];
         localStorage.setItem('swaddo_delivery_token', token);
+        Preferences.set({ key: 'swaddo_delivery_token', value: token });
       }
     }
 
@@ -51,6 +53,7 @@ export function requireAuth(router: any, intendedPath: string): boolean {
       if (match) {
         token = match[2];
         localStorage.setItem('swaddo_delivery_token', token);
+        Preferences.set({ key: 'swaddo_delivery_token', value: token });
       }
     }
 

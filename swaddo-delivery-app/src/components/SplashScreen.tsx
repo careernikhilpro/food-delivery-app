@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bike, Package, Wind } from "lucide-react";
+import { SplashScreen as NativeSplashScreen } from '@capacitor/splash-screen';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 
 export default function SplashScreen() {
   const [mounted, setMounted] = useState(false);
@@ -13,6 +16,13 @@ export default function SplashScreen() {
     const t = setTimeout(() => {
       setShow(false);
     }, 1800); 
+
+    if (Capacitor.isNativePlatform()) {
+      NativeSplashScreen.hide().catch(() => {});
+      StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#10B981' }).catch(() => {});
+    }
+
     return () => clearTimeout(t);
   }, []);
 

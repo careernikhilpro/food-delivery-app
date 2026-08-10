@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
 type LocationContextType = {
   currentLocation: string;
@@ -18,6 +20,26 @@ type LocationContextType = {
 };
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
+
+export const getNativeOrWebPosition = async (successCallback: (position: any) => void, errorCallback: (error: any) => void) => {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await Geolocation.checkPermissions();
+      if (permission.location !== 'granted') {
+        const req = await Geolocation.requestPermissions();
+        if (req.location !== 'granted') {
+          throw new Error('Location permission denied');
+        }
+      }
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+      successCallback({ coords: { latitude: position.coords.latitude, longitude: position.coords.longitude } });
+    } else {
+      navigator.geolocation.getCurrentPosition(successCallback, errorCallback, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    }
+  } catch (error) {
+    errorCallback(error);
+  }
+};
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [currentLocation, setCurrentLocation] = useState("");
@@ -55,9 +77,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     // Auto-fetch live GPS if they haven't set a manual address, or if nothing is saved, or if it's stuck on Dummy
     if (!savedLoc || savedLoc === "Locating..." || locationType !== "manual" || savedLoc.includes("Dummy")) {
-      if ("geolocation" in navigator) {
+      if (true) {
         if (!savedLoc || savedLoc === "Locating...") setIsLocationLoading(true);
-        navigator.geolocation.getCurrentPosition(
+        getNativeOrWebPosition(
           async (position) => {
             try {
               const { latitude, longitude } = position.coords;
@@ -138,8 +160,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("swaddo_location_type");
     setIsLocationLoading(true);
     
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
+    if (true) {
+      getNativeOrWebPosition(
         async (position) => {
           try {
             const { latitude, longitude } = position.coords;

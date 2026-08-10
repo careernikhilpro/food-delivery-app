@@ -2,7 +2,13 @@
 
 import { User, Store, LogOut, Settings, Bell, HelpCircle, ChevronRight, Edit2, Check, X, MapPin, LocateFixed, Search, Loader2, Clock, ChefHat } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Preferences } from '@capacitor/preferences';
 import { useRouter } from "next/navigation";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { LocationPickerMap } from '@/components/maps/LocationPickerMap';
@@ -229,49 +235,71 @@ export default function ProfilePage() {
     }
   };
 
-  const handleUseCurrentLocation = () => {
-    if ("geolocation" in navigator) {
-      setIsSearchingMap(true);
-      setMapSearchError("");
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          setMapLat(lat);
-          setMapLng(lon);
-          setMapCenterLat(lat);
-          setMapCenterLng(lon);
-          if (mapRef.current) {
-            mapRef.current.panTo({ lat, lng: lon });
-            mapRef.current.setZoom(17.5);
+  const handleUseCurrentLocation = async () => {
+    setIsSearchingMap(true);
+    setMapSearchError("");
+    
+    try {
+      const check = async () => {
+        if (Capacitor.isNativePlatform()) {
+           const perm = await Geolocation.requestPermissions();
+           if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') return false;
+           return true;
+        }
+        return "geolocation" in navigator;
+      };
+
+      const hasPerm = await check();
+      if (!hasPerm) {
+         setMapSearchError("Location permission denied.");
+         setIsSearchingMap(false);
+         return;
+      }
+
+      const processLocation = async (lat: number, lon: number) => {
+        setMapLat(lat);
+        setMapLng(lon);
+        setMapCenterLat(lat);
+        setMapCenterLng(lon);
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat, lng: lon });
+          mapRef.current.setZoom(17.5);
+        }
+          
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
+          const res = await fetch(`${baseUrl}/location/reverse-geocode`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng: lon })
+          });
+          
+          const data = await res.json();
+          if (data && data.status === 'success' && data.data) {
+            setMapSearchQuery(data.data.address || data.data.city || "");
           }
-          
-          try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
-            const res = await fetch(`${baseUrl}/location/reverse-geocode`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ lat, lng: lon })
-            });
-            
-            const data = await res.json();
-            
-            if (data && data.status === 'success' && data.data) {
-              setMapSearchQuery(data.data.address || data.data.city || "");
-            }
-          } catch(e) {}
-          
-          setIsSearchingMap(false);
-        },
-        (error) => {
-          console.error("Error fetching location", error);
-          setMapSearchError("Could not get your current location. Please check browser permissions.");
-          setIsSearchingMap(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      setMapSearchError("Geolocation is not supported by your browser.");
+        } catch(e) {}
+        
+        setIsSearchingMap(false);
+      };
+
+      if (Capacitor.isNativePlatform()) {
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+        await processLocation(position.coords.latitude, position.coords.longitude);
+      } else {
+        navigator.geolocation.getCurrentPosition(
+          (position) => processLocation(position.coords.latitude, position.coords.longitude),
+          (error) => {
+            console.error("Error fetching location", error);
+            setMapSearchError("Could not get your current location.");
+            setIsSearchingMap(false);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+    } catch (err) {
+      setMapSearchError("Error accessing location.");
+      setIsSearchingMap(false);
     }
   };
 
@@ -334,6 +362,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("swaddo_merchant_token");
+    Preferences.remove({ key: 'swaddo_merchant_token' });
     document.cookie = 'token=; Max-Age=-99999999; path=/';
     document.cookie = 'role=; Max-Age=-99999999; path=/';
     router.push("/login");

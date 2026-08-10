@@ -4,32 +4,57 @@ import { useState, useEffect } from "react";
 import { WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
+
 export default function OfflineOverlay() {
   const [isOnline, setIsOnline] = useState(true);
   const [showOverlay, setShowOverlay] = useState(false);
 
   useEffect(() => {
-    // Initial check
-    if (typeof window !== "undefined") {
-      setIsOnline(navigator.onLine);
-    }
+    let networkListener: any;
 
-    const handleOnline = () => {
+    const setupNativeNetwork = async () => {
+      const status = await Network.getStatus();
+      setIsOnline(status.connected);
+
+      networkListener = await Network.addListener('networkStatusChange', status => {
+        if (status.connected) {
+          setIsOnline(true);
+          setTimeout(() => setShowOverlay(false), 2000);
+        } else {
+          setIsOnline(false);
+          setShowOverlay(true);
+        }
+      });
+    };
+
+    const handleWebOnline = () => {
       setIsOnline(true);
       setTimeout(() => setShowOverlay(false), 2000); // Hide after showing success for 2s
     };
 
-    const handleOffline = () => {
+    const handleWebOffline = () => {
       setIsOnline(false);
       setShowOverlay(true);
     };
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    if (Capacitor.isNativePlatform()) {
+      setupNativeNetwork();
+    } else {
+      if (typeof window !== "undefined") {
+        setIsOnline(navigator.onLine);
+        window.addEventListener("online", handleWebOnline);
+        window.addEventListener("offline", handleWebOffline);
+      }
+    }
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      if (networkListener) networkListener.remove();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("online", handleWebOnline);
+        window.removeEventListener("offline", handleWebOffline);
+      }
     };
   }, []);
 

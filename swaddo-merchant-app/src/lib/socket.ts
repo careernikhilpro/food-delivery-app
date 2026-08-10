@@ -12,7 +12,7 @@ export const getSocket = () => {
       wsUrl = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '');
     }
     
-    socket = io(wsUrl || 'http://localhost:5005', {
+    socket = io(wsUrl || 'https://food-delivery-app-wfv0.onrender.com', {
       auth: { token },
       autoConnect: false,
       transports: ['websocket'], // Force websocket for 0.1s speed (bypass 5-6s polling lag)

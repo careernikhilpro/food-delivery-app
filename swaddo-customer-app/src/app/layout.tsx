@@ -8,6 +8,7 @@ import { CartProvider } from "@/context/CartContext";
 import { LocationProvider } from "@/context/LocationContext";
 import PageTransitionWrapper from "@/components/PageTransitionWrapper";
 import AppInit from "@/components/AppInit";
+import CapacitorBackButton from "@/components/CapacitorBackButton";
 import PWARegister from "@/components/PWARegister";
 import SWRProvider from "@/components/SWRProvider";
 import { Toaster } from "react-hot-toast";
@@ -89,6 +90,7 @@ export default function RootLayout({
                 {/* Main Content Area */}
                 <main className="app-scroll-container pb-24 xl:pb-0 xl:pt-20 relative">
                   <AppInit />
+                  <CapacitorBackButton />
                   <PageTransitionWrapper>
                     {children}
                   </PageTransitionWrapper>

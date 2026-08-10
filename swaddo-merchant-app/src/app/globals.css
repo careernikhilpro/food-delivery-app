@@ -31,6 +31,13 @@ html, body {
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  background-color: var(--color-bg-main);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

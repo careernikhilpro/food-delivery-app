@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import SplashScreen from "@/components/SplashScreen";
 import PWARegister from "@/components/PWARegister";
 import FCMListener from "@/components/FCMListener";
+import CapacitorBackButton from "@/components/CapacitorBackButton";
 import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${poppins.variable} font-body bg-bg-main text-text-primary antialiased`}>
         <SplashScreen />
+        <CapacitorBackButton />
         <main className="pb-20">
           {children}
         </main>
