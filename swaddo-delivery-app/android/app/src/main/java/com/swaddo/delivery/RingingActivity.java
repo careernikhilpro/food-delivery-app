@@ -160,6 +160,14 @@ public class RingingActivity extends Activity {
             @Override
             public void onClick(View v) {
                 if (actionInProgress) return;
+                actionInProgress = true;
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Reject clicked");
+                
+                // Since there is no specific Reject API endpoint currently implemented in the backend,
+                // we treat reject as a local UI action to dismiss the screen and wait for the backend 
+                // to timeout the assignment naturally.
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Reject SUCCESS (Local) - closing RingingActivity");
+                
                 stopRinging();
                 if (notificationId != -1) {
                     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -185,10 +193,16 @@ public class RingingActivity extends Activity {
     private void acceptOrderAPI(final String orderId, final int notificationId) {
         new Thread(() -> {
             try {
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept clicked");
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: orderId=" + orderId);
+                
                 SharedPreferences prefs = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
                 String token = prefs.getString("swaddo_delivery_token", null);
                 String riderId = prefs.getString("riderId", null);
                 String apiUrl = prefs.getString("swaddo_api_url", "https://food-delivery-app-wfv0.onrender.com");
+                
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: riderId=" + riderId);
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: token present=" + (token != null));
                 
                 if (token == null || riderId == null) {
                     runOnUiThread(() -> Toast.makeText(RingingActivity.this, "Auth error: Token or Rider ID missing", Toast.LENGTH_SHORT).show());
@@ -196,14 +210,13 @@ public class RingingActivity extends Activity {
                     return;
                 }
                 
-                String finalOrderId = orderId;
-                if (!finalOrderId.startsWith("job_")) {
-                    finalOrderId = "job_" + finalOrderId;
-                }
+                String finalOrderId = orderId; // Do NOT prefix with "job_"
                 URL url = new URL(apiUrl + "/api/delivery/assignments/" + finalOrderId + "/accept");
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept API URL=" + url.toString());
+                
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(5000); // 5 seconds timeout
-                conn.setReadTimeout(5000); // 5 seconds read timeout
+                conn.setConnectTimeout(10000); // 10 seconds
+                conn.setReadTimeout(10000); // 10 seconds
                 conn.setRequestMethod("PATCH");
                 conn.setRequestProperty("Authorization", "Bearer " + token);
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -218,9 +231,18 @@ public class RingingActivity extends Activity {
                 os.close();
                 
                 int responseCode = conn.getResponseCode();
-                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept API HTTP=" + responseCode);
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept API HTTP status=" + responseCode);
+                
+                java.io.InputStream stream = (responseCode >= 200 && responseCode < 300) ? conn.getInputStream() : conn.getErrorStream();
+                String responseBody = "";
+                if (stream != null) {
+                    java.util.Scanner s = new java.util.Scanner(stream).useDelimiter("\\A");
+                    responseBody = s.hasNext() ? s.next() : "";
+                }
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept API response=" + responseBody);
                 
                 if (responseCode >= 200 && responseCode < 300) {
+                    android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept SUCCESS - closing RingingActivity");
                     runOnUiThread(() -> {
                         stopRinging();
                         if (notificationId != -1) {
@@ -235,20 +257,18 @@ public class RingingActivity extends Activity {
                         finish();
                     });
                 } else {
+                    android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept FAILED - keeping RingingActivity open");
+                    final String errorMsg = "Error: " + responseCode + ". Swipe to retry.";
                     runOnUiThread(() -> {
-                        Toast.makeText(RingingActivity.this, "Failed to accept order. It might have been taken.", Toast.LENGTH_LONG).show();
-                        stopRinging();
-                        if (notificationId != -1) {
-                            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                            notificationManager.cancel(notificationId);
-                        }
-                        finish();
+                        Toast.makeText(RingingActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        resetAction();
                     });
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                android.util.Log.e("SwaddoFCM", "DIAGNOSTIC: Accept FAILED (Exception) - keeping RingingActivity open: " + e.getMessage());
                 runOnUiThread(() -> {
-                    Toast.makeText(RingingActivity.this, "Network error. Try from app.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(RingingActivity.this, "Network error. Swipe to retry.", Toast.LENGTH_SHORT).show();
                     resetAction();
                 });
             }
