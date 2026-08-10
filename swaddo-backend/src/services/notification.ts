@@ -84,8 +84,8 @@ export const notificationService = {
         return false;
       }
       
-      // FIX: Use Firebase Admin SDK (Native FCM) instead of Web Push for Merchants!
-      return await this.sendNativePush(token, title, body, data);
+      // Use a dedicated channel ID for merchants to avoid conflicts with riders
+      return await this.sendNativePush(token, title, body, data, 'swaddo_merchant_v1');
     } catch (error) {
       logger.error(`Error sending push to vendor ${vendorId}:`, error);
       return false;
@@ -203,7 +203,7 @@ export const notificationService = {
    * This is REQUIRED for Android to allow background processes to wake up and ring.
    * If we include a "notification" block, Android OS swallows it and keeps it silent!
    */
-  async sendNativePush(token: string, title: string, body: string, data?: any) {
+  async sendNativePush(token: string, title: string, body: string, data?: any, channelId: string = 'swaddo_alerts_v5') {
     if (!getApps().length) return false;
     
     try {
@@ -213,7 +213,7 @@ export const notificationService = {
           title,
           body,
           ...data,
-          android_channel_id: 'swaddo_alerts_v5'
+          android_channel_id: channelId
         },
         android: {
           priority: 'high' as const // CRITICAL: Wakes up the app from Doze mode
