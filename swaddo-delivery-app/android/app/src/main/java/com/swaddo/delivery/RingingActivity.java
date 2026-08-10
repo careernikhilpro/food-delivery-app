@@ -104,6 +104,7 @@ public class RingingActivity extends Activity {
             ringtone.setLooping(true);
         }
         ringtone.play();
+        android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: ringtone started");
 
         // Start vibrating
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -123,6 +124,7 @@ public class RingingActivity extends Activity {
                     actionInProgress = true;
                     seekBar.setEnabled(false); 
                     tvTitle.setText("Accepting...");
+                    android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept API started");
                     acceptOrderAPI(orderId, notificationId);
                 }
             }
@@ -146,6 +148,7 @@ public class RingingActivity extends Activity {
                 if (notificationId != -1) {
                     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                     notificationManager.cancel(notificationId);
+                    android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: notification cancelled");
                 }
                 finish(); 
             }
@@ -176,7 +179,11 @@ public class RingingActivity extends Activity {
                     return;
                 }
                 
-                URL url = new URL("https://food-delivery-app-wfv0.onrender.com/api/delivery/assignments/" + orderId + "/accept");
+                String finalOrderId = orderId;
+                if (!finalOrderId.startsWith("job_")) {
+                    finalOrderId = "job_" + finalOrderId;
+                }
+                URL url = new URL("https://food-delivery-app-wfv0.onrender.com/api/delivery/assignments/" + finalOrderId + "/accept");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("PATCH");
                 conn.setRequestProperty("Authorization", "Bearer " + token);
@@ -192,13 +199,15 @@ public class RingingActivity extends Activity {
                 os.close();
                 
                 int responseCode = conn.getResponseCode();
+                android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: Accept API HTTP=" + responseCode);
                 
-                if (responseCode == 200 || responseCode == 201) {
+                if (responseCode >= 200 && responseCode < 300) {
                     runOnUiThread(() -> {
                         stopRinging();
                         if (notificationId != -1) {
                             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                             notificationManager.cancel(notificationId);
+                            android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: notification cancelled");
                         }
                         // Open MainActivity
                         Intent mainIntent = new Intent(RingingActivity.this, MainActivity.class);

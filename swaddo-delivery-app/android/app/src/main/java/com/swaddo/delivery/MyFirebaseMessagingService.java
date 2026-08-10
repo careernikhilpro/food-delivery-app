@@ -27,7 +27,7 @@ public class MyFirebaseMessagingService extends MessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage); // Forward to Capacitor
-        android.util.Log.d(TAG, "FCM Message Received!");
+        android.util.Log.d(TAG, "DIAGNOSTIC: FCM received");
 
         if (remoteMessage.getData().size() > 0) {
             String type = remoteMessage.getData().get("type");
@@ -37,18 +37,18 @@ public class MyFirebaseMessagingService extends MessagingService {
             }
             
             android.util.Log.d(TAG, "FCM contains data payload.");
+            android.util.Log.d(TAG, "DIAGNOSTIC: isAppInForeground=" + isAppInForeground());
             
             if (isAppInForeground()) {
                 android.util.Log.d(TAG, "App is in foreground. Skipping RingingActivity, letting web app handle it.");
                 return;
             }
             
-            android.util.Log.d(TAG, "Triggering native notification and RingingActivity.");
             String title = remoteMessage.getData().get("title");
             String body = remoteMessage.getData().get("body");
             String orderId = remoteMessage.getData().get("orderId");
             
-            android.util.Log.d(TAG, "DIAGNOSTIC: FCM Data parsed. orderId=" + orderId + ", title=" + title);
+            android.util.Log.d(TAG, "DIAGNOSTIC: orderId=" + orderId);
             
             if (title == null && body == null) {
                 android.util.Log.d(TAG, "Empty FCM data payload. Ignoring.");
@@ -60,8 +60,10 @@ public class MyFirebaseMessagingService extends MessagingService {
             String notifBody = "Tap to open and accept.";
 
             int notificationId = orderId != null ? orderId.hashCode() : (int) System.currentTimeMillis();
+            android.util.Log.d(TAG, "DIAGNOSTIC: notificationId=" + notificationId);
 
             try {
+                android.util.Log.d(TAG, "DIAGNOSTIC: creating fullScreenIntent");
                 Intent fullScreenIntent = new Intent(this, RingingActivity.class);
                 fullScreenIntent.putExtra("title", title);
                 fullScreenIntent.putExtra("body", body);
@@ -103,13 +105,13 @@ public class MyFirebaseMessagingService extends MessagingService {
                 if (pm != null) {
                     isScreenOn = pm.isInteractive();
                 }
-                android.util.Log.d(TAG, "DIAGNOSTIC: Screen is currently ON/Interactive: " + isScreenOn);
+                android.util.Log.d(TAG, "DIAGNOSTIC: screenInteractive=" + isScreenOn);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     boolean canDraw = android.provider.Settings.canDrawOverlays(this);
-                    android.util.Log.d(TAG, "DIAGNOSTIC: canDrawOverlays permission: " + canDraw);
+                    android.util.Log.d(TAG, "DIAGNOSTIC: overlay permission=" + canDraw);
                     if (canDraw) {
-                        android.util.Log.d(TAG, "DIAGNOSTIC: Attempting explicit startActivity for RingingActivity...");
+                        android.util.Log.d(TAG, "DIAGNOSTIC: launching RingingActivity");
                         try {
                             startActivity(fullScreenIntent);
                             android.util.Log.d(TAG, "DIAGNOSTIC: startActivity(fullScreenIntent) succeeded.");
@@ -162,15 +164,15 @@ public class MyFirebaseMessagingService extends MessagingService {
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     int perm = androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS);
-                    android.util.Log.d(TAG, "DIAGNOSTIC: POST_NOTIFICATIONS permission status (0=Granted, -1=Denied): " + perm);
+                    android.util.Log.d(TAG, "DIAGNOSTIC: notification permission=" + (perm == android.content.pm.PackageManager.PERMISSION_GRANTED));
                 }
 
-                android.util.Log.d(TAG, "DIAGNOSTIC: Posting notification to system with ID: " + notificationId);
+                android.util.Log.d(TAG, "DIAGNOSTIC: posting notification");
                 android.app.Notification notification = builder.build();
                 notification.flags |= android.app.Notification.FLAG_INSISTENT;
                 notificationManager.notify(notificationId, notification);
                 
-                android.util.Log.d(TAG, "Notification posted successfully!");
+                android.util.Log.d(TAG, "DIAGNOSTIC: notification posted successfully!");
 
             } catch (Exception e) {
                 android.util.Log.e(TAG, "Exception during native notification flow: " + e.getMessage());

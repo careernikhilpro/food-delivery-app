@@ -115,11 +115,12 @@ export const notificationService = {
       
       const token = result.rows[0]?.fcm_token;
       if (!token) {
-        logger.info(`DIAGNOSTIC: No FCM token found for rider (user_id: ${userId}). Cannot send FCM.`);
+        logger.info(`DIAGNOSTIC: No FCM token found for rider userId=${userId}`);
         return false;
       }
       
-      logger.info(`DIAGNOSTIC: Backend successfully retrieved FCM token for rider ${userId}, attempting to send FCM message...`);
+      logger.info(`DIAGNOSTIC: Rider FCM token found`);
+      logger.info(`DIAGNOSTIC: Sending DATA-ONLY FCM message`);
       
       const payload = {
         token: token,
@@ -132,7 +133,7 @@ export const notificationService = {
       };
 
       const response = await getMessaging().send(payload);
-      logger.info(`DIAGNOSTIC: Backend successfully sent delivery FCM message. Response: ${response}`);
+      logger.info(`DIAGNOSTIC: FCM message sent successfully`);
       return true;
     } catch (error) {
       logger.error('DIAGNOSTIC: Backend Error sending push notification to rider:', error);
