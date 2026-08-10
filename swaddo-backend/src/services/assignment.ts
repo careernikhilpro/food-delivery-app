@@ -36,6 +36,14 @@ export class AssignmentManager {
 
   async init(io: Server) {
     this.io = io;
+    try {
+      const { pool } = require('../db');
+      console.log("[Assignment] Running Auto-Recovery for stuck orders...");
+      const res = await pool.query(`
+        SELECT o.id, o.stall_id, o.customer_id, o.delivery_address, o.delivery_instructions, o.restaurant_instructions,
+               o.delivery_lat, o.delivery_lng, o.total_amount,
+               u.name as customer_name,
+               s.name as stall_name, s.lat as pickup_lat, s.lng as pickup_lng
         FROM orders o
         LEFT JOIN users u ON o.customer_id = u.id
         LEFT JOIN stalls s ON o.stall_id = s.id
