@@ -520,11 +520,11 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
       const isCod = d.payment_method === 'cod';
 
       // Format time correctly (e.g. 06:05 PM)
-      const timeString = dDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const timeString = dDateIST.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
       return {
         id: d.id.toString(),
-        date: diffDays === 0 ? `Today, ${timeString}` : `${dDate.toLocaleDateString()} • ${timeString}`,
+        date: diffDays === 0 ? `Today, ${timeString}` : `${dDateIST.toLocaleDateString('en-IN')} • ${timeString}`,
         stall: d.stall_name,
         amount: finalAmount,
         distance: `${totalDist} km`,
