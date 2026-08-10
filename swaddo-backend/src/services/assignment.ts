@@ -102,7 +102,34 @@ export class AssignmentManager {
 
     const notifiedRiders = this.activeJobs.get(jobPayload.id)!;
 
-    const totalAvailable = Array.from(this.onlineRiders.entries()).filter(([rId, data]) => !data.isBusy);
+    const { pool } = require('../db');
+    
+    // DB-Driven: Find all online riders with fresh GPS (< 2 minutes) who don't have an active assignment
+    let totalAvailable: [string, any][] = [];
+    try {
+      const dbRes = await pool.query(`
+        SELECT dp.user_id, dp.last_lat, dp.last_lng 
+        FROM delivery_partners dp
+        LEFT JOIN delivery_assignments da 
+          ON da.delivery_partner_id = dp.id 
+          AND da.status IN ('accepted', 'picked_up')
+        WHERE dp.current_status = 'online' 
+          AND dp.last_ping >= NOW() - INTERVAL '2 minutes'
+          AND da.id IS NULL
+      `);
+      
+      for (const row of dbRes.rows) {
+        const rId = row.user_id.toString();
+        // Fallback: check in-memory busy state just in case
+        const memRider = this.onlineRiders.get(rId);
+        if (memRider && memRider.isBusy) continue;
+        
+        totalAvailable.push([rId, { lat: parseFloat(row.last_lat), lng: parseFloat(row.last_lng) }]);
+      }
+    } catch (err) {
+      console.error("[Assignment] Error querying available riders from DB:", err);
+    }
+
     const availableRiders = totalAvailable.filter(([rId, data]) => !notifiedRiders.has(rId));
 
     // If there is only 1 rider online, do NOT revoke. Just re-notify them.

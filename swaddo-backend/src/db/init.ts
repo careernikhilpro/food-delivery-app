@@ -376,6 +376,15 @@ const runSchema = async () => {
       DO $$ BEGIN
         ALTER TABLE delivery_partners ADD COLUMN rc_number VARCHAR(30);
       EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE delivery_partners ADD COLUMN last_lat DECIMAL(10,8);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE delivery_partners ADD COLUMN last_lng DECIMAL(10,8);
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE delivery_partners ADD COLUMN last_ping TIMESTAMP;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
 
     // Payments

@@ -184,14 +184,38 @@ const gpsLimiter = rateLimit({
 
 router.post('/ping', authenticate, requireDelivery, gpsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { lat, lng, orderId } = req.body;
+    const { lat, lng } = req.body;
     
     // Store latest GPS in Redis for fast access by Socket.io
     await redis.set(`rider_loc:${req.user!.id}`, JSON.stringify({ latitude: lat, longitude: lng, updated_at: new Date() }), { EX: 60 });
 
-    // In a real app, you would publish this to Socket.io here or via a Redis PubSub channel
+    // Ensure we update DB so AssignmentManager can find this rider
+    await pool.query(
+      `UPDATE delivery_partners 
+       SET last_lat = $1, last_lng = $2, last_ping = NOW() 
+       WHERE user_id = $3`,
+      [lat, lng, req.user!.id]
+    );
     
     res.json({ status: 'ok' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { status } = req.body; // 'online' or 'offline'
+    if (status !== 'online' && status !== 'offline') {
+      return res.status(400).json({ message: 'Status must be online or offline' });
+    }
+
+    await pool.query(
+      `UPDATE delivery_partners SET current_status = $1 WHERE user_id = $2`,
+      [status, req.user!.id]
+    );
+
+    res.json({ message: `Status updated to ${status}` });
   } catch (err) {
     next(err);
   }
