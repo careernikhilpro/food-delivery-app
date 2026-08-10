@@ -105,6 +105,18 @@ export class AssignmentManager {
 
     const { pool } = require('../db');
     
+    try {
+      const orderId = jobPayload.orderId || jobPayload.id.toString().replace('job_', '');
+      const orderCheck = await pool.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
+      if (orderCheck.rows.length === 0 || orderCheck.rows[0].status !== 'ready') {
+        console.log(`[Assignment] Job ${jobPayload.id} is no longer ready in DB. Revoking from memory.`);
+        this.revokeJob(jobPayload.id);
+        return;
+      }
+    } catch (e) {
+      console.error(`[Assignment] Error verifying order status for ${jobPayload.id}:`, e);
+    }
+    
     // DB-Driven: Find all online riders with fresh GPS (< 2 minutes) who don't have an active assignment
     let totalAvailable: [string, any][] = [];
     try {
@@ -236,7 +248,9 @@ export class AssignmentManager {
     const jobWithDistance = { 
       ...jobPayload, 
       pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
-      pickupPayout: pickupPayout
+      pickupPayout: pickupPayout,
+      deliveryPay: deliveryPay,
+      totalPayout: totalPayout
     };
     
     // Store exact promised payout and distance for this specific rider

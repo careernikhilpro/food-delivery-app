@@ -269,6 +269,11 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       [orderId]
     );
 
+    if (updateRes.rows.length === 0) {
+      assignmentManager.revokeJob(jobId);
+      return res.status(404).json({ message: 'Order not found in DB (cleared from ghost memory)' });
+    }
+
     // Fetch real rider info
     const riderRes = await pool.query(
       `SELECT u.name, u.phone, dp.vehicle_details 
