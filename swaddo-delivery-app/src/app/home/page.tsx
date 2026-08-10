@@ -143,9 +143,13 @@ function HomeContent() {
         if (Capacitor.isNativePlatform()) {
           const { Device } = await import('@capacitor/device');
           const batteryInfo = await Device.getBatteryInfo();
-          if (batteryInfo.batteryLevel !== undefined && batteryInfo.batteryLevel < 0.15 && !batteryInfo.isCharging) {
-            alert("Battery is below 15%. Please charge your phone to go online.");
-            return;
+          let level = batteryInfo.batteryLevel;
+          if (level !== undefined) {
+             if (level > 1.0) level = level / 100.0; // normalize 8% (returns 8) to 0.08
+             if (level < 0.15 && !batteryInfo.isCharging) {
+               alert("Battery is below 15%. Please charge your phone to go online.");
+               return;
+             }
           }
           
           let watcherId;
