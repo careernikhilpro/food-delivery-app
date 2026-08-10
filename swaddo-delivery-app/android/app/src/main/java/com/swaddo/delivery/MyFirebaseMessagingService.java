@@ -39,6 +39,13 @@ public class MyFirebaseMessagingService extends MessagingService {
             android.util.Log.d(TAG, "FCM contains data payload.");
             android.util.Log.d(TAG, "DIAGNOSTIC: isAppInForeground=" + isAppInForeground());
             
+            // Acquire Wakelock to prevent CPU from sleeping during processing
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                android.os.PowerManager.WakeLock wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP, "SwaddoFCM:WakeLock");
+                wakeLock.acquire(15000); // Hold for 15 seconds max
+            }
+            
             if (isAppInForeground()) {
                 android.util.Log.d(TAG, "App is in foreground. Skipping RingingActivity, letting web app handle it.");
                 return;
@@ -118,6 +125,19 @@ public class MyFirebaseMessagingService extends MessagingService {
                 android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
                 if (pm != null) {
                     isScreenOn = pm.isInteractive();
+                    if (!isScreenOn) {
+                        try {
+                            android.os.PowerManager.WakeLock wakeLock = pm.newWakeLock(
+                                android.os.PowerManager.FULL_WAKE_LOCK | 
+                                android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP | 
+                                android.os.PowerManager.ON_AFTER_RELEASE, 
+                                "SwaddoFCM:WakeScreen");
+                            wakeLock.acquire(10000);
+                            android.util.Log.d(TAG, "DIAGNOSTIC: Forced screen wakeup via Wakelock");
+                        } catch (Exception e) {
+                            android.util.Log.e(TAG, "DIAGNOSTIC: Wakelock failed", e);
+                        }
+                    }
                 }
                 android.util.Log.d(TAG, "DIAGNOSTIC: screenInteractive=" + isScreenOn);
 
@@ -147,12 +167,14 @@ public class MyFirebaseMessagingService extends MessagingService {
                         mainIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
                 String channelId = "swaddo_alerts_v5";
+                android.net.Uri soundUri = android.net.Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.orderring);
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(R.mipmap.ic_launcher)
                         .setContentTitle(notifTitle)
                         .setContentText(notifBody)
                         .setPriority(NotificationCompat.PRIORITY_MAX)
                         .setCategory(NotificationCompat.CATEGORY_CALL)
+                        .setSound(soundUri, android.media.AudioManager.STREAM_ALARM)
                         .setFullScreenIntent(fullScreenPendingIntent, true)
                         .setContentIntent(contentIntent)
                         .setAutoCancel(true)
