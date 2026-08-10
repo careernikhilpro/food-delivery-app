@@ -415,7 +415,7 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
       `Your order #${order.id} is now ${status}`
     );
 
-    // If status is delivered, update the assignment earnings
+    // If status is delivered or cancelled, update the assignment status
     if (status === 'delivered') {
       await pool.query(
         `UPDATE delivery_assignments 
@@ -424,6 +424,14 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
         [order.id]
       );
       console.log(`[Database] Delivery assignment for order ${order.id} marked completed.`);
+    } else if (status === 'cancelled') {
+      await pool.query(
+        `UPDATE delivery_assignments 
+         SET status = 'cancelled'
+         WHERE order_id = $1`,
+        [order.id]
+      );
+      console.log(`[Database] Delivery assignment for order ${order.id} marked cancelled.`);
     }
 
     if (status === 'delivered' || status === 'cancelled') {
