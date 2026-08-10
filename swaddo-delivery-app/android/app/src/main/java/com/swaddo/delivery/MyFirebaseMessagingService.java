@@ -122,7 +122,6 @@ public class MyFirebaseMessagingService extends MessagingService {
                 fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
                 boolean isScreenOn = false;
-                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
                 if (pm != null) {
                     isScreenOn = pm.isInteractive();
                     if (!isScreenOn) {
@@ -188,7 +187,6 @@ public class MyFirebaseMessagingService extends MessagingService {
                             "Ringing Alerts",
                             NotificationManager.IMPORTANCE_HIGH);
                     
-                    android.net.Uri soundUri = android.net.Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.orderring);
                     android.media.AudioAttributes audioAttributes = new android.media.AudioAttributes.Builder()
                             .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .setUsage(android.media.AudioAttributes.USAGE_ALARM)
