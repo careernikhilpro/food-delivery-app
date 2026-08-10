@@ -240,6 +240,17 @@ function HomeContent() {
           setTimer(300);
           localStorage.setItem("pendingJob", JSON.stringify(data));
           localStorage.setItem("pendingTimer", (Math.floor(Date.now() / 1000) + 300).toString());
+          
+          // Play loud ringing sound in foreground
+          try {
+            const audio = new Audio('/orderring.mp3'); // Ensure this file exists in public folder
+            audio.loop = true;
+            audio.id = "rider-ringtone";
+            document.body.appendChild(audio);
+            audio.play().catch(e => console.error("Audio play failed:", e));
+          } catch (e) {
+            console.error("Failed to setup audio", e);
+          }
         });
 
         socket?.on("job_revoked", (payload) => {
@@ -247,6 +258,13 @@ function HomeContent() {
             if (prev && prev.id === payload.id) {
               localStorage.removeItem("pendingJob");
               localStorage.removeItem("pendingTimer");
+              
+              // Stop audio
+              const audioEl = document.getElementById("rider-ringtone") as HTMLAudioElement;
+              if (audioEl) {
+                audioEl.pause();
+                audioEl.remove();
+              }
               return null;
             }
             return prev;
@@ -325,6 +343,15 @@ function HomeContent() {
   const acceptJob = useCallback(async (jobIdToAccept?: string | any) => {
     const targetJobId = (typeof jobIdToAccept === 'string') ? jobIdToAccept : newJob?.id;
     if (!targetJobId) return;
+    
+    const stopAudio = () => {
+      const audioEl = document.getElementById("rider-ringtone") as HTMLAudioElement;
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.remove();
+      }
+    };
+    
     try {
       const res = await api.patch(`/delivery/assignments/${targetJobId}/accept`, {
         riderId: riderIdRef.current,
@@ -336,11 +363,13 @@ function HomeContent() {
       
       localStorage.removeItem("pendingJob");
       localStorage.removeItem("pendingTimer");
+      stopAudio();
       setNewJob(null);
       router.push(`/active-delivery?id=${targetJobId}`);
     } catch (err: any) {
       console.log(err.message);
       alert(err.response?.data?.message || "Failed to accept job");
+      stopAudio();
       setNewJob(null);
       localStorage.removeItem("pendingJob");
       localStorage.removeItem("pendingTimer");
@@ -349,6 +378,11 @@ function HomeContent() {
 
   const rejectJob = useCallback((jobIdToReject?: string) => {
     // Optionally call an endpoint to explicitly reject
+    const audioEl = document.getElementById("rider-ringtone") as HTMLAudioElement;
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.remove();
+    }
     setNewJob(null);
     localStorage.removeItem("pendingJob");
     localStorage.removeItem("pendingTimer");
