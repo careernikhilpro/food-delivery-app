@@ -29,15 +29,20 @@ io.on('connection', (socket) => {
   logger.info(`Client connected: ${socket.id}`);
   
   socket.on('rider_online', (data) => {
-    // For local testing, we expect the client to send their ID. 
-    // If none provided, we mock it using the socket ID.
-    const riderId = data?.riderId || `mock_rider_${socket.id.substring(0,5)}`;
+    let riderId = data?.riderId || `mock_rider_${socket.id.substring(0,5)}`;
+    // Fix: If frontend accidentally prepends 'rider_', strip it so it matches DB user_id
+    if (typeof riderId === 'string' && riderId.startsWith('rider_')) {
+        riderId = riderId.replace('rider_', '');
+    }
     socket.join(`rider_${riderId}`);
     assignmentManager.registerRider(riderId, socket.id, data?.lat, data?.lng);
   });
 
   socket.on('rider_sync_location', (data) => {
-    const riderId = data?.riderId;
+    let riderId = data?.riderId;
+    if (typeof riderId === 'string' && riderId.startsWith('rider_')) {
+        riderId = riderId.replace('rider_', '');
+    }
     if (riderId && data?.lat && data?.lng) {
       assignmentManager.updateRiderLocation(riderId, data.lat, data.lng);
     }

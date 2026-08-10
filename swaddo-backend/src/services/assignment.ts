@@ -125,7 +125,17 @@ export class AssignmentManager {
         const memRider = this.onlineRiders.get(rId);
         if (memRider && memRider.isBusy) continue;
         
-        totalAvailable.push([rId, { lat: parseFloat(row.last_lat), lng: parseFloat(row.last_lng) }]);
+        let lat = parseFloat(row.last_lat);
+        let lng = parseFloat(row.last_lng);
+        
+        if (isNaN(lat) && memRider && memRider.lat) lat = memRider.lat;
+        if (isNaN(lng) && memRider && memRider.lng) lng = memRider.lng;
+        
+        // Final fallback to 0 if really missing to avoid NaNs, though they will be filtered by distance
+        if (isNaN(lat)) lat = 0;
+        if (isNaN(lng)) lng = 0;
+
+        totalAvailable.push([rId, { lat, lng }]);
       }
     } catch (err) {
       console.error("[Assignment] Error querying available riders from DB:", err);

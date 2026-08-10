@@ -211,7 +211,7 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
     }
 
     await pool.query(
-      `UPDATE delivery_partners SET current_status = $1 WHERE user_id = $2`,
+      `UPDATE delivery_partners SET current_status = $1, last_ping = NOW() WHERE user_id = $2`,
       [status, req.user!.id]
     );
 
