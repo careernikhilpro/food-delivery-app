@@ -225,15 +225,15 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
 router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.id;
-    const { riderId, lat, lng } = req.body;
+    const { riderId } = req.body;
 
     if (!riderId) {
       return res.status(400).json({ message: 'Rider ID is required' });
     }
 
-    const success = assignmentManager.acceptJob(jobId, riderId);
+    const promisedOffer = assignmentManager.acceptJob(jobId, riderId);
     
-    if (!success) {
+    if (!promisedOffer) {
       return res.status(400).json({ message: 'Job no longer available or already accepted by someone else.' });
     }
 
@@ -242,73 +242,26 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
 
     const { pool } = require('../db');
 
-    // Calculate Distances if lat/lng are provided
-    let pickupDistance = null;
-    let deliveryDistance = null;
+    const totalPayout = promisedOffer.totalPayout || 0;
+    const actualPickupDist = promisedOffer.pickupDistance || 0;
+    const actualDeliveryDist = promisedOffer.dropoffDistance || 0;
 
-    if (lat && lng) {
-      try {
-        const orderCoordsRes = await pool.query(
-          `SELECT o.delivery_lat, o.delivery_lng, s.latitude as stall_lat, s.longitude as stall_lng 
-           FROM orders o 
-           JOIN stalls s ON o.stall_id = s.id 
-           WHERE o.id = $1`, [orderId]
-        );
-        if (orderCoordsRes.rows.length > 0) {
-          const coords = orderCoordsRes.rows[0];
-          if (coords.stall_lat && coords.stall_lng) {
-             const r = await routeETA(lat, lng, coords.stall_lat, coords.stall_lng);
-             pickupDistance = r?.distanceKm || null;
-          }
-          if (coords.stall_lat && coords.stall_lng && coords.delivery_lat && coords.delivery_lng) {
-             const r = await routeETA(coords.stall_lat, coords.stall_lng, coords.delivery_lat, coords.delivery_lng);
-             deliveryDistance = r?.distanceKm || null;
-          }
-        }
-      } catch (e) {
-        console.error("Error calculating distances:", e);
-      }
-    }
-
-    // Calculate Payouts
-    let totalPayout = 0;
+    // INSERT into delivery_assignments to track earnings and distances exactly as promised
     try {
-      const orderCoordsRes = await pool.query(
-        `SELECT o.delivery_lat, o.delivery_lng, o.payment_method, s.latitude as stall_lat, s.longitude as stall_lng 
-         FROM orders o 
-         JOIN stalls s ON o.stall_id = s.id 
-         WHERE o.id = $1`, [orderId]
+      await pool.query(
+        `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount)
+         VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), $3, $4, $5, $6)
+         ON CONFLICT (order_id) DO UPDATE SET 
+            delivery_partner_id = EXCLUDED.delivery_partner_id, 
+            status = EXCLUDED.status,
+            pickup_distance_km = EXCLUDED.pickup_distance_km,
+            delivery_distance_km = EXCLUDED.delivery_distance_km,
+            earnings_amount = EXCLUDED.earnings_amount`,
+        [orderId, req.user!.id, 'accepted', actualPickupDist, actualDeliveryDist, totalPayout]
       );
-      if (orderCoordsRes.rows.length > 0) {
-        const coords = orderCoordsRes.rows[0];
-        
-        let actualPickupDist = pickupDistance || 0;
-        let actualDeliveryDist = deliveryDistance || 0;
-        
-        const pickupFee = calculatePickupPayout(actualPickupDist);
-        
-        let dropFee = 25;
-        const extraDropDist = actualDeliveryDist > 3 ? actualDeliveryDist - 3 : 0;
-        if (extraDropDist > 0) dropFee += extraDropDist * 10;
-        
-        let returnFee = 0;
-        if (coords.payment_method === 'cod') {
-          returnFee = 3 + (extraDropDist * 10);
-        }
-        
-        totalPayout = Math.round((pickupFee + dropFee + returnFee) * 100) / 100;
-      }
     } catch (e) {
-      console.error("Error calculating totalPayout:", e);
+      console.error("Error creating delivery_assignment record", e);
     }
-
-    // INSERT into delivery_assignments to track earnings and distances
-    await pool.query(
-      `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount)
-       VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), 'accepted', $3, $4, $5)
-       ON CONFLICT DO NOTHING`,
-      [orderId, req.user!.id, pickupDistance, deliveryDistance, totalPayout > 0 ? totalPayout : null]
-    );
 
     // Update database status
     const updateRes = await pool.query(
@@ -499,30 +452,38 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
     const result = await pool.query(earningsQuery, [partnerId]);
     const deliveries = result.rows;
 
-    const now = new Date();
+    const nowStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+    const nowIST = new Date(nowStr);
     let todayEarnings = 0;
     let weekEarnings = 0;
     let monthEarnings = 0;
 
     // Daily breakdown for the past 7 days (including today)
     const dailyBreakdown = Array(7).fill(0).map((_, i) => {
-      const d = new Date();
+      const d = new Date(nowIST);
       d.setDate(d.getDate() - (6 - i));
-      return { date: d.toISOString().split('T')[0], dayName: ['S','M','T','W','T','F','S'][d.getDay()], earnings: 0 };
+      // Format as YYYY-MM-DD in IST
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return { date: `${yyyy}-${mm}-${dd}`, dayName: ['S','M','T','W','T','F','S'][d.getDay()], earnings: 0 };
     });
 
     const deliveryHistory = deliveries.map((d: any) => {
-      const dDate = new Date(d.assigned_at || Date.now());
-      const diffTime = Math.abs(now.getTime() - dDate.getTime());
+      // Parse assigned_at assuming it is UTC in DB, convert to IST
+      const dDateStr = new Date(d.assigned_at || Date.now()).toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
+      const dDateIST = new Date(dDateStr);
+      
+      const diffTime = Math.abs(nowIST.getTime() - dDateIST.getTime());
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       
       const pickupKm = parseFloat(d.pickup_distance_km || '0');
       const deliveryKm = parseFloat(d.delivery_distance_km || '0');
       const totalDist = (pickupKm + deliveryKm).toFixed(1);
       
+      // Calculate breakdown using the SAME logic as AssignmentManager
       let pickupFee = 0;
-      if (pickupKm <= 0.4) pickupFee = 0;
-      else if (pickupKm <= 0.6) pickupFee = 1;
+      if (pickupKm > 0.4 && pickupKm <= 0.6) pickupFee = 1;
       else if (pickupKm <= 0.8) pickupFee = 2;
       else if (pickupKm <= 1.2) pickupFee = 3;
       else if (pickupKm <= 1.8) pickupFee = 4;
@@ -530,41 +491,29 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
       else if (pickupKm <= 3.0) pickupFee = 6;
       else if (pickupKm <= 3.5) pickupFee = 7;
       else if (pickupKm <= 4.0) pickupFee = 8;
-      else pickupFee = 10;
+      else if (pickupKm > 4.0) pickupFee = 10;
       
-      let dropFee = 15;
-      if (deliveryKm <= 1.4) dropFee = 15;
-      else if (deliveryKm <= 2.0) dropFee = 15 + ((deliveryKm - 1.4) / 0.6) * 4;
-      else if (deliveryKm <= 3.0) dropFee = 19 + ((deliveryKm - 2.0) / 1.0) * 5;
-      else if (deliveryKm <= 4.0) dropFee = 24 + ((deliveryKm - 3.0) / 1.0) * 6;
-      else dropFee = 30 + ((deliveryKm - 4.0) / 1.0) * 6;
-      dropFee = Math.round(dropFee * 100) / 100;
+      let dropFee = 25;
+      const extraDropDist = deliveryKm > 3 ? deliveryKm - 3 : 0;
+      if (extraDropDist > 0) dropFee += extraDropDist * 10;
       
       let returnFee = 0;
-      if (deliveryKm > 3.0 && deliveryKm <= 3.5) {
-        returnFee = ((deliveryKm - 3.0) / 0.5) * 3;
-      } else if (deliveryKm > 3.5) {
-        const extraDist = Math.min(deliveryKm, 4.5) - 3.5;
-        returnFee = 3 + (extraDist / 1.0) * 10; 
-      }
-      returnFee = Math.round(returnFee * 100) / 100;
-
-      const calculatedAmount = Math.round((pickupFee + dropFee + returnFee) * 100) / 100;
-      const historicalAmount = parseFloat(d.earnings_amount);
-      const isHistoricalValid = !isNaN(historicalAmount) && historicalAmount > 0;
-      
-      let finalAmount = calculatedAmount;
-      if (isHistoricalValid) {
-        finalAmount = historicalAmount;
-        // Adjust dropFee so the breakdown perfectly matches the saved amount
-        dropFee = Math.round((finalAmount - pickupFee - returnFee) * 100) / 100;
+      if (d.payment_method === 'cod') {
+        returnFee = 3 + (extraDropDist * 10);
       }
 
-      if (diffDays === 0 && dDate.getDate() === now.getDate()) todayEarnings += finalAmount;
+      // Use the locked earnings_amount from the DB!
+      const finalAmount = parseFloat(d.earnings_amount || '0');
+
+      if (diffDays === 0 && dDateIST.getDate() === nowIST.getDate()) todayEarnings += finalAmount;
       if (diffDays < 7) weekEarnings += finalAmount;
-      if (dDate.getMonth() === now.getMonth() && dDate.getFullYear() === now.getFullYear()) monthEarnings += finalAmount;
+      if (dDateIST.getMonth() === nowIST.getMonth() && dDateIST.getFullYear() === nowIST.getFullYear()) monthEarnings += finalAmount;
 
-      const dateStr = dDate.toISOString().split('T')[0];
+      const yyyy = dDateIST.getFullYear();
+      const mm = String(dDateIST.getMonth() + 1).padStart(2, '0');
+      const dd = String(dDateIST.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
       const dayData = dailyBreakdown.find(day => day.date === dateStr);
       if (dayData) dayData.earnings += finalAmount;
 

@@ -38,6 +38,7 @@ export class AssignmentManager {
   private activeJobs: Map<string, Set<string>> = new Map();
   private jobPayloads: Map<string, any> = new Map();
   private jobTimers: Map<string, NodeJS.Timeout> = new Map();
+  private jobOffers: Map<string, any> = new Map();
 
   init(io: Server) {
     this.io = io;
@@ -114,7 +115,7 @@ export class AssignmentManager {
           ON da.delivery_partner_id = dp.id 
           AND da.status IN ('accepted', 'picked_up')
         WHERE dp.current_status = 'online' 
-          AND dp.last_ping >= NOW() - INTERVAL '2 minutes'
+          AND dp.last_ping >= NOW() - INTERVAL '30 seconds'
           AND da.id IS NULL
       `);
       
@@ -228,6 +229,13 @@ export class AssignmentManager {
       pickupPayout: pickupPayout
     };
     
+    // Store exact promised payout and distance for this specific rider
+    this.jobOffers.set(`${jobPayload.id}_${nearestRider.riderId}`, {
+      pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
+      dropoffDistance: jobPayload.dropoffDistance || 0,
+      totalPayout: totalPayout
+    });
+    
     if (this.io) {
       this.io.to(`rider_${nearestRider.riderId}`).emit('job_offer', jobWithDistance);
       // Send a high-priority FCM Push Notification so the app rings in the background
@@ -261,8 +269,16 @@ export class AssignmentManager {
     }, 300000));
   }
 
-  acceptJob(jobId: string, acceptedByRiderId: string) {
-    if (!this.activeJobs.has(jobId)) return false;
+  acceptJob(jobId: string, acceptedByRiderId: string): any | null {
+    if (!this.activeJobs.has(jobId)) return null;
+
+    // Retrieve the exact promised payout for THIS specific rider
+    const offerKey = `${jobId}_${acceptedByRiderId}`;
+    const promisedOffer = this.jobOffers.get(offerKey);
+    if (!promisedOffer) {
+      console.warn(`[Assignment] Job ${jobId} accepted by ${acceptedByRiderId}, but no recorded offer found!`);
+      return null;
+    }
 
     if (this.jobTimers.has(jobId)) {
       clearTimeout(this.jobTimers.get(jobId)!);
@@ -280,11 +296,17 @@ export class AssignmentManager {
 
     this.activeJobs.delete(jobId);
     this.jobPayloads.delete(jobId);
+    // Cleanup any offers related to this jobId
+    for (const key of this.jobOffers.keys()) {
+      if (key.startsWith(`${jobId}_`)) {
+        this.jobOffers.delete(key);
+      }
+    }
     
     const accepter = this.onlineRiders.get(acceptedByRiderId);
     if (accepter) accepter.isBusy = true;
 
-    return true;
+    return promisedOffer;
   }
 
   markRiderAvailable(riderId: string) {

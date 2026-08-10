@@ -139,6 +139,13 @@ function HomeContent() {
       }
       try {
         if (Capacitor.isNativePlatform()) {
+          const { Device } = await import('@capacitor/device');
+          const batteryInfo = await Device.getBatteryInfo();
+          if (batteryInfo.batteryLevel !== undefined && batteryInfo.batteryLevel < 0.15 && !batteryInfo.isCharging) {
+            alert("Battery is below 15%. Please charge your phone to go online.");
+            return;
+          }
+          
           const { BackgroundGeolocation } = await import('@capacitor-community/background-geolocation');
           
           let watcherId;
