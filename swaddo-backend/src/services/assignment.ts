@@ -127,7 +127,7 @@ export class AssignmentManager {
           ON da.delivery_partner_id = dp.id 
           AND da.status IN ('accepted', 'picked_up')
         WHERE dp.current_status = 'online' 
-          AND dp.last_ping >= NOW() - INTERVAL '30 seconds'
+          AND dp.last_ping >= NOW() - INTERVAL '5 minutes'
           AND da.id IS NULL
       `);
       
