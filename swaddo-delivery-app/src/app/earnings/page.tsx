@@ -55,7 +55,7 @@ export default function Earnings() {
       <div className="flex justify-between items-center mb-3">
         <h1 className="text-[24px] font-black tracking-tight text-slate-900 leading-none mt-1">Earnings</h1>
         <button 
-          onClick={fetchEarnings}
+          onClick={() => fetchEarnings(false)}
           className={`p-2 rounded-full bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md active:scale-95 ${loading ? 'animate-spin text-[#10B981]' : 'text-slate-500 hover:text-[#10B981]'}`}
         >
           <RefreshCw size={20} strokeWidth={2.5} />
