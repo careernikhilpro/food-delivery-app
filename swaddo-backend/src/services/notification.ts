@@ -124,20 +124,14 @@ export const notificationService = {
       
       const payload = {
         token: token,
-        notification: {
-          title,
-          body
-        },
         data: {
           ...data,
           title: title,
-          body: body
+          body: body,
+          channelId: 'swaddo_alerts_v5'
         },
         android: {
-          priority: 'high' as const, // CRITICAL: Wakes up the app from Doze/Killed mode
-          notification: {
-            channelId: 'swaddo_alerts_v5'
-          }
+          priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode
         }
       };
 

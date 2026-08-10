@@ -245,6 +245,8 @@ function HomeContent() {
         socket?.on("job_revoked", (payload) => {
           setNewJob((prev: any) => {
             if (prev && prev.id === payload.id) {
+              localStorage.removeItem("pendingJob");
+              localStorage.removeItem("pendingTimer");
               return null;
             }
             return prev;
