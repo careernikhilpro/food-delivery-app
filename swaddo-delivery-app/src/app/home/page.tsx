@@ -63,7 +63,7 @@ function HomeContent() {
                   const payload = JSON.parse(window.atob(base64));
                   if (payload && payload.id) {
                       currentRiderId = payload.id.toString();
-                      localStorage.setItem("riderId", currentRiderId);
+                      localStorage.setItem("riderId", currentRiderId as string);
                   }
               }
           } catch (e) {
