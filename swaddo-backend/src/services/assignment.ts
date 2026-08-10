@@ -83,10 +83,8 @@ export class AssignmentManager {
   unregisterSocket(socketId: string) {
     for (const [riderId, data] of this.onlineRiders.entries()) {
       if (data.socketId === socketId) {
-        // DO NOT DELETE the rider here. If the app is killed/minimized, the socket disconnects
-        // but we still want to send FCM background pushes (just like the Merchant app).
-        data.socketId = '';
-        console.log(`[Assignment] Rider ${riderId} socket disconnected, but keeping them active for FCM`);
+        this.onlineRiders.delete(riderId);
+        console.log(`[Assignment] Rider ${riderId} disconnected`);
         break;
       }
     }
