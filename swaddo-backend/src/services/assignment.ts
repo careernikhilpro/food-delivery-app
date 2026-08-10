@@ -204,8 +204,9 @@ export class AssignmentManager {
     if (this.io) {
       this.io.to(`rider_${nearestRider.riderId}`).emit('job_offer', jobWithDistance);
       // Send a high-priority FCM Push Notification so the app rings in the background
+      let numericRiderId = parseInt(nearestRider.riderId.replace('rider_', ''), 10);
       notificationService.sendToRider(
-        parseInt(nearestRider.riderId),
+        numericRiderId,
         'New Delivery Assignment! 🛵',
         `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${totalPayout}`,
         { 

@@ -72,11 +72,12 @@ export const emitOrderStatusUpdate = (
       if (customerId) {
         // We get extra data from the DB to make the notification personalized
         const extraRes = await pool.query(`
-          SELECT s.name as stall_name, dp.name as rider_name
+          SELECT s.name as stall_name, u2.name as rider_name
           FROM orders o
           LEFT JOIN stalls s ON o.stall_id = s.id
           LEFT JOIN delivery_assignments da ON o.id = da.order_id AND da.status = 'assigned'
           LEFT JOIN delivery_partners dp ON da.delivery_partner_id = dp.id
+          LEFT JOIN users u2 ON dp.user_id = u2.id
           WHERE o.id = $1
         `, [orderId]);
         
