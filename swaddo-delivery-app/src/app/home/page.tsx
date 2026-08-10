@@ -6,7 +6,9 @@ import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
 import { Navigation, Menu, Settings, LogOut, CheckCircle, Clock, MapPin, Store, ChevronRight, X, User, Volume2, Siren, CheckCircle2, XCircle, Package, BellRing } from "lucide-react";
 import { Geolocation } from '@capacitor/geolocation';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+const BackgroundGeolocation = registerPlugin<any>('BackgroundGeolocation');
 import { Preferences } from '@capacitor/preferences';
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
@@ -146,8 +148,6 @@ function HomeContent() {
             return;
           }
           
-          const { BackgroundGeolocation } = await import('@capacitor-community/background-geolocation');
-          
           let watcherId;
           watcherId = await BackgroundGeolocation.addWatcher(
             {
@@ -157,7 +157,7 @@ function HomeContent() {
               stale: false,
               distanceFilter: 10 // meters
             },
-            function callback(location, error) {
+            function callback(location: any, error: any) {
               if (error) {
                 if (error.code === "NOT_AUTHORIZED") {
                   if (window.confirm("This app needs your location to assign orders, but does not have permission.")) {
@@ -205,7 +205,6 @@ function HomeContent() {
     } else {
       try {
         if (Capacitor.isNativePlatform() && watchId !== null) {
-          const { BackgroundGeolocation } = await import('@capacitor-community/background-geolocation');
           BackgroundGeolocation.removeWatcher({ id: watchId as string });
           setWatchId(null);
         }
