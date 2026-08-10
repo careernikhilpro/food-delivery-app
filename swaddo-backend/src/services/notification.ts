@@ -129,6 +129,9 @@ export const notificationService = {
           title: title,
           body: body,
           click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        },
+        android: {
+          priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode
         }
       };
 
