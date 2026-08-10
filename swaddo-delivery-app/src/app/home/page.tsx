@@ -111,7 +111,7 @@ function HomeContent() {
           // Auto offline if limit exceeded while online
           if (res.data.floatingCash >= 2000 && isOnline) {
             alert("Floating cash limit reached. You have been taken offline. Please deposit cash to receive more orders.");
-            setIsOnline(false);
+            toggleOnlineStatus(false);
           }
         }
       } catch (err) {
@@ -131,10 +131,89 @@ function HomeContent() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return; // Prevent overwriting localStorage on first render before mount
+  const toggleOnlineStatus = async (newStatus: boolean) => {
+    if (newStatus) {
+      if (stats.floatingCash >= 2000) {
+        alert("Your floating cash limit (₹2000) has been reached. Please deposit cash to go online and receive new orders.");
+        return;
+      }
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const { BackgroundGeolocation } = await import('@capacitor-community/background-geolocation');
+          
+          let watcherId;
+          watcherId = await BackgroundGeolocation.addWatcher(
+            {
+              backgroundMessage: "Swaddo is tracking your location to assign deliveries.",
+              backgroundTitle: "Delivery Tracking Active",
+              requestPermissions: true,
+              stale: false,
+              distanceFilter: 10 // meters
+            },
+            function callback(location, error) {
+              if (error) {
+                if (error.code === "NOT_AUTHORIZED") {
+                  if (window.confirm("This app needs your location to assign orders, but does not have permission.")) {
+                    BackgroundGeolocation.openSettings();
+                  }
+                }
+                return;
+              }
+              
+              if (location) {
+                setCurrentLocation({ lat: location.latitude, lng: location.longitude });
+                api.post("/delivery/ping", { lat: location.latitude, lng: location.longitude }).catch(() => {});
+                
+                const currentSocket = getSocket();
+                if (currentSocket) {
+                  const riderId = riderIdRef.current || localStorage.getItem("riderId");
+                  currentSocket.emit("rider_sync_location", { riderId, lat: location.latitude, lng: location.longitude });
+                }
+              }
+            }
+          );
+          setWatchId(watcherId);
+          
+          // Get first location to ensure we have a fix before going online
+          // BackgroundGeolocation doesn't have getCurrentPosition natively, so we use Capacitor standard for the very first fix
+          const { Geolocation } = await import('@capacitor/geolocation');
+          const firstPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+          await api.post("/delivery/ping", { lat: firstPos.coords.latitude, lng: firstPos.coords.longitude });
+        } else {
+          // Web fallback
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+          });
+          await api.post("/delivery/ping", { lat: pos.coords.latitude, lng: pos.coords.longitude });
+        }
+        
+        await api.post("/delivery/status", { status: "online" });
+        setIsOnline(true);
+        localStorage.setItem("isOnline", "true");
+        
+      } catch (err) {
+        console.error("Failed to go online", err);
+        alert("Failed to access location or backend. Cannot go online.");
+      }
+    } else {
+      try {
+        if (Capacitor.isNativePlatform() && watchId !== null) {
+          const { BackgroundGeolocation } = await import('@capacitor-community/background-geolocation');
+          BackgroundGeolocation.removeWatcher({ id: watchId as string });
+          setWatchId(null);
+        }
+        await api.post("/delivery/status", { status: "offline" });
+        setIsOnline(false);
+        localStorage.setItem("isOnline", "false");
+        disconnectSocket();
+      } catch (err) {
+        console.error("Failed to go offline", err);
+      }
+    }
+  };
 
-    let intervalId: any;
+  useEffect(() => {
+    if (!mounted) return;
 
     if (isOnline) {
       localStorage.setItem("isOnline", "true");
@@ -143,7 +222,6 @@ function HomeContent() {
       const emitOnline = () => {
           const riderId = riderIdRef.current || localStorage.getItem("riderId");
           socket?.emit("rider_online", { riderId, lat: currentLocation?.lat, lng: currentLocation?.lng });
-          console.log(`Socket connected for job updates as ${riderId}`);
         };
         
         socket?.on("connect", emitOnline);
@@ -153,7 +231,7 @@ function HomeContent() {
 
         socket?.on("job_offer", (data) => {
           setNewJob(data);
-          setTimer(300); // 5 minutes to match backend timeout
+          setTimer(300);
           localStorage.setItem("pendingJob", JSON.stringify(data));
           localStorage.setItem("pendingTimer", (Math.floor(Date.now() / 1000) + 300).toString());
         });
@@ -168,80 +246,21 @@ function HomeContent() {
         });
 
         socket?.on("job_accepted_by_me", (payload) => {
-          // This event is fired when we accept the job on another device
           setNewJob(null);
           localStorage.setItem("currentJob", JSON.stringify(payload));
           localStorage.setItem('activeDelivery', `job_${payload.id}`);
           router.push(`/active-delivery?id=job_${payload.id}`);
         });
         
-        // Listen to background push messages from Service Worker
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'NEW_ORDER_PUSH') {
-              console.log("Wake up via Web Push!", event.data.data);
               setNewJob(event.data.data);
             }
           });
         }
-
-      // Start pinging GPS
-      const startWatch = async () => {
-        try {
-          const check = async () => {
-            if (Capacitor.isNativePlatform()) {
-               const perm = await Geolocation.requestPermissions();
-               if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') return false;
-               return true;
-            }
-            return "geolocation" in navigator;
-          };
-
-          const hasPermission = await check();
-          if (!hasPermission) {
-            alert("Location access is required to go online.");
-            setIsOnline(false);
-            localStorage.setItem("isOnline", "false");
-            return;
-          }
-
-          const callback = (position: any, error?: any) => {
-            if (error || !position) {
-              if (error?.code === error?.TIMEOUT) return;
-              console.error("GPS Error:", error);
-              return;
-            }
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            setCurrentLocation({ lat: latitude, lng: longitude });
-            
-            api.post("/delivery/ping", { lat: latitude, lng: longitude }).catch(() => {});
-            const currentSocket = getSocket();
-            if (currentSocket) {
-              const riderId = riderIdRef.current || localStorage.getItem("riderId");
-              currentSocket.emit("rider_sync_location", { riderId, lat: latitude, lng: longitude });
-            }
-          };
-
-          let id;
-          if (Capacitor.isNativePlatform()) {
-            id = await Geolocation.watchPosition({ enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }, callback);
-          } else {
-            id = navigator.geolocation.watchPosition(callback as any, callback as any, { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 });
-          }
-          setWatchId(id);
-        } catch (err) {
-          console.error("GPS init failed", err);
-        }
-      };
-      
-      startWatch();
     } else {
       localStorage.setItem("isOnline", "false");
-      if (watchId !== null) {
-        if (Capacitor.isNativePlatform()) Geolocation.clearWatch({ id: watchId as string });
-        else navigator.geolocation.clearWatch(watchId as number);
-      }
       disconnectSocket();
     }
 
@@ -250,31 +269,12 @@ function HomeContent() {
       pingTimer = setInterval(() => {
         api.post('/delivery/ping-time').catch(console.error);
         setStats(prev => ({ ...prev, hours: prev.hours + 1 }));
-        
-        // Also force sync location if we have it
-        if ("geolocation" in navigator) {
-          navigator.geolocation.getCurrentPosition((position) => {
-            const { latitude, longitude } = position.coords;
-            const currentSocket = getSocket();
-            if (currentSocket) {
-              const riderId = riderIdRef.current || localStorage.getItem("riderId");
-              currentSocket.emit("rider_sync_location", { riderId, lat: latitude, lng: longitude });
-            }
-          }, () => {}, { enableHighAccuracy: false, maximumAge: 10000, timeout: 5000 });
-        }
-      }, 30000); // Changed to 30 seconds for better assignment accuracy
+      }, 30000); 
     }
 
     return () => {
-      if (watchId !== null) {
-        if (Capacitor.isNativePlatform()) Geolocation.clearWatch({ id: watchId as string });
-        else navigator.geolocation.clearWatch(watchId as number);
-      }
       disconnectSocket();
       if (pingTimer) clearInterval(pingTimer);
-      // Remove listener inside the useEffect cleanup, but since we defined it conditionally in if(isOnline),
-      // we must find a way to remove it. A simpler way is defining it globally inside the component effect.
-      // Actually, removing by reference is safer if we just define it in the same scope.
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, mounted]);
@@ -473,7 +473,7 @@ function HomeContent() {
                 alert("Your floating cash limit (₹2000) has been reached. Please deposit cash to go online and receive new orders.");
                 return;
               }
-              setIsOnline(!isOnline);
+              toggleOnlineStatus(!isOnline);
             }}
             className={`w-[72px] h-10 rounded-full flex items-center p-1 transition-all duration-500 shadow-inner ${
               isOnline ? "bg-[#10B981]" : "bg-slate-200"
@@ -669,7 +669,7 @@ function HomeContent() {
             className="fixed bottom-24 left-6 right-6 z-40"
           >
             <button 
-              onClick={() => setIsOnline(true)}
+              onClick={() => toggleOnlineStatus(true)}
               className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] text-white py-4 rounded-[20px] font-black tracking-wide text-lg shadow-[0_12px_32px_rgba(16,185,129,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/20"
             >
               <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
