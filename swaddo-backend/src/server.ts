@@ -166,6 +166,11 @@ const migrateDB = async () => {
         ADD COLUMN IF NOT EXISTS item_name VARCHAR(255),
         ADD COLUMN IF NOT EXISTS variant_name VARCHAR(255),
         ADD COLUMN IF NOT EXISTS addons JSONB DEFAULT '[]'::jsonb;
+
+        ALTER TABLE delivery_partners
+        ADD COLUMN IF NOT EXISTS last_lat DECIMAL(10, 8),
+        ADD COLUMN IF NOT EXISTS last_lng DECIMAL(11, 8),
+        ADD COLUMN IF NOT EXISTS last_ping TIMESTAMP;
       `);
       logger.info('Auto-migrated orders and order_items table schema successfully.');
     } catch (migErr) {
