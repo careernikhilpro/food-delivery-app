@@ -273,9 +273,17 @@ function HomeContent() {
     let pingTimer: NodeJS.Timeout;
     if (isOnline) {
       pingTimer = setInterval(() => {
+        // Send heartbeat for online hours
         api.post('/delivery/ping-time').catch(console.error);
         setStats(prev => ({ ...prev, hours: prev.hours + 1 }));
-      }, 30000); 
+
+        // Force a location ping every 15s so the rider stays fresh in the 30s assignment window
+        // even if they are stationary and the background watcher doesn't trigger.
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true }).then(pos => {
+          api.post("/delivery/ping", { lat: pos.coords.latitude, lng: pos.coords.longitude }).catch(() => {});
+        }).catch(err => console.error("Interval location error:", err));
+        
+      }, 15000); 
     }
 
     return () => {
