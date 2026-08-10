@@ -172,6 +172,7 @@ public class RingingActivity extends Activity {
                 SharedPreferences prefs = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
                 String token = prefs.getString("swaddo_delivery_token", null);
                 String riderId = prefs.getString("riderId", null);
+                String apiUrl = prefs.getString("swaddo_api_url", "https://food-delivery-app-wfv0.onrender.com");
                 
                 if (token == null || riderId == null) {
                     runOnUiThread(() -> Toast.makeText(RingingActivity.this, "Auth error: Token or Rider ID missing", Toast.LENGTH_SHORT).show());
@@ -183,7 +184,7 @@ public class RingingActivity extends Activity {
                 if (!finalOrderId.startsWith("job_")) {
                     finalOrderId = "job_" + finalOrderId;
                 }
-                URL url = new URL("https://food-delivery-app-wfv0.onrender.com/api/delivery/assignments/" + finalOrderId + "/accept");
+                URL url = new URL(apiUrl + "/api/delivery/assignments/" + finalOrderId + "/accept");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("PATCH");
                 conn.setRequestProperty("Authorization", "Bearer " + token);

@@ -40,8 +40,88 @@ export class AssignmentManager {
   private jobTimers: Map<string, NodeJS.Timeout> = new Map();
   private jobOffers: Map<string, any> = new Map();
 
-  init(io: Server) {
+  async init(io: Server) {
     this.io = io;
+    try {
+      const { pool } = require('../db');
+      console.log("[Assignment] Running Auto-Recovery for stuck orders...");
+      const res = await pool.query(`
+        SELECT o.id, o.stall_id, o.customer_id, o.delivery_address, o.delivery_instructions, o.restaurant_instructions,
+               o.delivery_lat, o.delivery_lng, o.total_amount,
+               u.name as customer_name,
+               s.name as stall_name, s.lat as pickup_lat, s.lng as pickup_lng
+        FROM orders o
+        LEFT JOIN users u ON o.customer_id = u.id
+        LEFT JOIN stalls s ON o.stall_id = s.id
+        LEFT JOIN delivery_assignments da ON da.order_id = o.id AND da.status IN ('accepted', 'picked_up')
+        WHERE o.status = 'ready' AND da.id IS NULL
+      `);
+      
+      if (res.rows.length > 0) {
+        console.log(`[Assignment] Found ${res.rows.length} unassigned ready orders. Restarting broadcast...`);
+        
+        const getDistanceFromLatLonInKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+          const R = 6371; 
+          const dLat = (lat2 - lat1) * (Math.PI / 180);
+          const dLon = (lon2 - lon1) * (Math.PI / 180);
+          const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return parseFloat((R * c).toFixed(1));
+        };
+
+        for (const order of res.rows) {
+          const itemsRes = await pool.query(`
+            SELECT mi.name, oi.quantity, oi.price
+            FROM order_items oi
+            JOIN menu_items mi ON oi.menu_item_id = mi.id
+            WHERE oi.order_id = $1
+          `, [order.id]);
+          
+          let itemCount = 0;
+          const itemsDesc = itemsRes.rows.map((i: any) => {
+            itemCount += i.quantity;
+            return `${i.quantity}x ${i.name}`;
+          }).join(', ');
+          
+          const dropoffDistance = getDistanceFromLatLonInKm(
+            order.pickup_lat, order.pickup_lng,
+            order.delivery_lat, order.delivery_lng
+          );
+          
+          let earnings = 15;
+          if (dropoffDistance > 1.5) {
+            earnings += Math.ceil((dropoffDistance - 1.5) / 0.5) * 5;
+          }
+          let returnPayout = 0;
+          if (dropoffDistance > 2.5) {
+            returnPayout = Math.ceil((dropoffDistance - 2.5) / 0.5) * 5;
+          }
+          
+          const payload = {
+            id: order.id.toString(),
+            dropoffDistance,
+            earnings,
+            customerName: order.customer_name,
+            itemCount,
+            itemsSummary: itemsDesc,
+            stallName: order.stall_name,
+            pickupLat: order.pickup_lat,
+            pickupLng: order.pickup_lng,
+            deliveryLat: order.delivery_lat,
+            deliveryLng: order.delivery_lng,
+            returnPayout
+          };
+          
+          this.startJobRing(payload);
+        }
+      } else {
+        console.log("[Assignment] No stuck ready orders found.");
+      }
+    } catch (e) {
+      console.error("[Assignment] Auto-Recovery failed", e);
+    }
   }
 
   getOnlineRider(riderId: string): OnlineRider | undefined {

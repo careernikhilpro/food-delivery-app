@@ -141,6 +141,9 @@ function HomeContent() {
       }
       try {
         if (Capacitor.isNativePlatform()) {
+          const { Preferences } = await import('@capacitor/preferences');
+          await Preferences.set({ key: 'swaddo_api_url', value: process.env.NEXT_PUBLIC_API_URL || "https://food-delivery-app-wfv0.onrender.com" });
+          
           const { Device } = await import('@capacitor/device');
           const batteryInfo = await Device.getBatteryInfo();
           let level = batteryInfo.batteryLevel;
@@ -633,9 +636,9 @@ function HomeContent() {
                 
                 {/* Delivery Base Payout */}
                 <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-[12px]">
-                  <span className="text-[12px] font-bold text-slate-600">Delivery Pay</span>
-                  <span className="font-black text-slate-700">₹{newJob.earnings || 45}</span>
-                </div>
+                    <span className="text-[12px] uppercase font-bold text-slate-500 tracking-wider">Delivery Pay</span>
+                    <span className="text-[18px] font-black text-slate-700">₹{parseFloat(newJob.earnings || newJob.deliveryPay || "15").toFixed(1)}</span>
+                  </div>
 
                 {/* Return Payout */}
                 {newJob.returnPayout !== undefined && newJob.returnPayout > 0 && (
@@ -648,7 +651,7 @@ function HomeContent() {
 
               <div className="flex justify-between items-end pt-4 mt-2 relative z-10">
                 <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Total Payout</span>
-                <span className="text-[32px] font-black tracking-tighter text-[#10B981] leading-none">₹{(newJob.earnings || 45) + (newJob.pickupPayout || 0) + (newJob.returnPayout || 0)}</span>
+                <span className="text-[32px] font-black tracking-tighter text-[#10B981] leading-none">₹{(parseFloat(newJob.earnings || newJob.deliveryPay || "15") + parseFloat(newJob.pickupPayout || "0") + parseFloat(newJob.returnPayout || "0")).toFixed(1)}</span>
               </div>
             </div>
 
@@ -663,7 +666,7 @@ function HomeContent() {
                   dragSnapToOrigin={!isAccepted}
                   dragElastic={0.05}
                   onDragEnd={(e, info) => {
-                    if (info.offset.x > window.innerWidth * 0.4) {
+                    if (info.offset.x > 120) {
                       setIsAccepted(true);
                       acceptJob();
                     }
