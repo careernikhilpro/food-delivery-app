@@ -176,7 +176,7 @@ public class RingingActivity extends Activity {
                     return;
                 }
                 
-                URL url = new URL("https://food-delivery-app-wfv0.onrender.com/api/delivery/assignments/job_" + orderId + "/accept");
+                URL url = new URL("https://food-delivery-app-wfv0.onrender.com/api/delivery/assignments/" + orderId + "/accept");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("PATCH");
                 conn.setRequestProperty("Authorization", "Bearer " + token);

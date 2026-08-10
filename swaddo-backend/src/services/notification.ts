@@ -123,12 +123,10 @@ export const notificationService = {
       
       const payload = {
         token: token,
-        notification: {
-          title,
-          body
-        },
         data: {
           ...data,
+          title: title,
+          body: body,
           click_action: 'FLUTTER_NOTIFICATION_CLICK'
         }
       };
