@@ -93,7 +93,7 @@ public class MyFirebaseMessagingService extends MessagingService {
                 PendingIntent contentIntent = PendingIntent.getActivity(this, notificationId + 1,
                         fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-                String channelId = "swaddo_alerts_v4";
+                String channelId = "swaddo_merchant_v1";
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(R.mipmap.ic_launcher)
                         .setContentTitle(notifTitle)
