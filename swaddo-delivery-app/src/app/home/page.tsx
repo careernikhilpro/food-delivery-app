@@ -117,8 +117,13 @@ function HomeContent() {
             floatingCash: res.data.floatingCash || 0,
             hours: res.data.hours || 0
           };
-          setStats(newStats);
-          sessionStorage.setItem("dashboardStats", JSON.stringify(newStats));
+          
+          const newStr = JSON.stringify(newStats);
+          const oldStr = sessionStorage.getItem("dashboardStats");
+          if (newStr !== oldStr) {
+            setStats(newStats);
+            sessionStorage.setItem("dashboardStats", newStr);
+          }
 
           // Auto offline if limit exceeded while online
           if (res.data.floatingCash >= 2000 && isOnline) {

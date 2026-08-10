@@ -32,12 +32,14 @@ export default function Profile() {
     if (!background) setLoading(true);
     try {
       const res = await api.get('/delivery/profile');
-      if (res.data && res.data.data) {
-        setProfile(res.data.data);
-        sessionStorage.setItem("profileData", JSON.stringify(res.data.data));
-      } else if (res.data) {
-        setProfile(res.data);
-        sessionStorage.setItem("profileData", JSON.stringify(res.data));
+      let newData = res.data?.data || res.data;
+      if (newData) {
+        const newStr = JSON.stringify(newData);
+        const oldStr = sessionStorage.getItem("profileData");
+        if (newStr !== oldStr) {
+          setProfile(newData);
+          sessionStorage.setItem("profileData", newStr);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch profile", err);
@@ -51,6 +53,7 @@ export default function Profile() {
     if (cachedData) {
       try {
         setProfile(JSON.parse(cachedData));
+        setLoading(false);
       } catch (e) {}
       fetchProfile(true); // Fetch in background
     } else {

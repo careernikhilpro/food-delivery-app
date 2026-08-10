@@ -15,12 +15,14 @@ export default function Earnings() {
     if (!background) setLoading(true);
     try {
       const res = await api.get('/delivery/earnings');
-      if (res.data && res.data.data) {
-        setData(res.data.data);
-        sessionStorage.setItem("earningsData", JSON.stringify(res.data.data));
-      } else if (res.data) {
-        setData(res.data);
-        sessionStorage.setItem("earningsData", JSON.stringify(res.data));
+      let newData = res.data?.data || res.data;
+      if (newData) {
+        const newStr = JSON.stringify(newData);
+        const oldStr = sessionStorage.getItem("earningsData");
+        if (newStr !== oldStr) {
+          setData(newData);
+          sessionStorage.setItem("earningsData", newStr);
+        }
       }
     } catch (err) {
       console.log("Failed to fetch earnings");
@@ -34,6 +36,7 @@ export default function Earnings() {
     if (cachedData) {
       try {
         setData(JSON.parse(cachedData));
+        setLoading(false);
       } catch (e) {}
       fetchEarnings(true); // Fetch in background
     } else {
