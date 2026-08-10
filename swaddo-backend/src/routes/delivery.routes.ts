@@ -215,6 +215,10 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
       [status, req.user!.id]
     );
 
+    if (status === 'offline') {
+      assignmentManager.handleRiderLogout(req.user!.id.toString());
+    }
+
     res.json({ message: `Status updated to ${status}` });
   } catch (err) {
     next(err);
@@ -246,18 +250,23 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
     const actualPickupDist = promisedOffer.pickupDistance || 0;
     const actualDeliveryDist = promisedOffer.dropoffDistance || 0;
 
+    const pickupPayout = promisedOffer.pickupPayout || 0;
+    const returnPayout = promisedOffer.returnPayout || 0;
+
     // INSERT into delivery_assignments to track earnings and distances exactly as promised
     try {
       await pool.query(
-        `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount)
-         VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), $3, $4, $5, $6)
+        `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount, pickup_payout, return_payout)
+         VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), $3, $4, $5, $6, $7, $8)
          ON CONFLICT (order_id) DO UPDATE SET 
             delivery_partner_id = EXCLUDED.delivery_partner_id, 
             status = EXCLUDED.status,
             pickup_distance_km = EXCLUDED.pickup_distance_km,
             delivery_distance_km = EXCLUDED.delivery_distance_km,
-            earnings_amount = EXCLUDED.earnings_amount`,
-        [orderId, req.user!.id, 'accepted', actualPickupDist, actualDeliveryDist, totalPayout]
+            earnings_amount = EXCLUDED.earnings_amount,
+            pickup_payout = EXCLUDED.pickup_payout,
+            return_payout = EXCLUDED.return_payout`,
+        [orderId, req.user!.id, 'accepted', actualPickupDist, actualDeliveryDist, totalPayout, pickupPayout, returnPayout]
       );
     } catch (e) {
       console.error("Error creating delivery_assignment record", e);
@@ -446,7 +455,7 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
 
     // Fetch all completed assignments for this rider
     const earningsQuery = `
-      SELECT da.id, da.earnings_amount, da.assigned_at, da.pickup_distance_km, da.delivery_distance_km, da.cash_collected,
+      SELECT da.id, da.earnings_amount, da.pickup_payout, da.return_payout, da.assigned_at, da.pickup_distance_km, da.delivery_distance_km, da.cash_collected,
              o.stall_id, o.payment_method, o.total_amount, s.name as stall_name
       FROM delivery_assignments da
       JOIN orders o ON da.order_id = o.id
@@ -486,29 +495,31 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
       const deliveryKm = parseFloat(d.delivery_distance_km || '0');
       const totalDist = (pickupKm + deliveryKm).toFixed(1);
       
-      // Calculate breakdown using the SAME logic as AssignmentManager
-      let pickupFee = 0;
-      if (pickupKm > 0.4 && pickupKm <= 0.6) pickupFee = 1;
-      else if (pickupKm <= 0.8) pickupFee = 2;
-      else if (pickupKm <= 1.2) pickupFee = 3;
-      else if (pickupKm <= 1.8) pickupFee = 4;
-      else if (pickupKm <= 2.4) pickupFee = 5;
-      else if (pickupKm <= 3.0) pickupFee = 6;
-      else if (pickupKm <= 3.5) pickupFee = 7;
-      else if (pickupKm <= 4.0) pickupFee = 8;
-      else if (pickupKm > 4.0) pickupFee = 10;
-      
-      let dropFee = 25;
-      const extraDropDist = deliveryKm > 3 ? deliveryKm - 3 : 0;
-      if (extraDropDist > 0) dropFee += extraDropDist * 10;
-      
-      let returnFee = 0;
-      if (d.payment_method === 'cod') {
-        returnFee = 3 + (extraDropDist * 10);
-      }
-
       // Use the locked earnings_amount from the DB!
       const finalAmount = parseFloat(d.earnings_amount || '0');
+      
+      let pickupFee = d.pickup_payout !== null ? parseFloat(d.pickup_payout) : 0;
+      let returnFee = d.return_payout !== null ? parseFloat(d.return_payout) : 0;
+      let dropFee = finalAmount - pickupFee - returnFee;
+      
+      // Fallback for old orders where pickup_payout and return_payout were not saved
+      if (d.pickup_payout === null && d.return_payout === null) {
+          if (pickupKm > 0.4 && pickupKm <= 0.6) pickupFee = 1;
+          else if (pickupKm <= 0.8) pickupFee = 2;
+          else if (pickupKm <= 1.2) pickupFee = 3;
+          else if (pickupKm <= 1.8) pickupFee = 4;
+          else if (pickupKm <= 2.4) pickupFee = 5;
+          else if (pickupKm <= 3.0) pickupFee = 6;
+          else if (pickupKm <= 3.5) pickupFee = 7;
+          else if (pickupKm <= 4.0) pickupFee = 8;
+          else if (pickupKm > 4.0) pickupFee = 10;
+          
+          if (d.payment_method === 'cod') {
+            const extraDropDist = deliveryKm > 3 ? deliveryKm - 3 : 0;
+            returnFee = 3 + (extraDropDist * 10);
+          }
+          dropFee = finalAmount - pickupFee - returnFee;
+      }
 
       if (diffDays === 0 && dDateIST.getDate() === nowIST.getDate()) todayEarnings += finalAmount;
       if (diffDays < 7) weekEarnings += finalAmount;

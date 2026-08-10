@@ -21,15 +21,9 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 function calculatePickupPayout(distance: number): number {
   if (distance <= 0.4) return 0;
-  if (distance <= 0.6) return 1;
-  if (distance <= 0.8) return 2;
-  if (distance <= 1.2) return 3;
-  if (distance <= 1.8) return 4;
-  if (distance <= 2.4) return 5;
-  if (distance <= 3.0) return 6;
-  if (distance <= 3.5) return 7;
-  if (distance <= 4.0) return 8;
-  return 10; // Fallback for > 4.0km, though such riders should be filtered out
+  if (distance <= 1.0) return Math.round((1 + ((distance - 0.4) / 0.6) * 2) * 10) / 10;
+  if (distance <= 2.0) return Math.round((3 + ((distance - 1.0) / 1.0) * 2) * 10) / 10;
+  return Math.round((5 + ((distance - 2.0) / 1.0) * 1.5) * 10) / 10;
 }
 
 export class AssignmentManager {
@@ -42,14 +36,6 @@ export class AssignmentManager {
 
   async init(io: Server) {
     this.io = io;
-    try {
-      const { pool } = require('../db');
-      console.log("[Assignment] Running Auto-Recovery for stuck orders...");
-      const res = await pool.query(`
-        SELECT o.id, o.stall_id, o.customer_id, o.delivery_address, o.delivery_instructions, o.restaurant_instructions,
-               o.delivery_lat, o.delivery_lng, o.total_amount,
-               u.name as customer_name,
-               s.name as stall_name, s.lat as pickup_lat, s.lng as pickup_lng
         FROM orders o
         LEFT JOIN users u ON o.customer_id = u.id
         LEFT JOIN stalls s ON o.stall_id = s.id
@@ -156,7 +142,106 @@ export class AssignmentManager {
       if (notified && !notified.has(riderId)) {
          console.log(`[Assignment] Newly available rider ${riderId} detected for active job ${jobId}. Retrying broadcast...`);
          this.broadcastJob(payload);
-         break; // Only try assigning one job at a time to this rider
+         return; // Only try assigning one job at a time to this rider
+      }
+    }
+    
+    // Check DB as well when a rider goes online
+    this.recoverStuckOrders();
+  }
+
+  private async recoverStuckOrders() {
+    try {
+      const { pool } = require('../db');
+      const res = await pool.query(`
+        SELECT o.*, s.name as stall_name, s.location as stall_location, s.latitude as stall_lat, s.longitude as stall_lng 
+        FROM orders o 
+        LEFT JOIN stalls s ON o.stall_id = s.id 
+        WHERE o.status = 'ready'
+      `);
+      
+      for (const order of res.rows) {
+        const jobId = 'job_' + order.id;
+        if (!this.jobPayloads.has(jobId)) {
+          console.log(`[Assignment] Found STUCK ready order ${order.id}. Auto-recovering...`);
+          
+          const stallLat = order.stall_lat || 25.611;
+          const stallLng = order.stall_lng || 85.144;
+          const deliveryLat = order.delivery_lat || stallLat;
+          const deliveryLng = order.delivery_lng || stallLng;
+          
+          const dropoffDistance = getDistance(stallLat, stallLng, deliveryLat, deliveryLng);
+          
+          let fee = 15;
+          if (dropoffDistance <= 1.4) {
+            fee = 15;
+          } else if (dropoffDistance <= 2.0) {
+            fee = 15 + ((dropoffDistance - 1.4) / 0.6) * 4;
+          } else if (dropoffDistance <= 3.0) {
+            fee = 19 + ((dropoffDistance - 2.0) / 1.0) * 5;
+          } else if (dropoffDistance <= 4.0) {
+            fee = 24 + ((dropoffDistance - 3.0) / 1.0) * 6;
+          } else {
+            fee = 30 + ((dropoffDistance - 4.0) / 1.0) * 6;
+          }
+          const earnings = Math.round(fee * 100) / 100;
+          
+          let returnPayout = 0;
+          if (dropoffDistance > 3.0 && dropoffDistance <= 3.5) {
+             returnPayout = ((dropoffDistance - 3.0) / 0.5) * 3;
+          } else if (dropoffDistance > 3.5) {
+             returnPayout = 3 + ((dropoffDistance - 3.5) / 1.0) * 10; 
+          }
+          returnPayout = Math.round(returnPayout * 10) / 10;
+          
+          const payload = {
+            id: jobId,
+            orderId: order.id,
+            stallName: order.stall_name || ("Stall #" + order.stall_id),
+            stallAddress: order.stall_location || "Food Court",
+            stallLat: stallLat,
+            stallLng: stallLng,
+            pickupLat: order.pickup_lat || stallLat,
+            pickupLng: order.pickup_lng || stallLng,
+            pickupDistance: null, 
+            customerName: order.customer_name,
+            customerAddress: order.delivery_address || "Customer Location",
+            itemCount: 1,
+            itemsSummary: "Items", 
+            deliveryInstructions: order.delivery_instructions,
+            restaurantInstructions: order.restaurant_instructions,
+            dropoffDistance: parseFloat(dropoffDistance.toFixed(1)),
+            earnings: earnings,
+            returnPayout: returnPayout
+          };
+          this.startJobRing(payload, 120000);
+        }
+      }
+    } catch (err) {
+      console.error("[Assignment] Error checking stuck DB jobs:", err);
+    }
+  }
+
+  handleRiderLogout(riderId: string) {
+    this.onlineRiders.delete(riderId);
+    for (const [jobId, notifiedRiders] of this.activeJobs.entries()) {
+      if (notifiedRiders.has(riderId)) {
+        console.log(`[Assignment] Rider ${riderId} logged out while ringing for job ${jobId}. Auto-rejecting...`);
+        notifiedRiders.delete(riderId);
+        
+        if (this.io) {
+          this.io.to(`rider_${riderId}`).emit('job_revoked', { id: jobId });
+        }
+
+        if (this.jobTimers.has(jobId)) {
+          clearTimeout(this.jobTimers.get(jobId)!);
+          this.jobTimers.delete(jobId);
+        }
+        
+        const payload = this.jobPayloads.get(jobId);
+        if (payload) {
+          this.broadcastJob(payload);
+        }
       }
     }
   }
@@ -337,7 +422,9 @@ export class AssignmentManager {
     this.jobOffers.set(`${jobPayload.id}_${nearestRider.riderId}`, {
       pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
       dropoffDistance: jobPayload.dropoffDistance || 0,
-      totalPayout: totalPayout
+      totalPayout: totalPayout,
+      pickupPayout: pickupPayout,
+      returnPayout: returnPay
     });
     
     if (this.io) {
@@ -359,7 +446,9 @@ export class AssignmentManager {
           pickupDistance: actualPickupDistance.toFixed(1),
           dropoffDistance: (jobPayload.dropoffDistance || 0).toString(),
           deliveryPay: deliveryPay.toString(),
-          totalPayout: totalPayout.toString()
+          totalPayout: totalPayout.toString(),
+          pickupPayout: pickupPayout.toString(),
+          returnPayout: returnPay.toString()
         }
       );
     }
