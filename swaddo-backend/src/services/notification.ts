@@ -127,8 +127,7 @@ export const notificationService = {
         data: {
           ...data,
           title: title,
-          body: body,
-          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+          body: body
         },
         android: {
           priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode
@@ -158,8 +157,7 @@ export const notificationService = {
           body
         },
         data: {
-          ...data,
-          click_action: data?.click_action || 'FLUTTER_NOTIFICATION_CLICK'
+          ...data
         },
         tokens
       };
@@ -186,8 +184,7 @@ export const notificationService = {
           body
         },
         data: {
-          ...data,
-          click_action: 'FLUTTER_NOTIFICATION_CLICK' // Standard for web/mobile click actions
+          ...data
         },
         token
       };
