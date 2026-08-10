@@ -157,7 +157,7 @@ export class AssignmentManager {
         SELECT o.*, s.name as stall_name, s.location as stall_location, s.latitude as stall_lat, s.longitude as stall_lng 
         FROM orders o 
         LEFT JOIN stalls s ON o.stall_id = s.id 
-        WHERE o.status = 'ready'
+        WHERE o.status IN ('ready', 'waiting')
       `);
       
       for (const order of res.rows) {
