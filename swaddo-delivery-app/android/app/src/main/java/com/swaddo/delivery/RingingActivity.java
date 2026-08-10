@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -28,7 +29,7 @@ import java.net.URL;
 
 public class RingingActivity extends Activity {
 
-    private Ringtone ringtone;
+    private MediaPlayer mediaPlayer;
     private Vibrator vibrator;
     private boolean actionInProgress = false;
 
@@ -64,18 +65,25 @@ public class RingingActivity extends Activity {
         String dropoffDistance = getIntent().getStringExtra("dropoffDistance");
         String deliveryPay = getIntent().getStringExtra("deliveryPay");
         String totalPayout = getIntent().getStringExtra("totalPayout");
+        String pickupPayout = getIntent().getStringExtra("pickupPayout");
+        String returnPayout = getIntent().getStringExtra("returnPayout");
         
         final int notificationId = getIntent().getIntExtra("notificationId", -1);
 
         TextView tvTitle = findViewById(R.id.tvTitle);
         TextView tvPickupStall = findViewById(R.id.tvPickupStall);
+        TextView tvItems = findViewById(R.id.tvItems);
+        TextView tvCustomerName = findViewById(R.id.tvCustomerName);
+        TextView tvCustomerAddress = findViewById(R.id.tvCustomerAddress);
         TextView tvPickupDistance = findViewById(R.id.tvPickupDistance);
         TextView tvDropoffDistance = findViewById(R.id.tvDropoffDistance);
         TextView tvDeliveryPay = findViewById(R.id.tvDeliveryPay);
         TextView tvTotalPayout = findViewById(R.id.tvTotalPayout);
-        TextView tvItems = findViewById(R.id.tvItems);
-        TextView tvCustomerName = findViewById(R.id.tvCustomerName);
-        TextView tvCustomerAddress = findViewById(R.id.tvCustomerAddress);
+        
+        TextView tvPickupPay = findViewById(R.id.tvPickupPay);
+        TextView tvReturnPay = findViewById(R.id.tvReturnPay);
+        View rlPickupPay = findViewById(R.id.rlPickupPay);
+        View rlReturnPay = findViewById(R.id.rlReturnPay);
         
         SeekBar sbAccept = findViewById(R.id.sbAccept);
         View btnReject = findViewById(R.id.btnReject);
@@ -84,8 +92,17 @@ public class RingingActivity extends Activity {
         if (stallName != null) tvPickupStall.setText(stallName);
         if (pickupDistance != null) tvPickupDistance.setText(pickupDistance + " km");
         if (dropoffDistance != null) tvDropoffDistance.setText(dropoffDistance + " km");
-        if (deliveryPay != null) tvDeliveryPay.setText("Rs" + deliveryPay);
-        if (totalPayout != null) tvTotalPayout.setText("Rs" + totalPayout);
+        if (deliveryPay != null) tvDeliveryPay.setText("₹" + deliveryPay);
+        if (totalPayout != null) tvTotalPayout.setText("₹" + totalPayout);
+        
+        if (pickupPayout != null && !pickupPayout.equals("0")) {
+            rlPickupPay.setVisibility(View.VISIBLE);
+            tvPickupPay.setText("₹" + pickupPayout);
+        }
+        if (returnPayout != null && !returnPayout.equals("0")) {
+            rlReturnPay.setVisibility(View.VISIBLE);
+            tvReturnPay.setText("₹" + returnPayout);
+        }
         
         if (itemsSummary != null && !itemsSummary.isEmpty()) {
             String count = itemCount != null ? itemCount : "0";
@@ -98,13 +115,12 @@ public class RingingActivity extends Activity {
         if (customerAddress != null) tvCustomerAddress.setText(customerAddress);
 
         // Start custom ringing
-        Uri alarmUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.orderring);
-        ringtone = RingtoneManager.getRingtone(getApplicationContext(), alarmUri);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            ringtone.setLooping(true);
+        mediaPlayer = MediaPlayer.create(this, R.raw.orderring);
+        if (mediaPlayer != null) {
+            mediaPlayer.setLooping(true);
+            mediaPlayer.start();
         }
-        ringtone.play();
-        android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: ringtone started");
+        android.util.Log.d("SwaddoFCM", "DIAGNOSTIC: ringtone started via MediaPlayer");
 
         // Start vibrating
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -186,6 +202,8 @@ public class RingingActivity extends Activity {
                 }
                 URL url = new URL(apiUrl + "/api/delivery/assignments/" + finalOrderId + "/accept");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(5000); // 5 seconds timeout
+                conn.setReadTimeout(5000); // 5 seconds read timeout
                 conn.setRequestMethod("PATCH");
                 conn.setRequestProperty("Authorization", "Bearer " + token);
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -251,8 +269,9 @@ public class RingingActivity extends Activity {
     }
 
     private void stopRinging() {
-        if (ringtone != null && ringtone.isPlaying()) {
-            ringtone.stop();
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+            mediaPlayer.stop();
+            mediaPlayer.release();
         }
         if (vibrator != null) {
             vibrator.cancel();

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
 import { api } from "@/lib/api";
-import { Navigation, Menu, Settings, LogOut, CheckCircle, Clock, MapPin, Store, ChevronRight, X, User, Volume2, Siren, CheckCircle2, XCircle, Package, BellRing } from "lucide-react";
+import { Navigation, Menu, Settings, LogOut, CheckCircle, Clock, MapPin, Store, ChevronRight, X, User, Volume2, Siren, CheckCircle2, XCircle, Package, BellRing, Loader2 } from "lucide-react";
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
@@ -98,17 +98,27 @@ function HomeContent() {
       }
     }
     
+    // Cache dashboard stats to prevent loaders
+    const cachedStats = sessionStorage.getItem("dashboardStats");
+    if (cachedStats) {
+      try {
+        setStats(JSON.parse(cachedStats));
+      } catch (e) {}
+    }
+
     // Fetch real performance stats from backend
     const fetchDashboardStats = async () => {
       try {
         const res = await api.get('/delivery/dashboard');
         if (res.data) {
-          setStats({
+          const newStats = {
             deliveries: res.data.deliveries || 0,
             earnings: res.data.earnings || 0,
             floatingCash: res.data.floatingCash || 0,
             hours: res.data.hours || 0
-          });
+          };
+          setStats(newStats);
+          sessionStorage.setItem("dashboardStats", JSON.stringify(newStats));
 
           // Auto offline if limit exceeded while online
           if (res.data.floatingCash >= 2000 && isOnline) {
@@ -132,6 +142,46 @@ function HomeContent() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!mounted || !isOnline) return;
+
+    let checking = false;
+    const checkBattery = async () => {
+      if (checking) return;
+      checking = true;
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const { Device } = await import('@capacitor/device');
+          const batteryInfo = await Device.getBatteryInfo();
+          let level = batteryInfo.batteryLevel;
+          if (level !== undefined) {
+             if (level > 1.0) level = level / 100.0;
+             if (level < 0.15 && !batteryInfo.isCharging) {
+               const activeJob = localStorage.getItem("activeDelivery");
+               if (!activeJob) {
+                 alert("Battery below 15%. Going offline automatically.");
+                 try {
+                   await api.post("/delivery/status", { status: "offline" });
+                 } catch (e) {}
+                 setIsOnline(false);
+                 localStorage.setItem("isOnline", "false");
+                 window.location.reload(); // Force full reset to clear watchers cleanly
+               }
+             }
+          }
+        }
+      } catch (err) {
+        console.error("Battery check failed:", err);
+      } finally {
+        checking = false;
+      }
+    };
+
+    checkBattery(); // Check immediately on mount/re-render
+    const batteryTimer = setInterval(checkBattery, 60000); // Check every 60 seconds
+    return () => clearInterval(batteryTimer);
+  }, [mounted, isOnline]);
 
   const toggleOnlineStatus = async (newStatus: boolean) => {
     if (newStatus) {
@@ -349,6 +399,7 @@ function HomeContent() {
       console.log(err.message);
       alert(err.response?.data?.message || "Failed to accept job");
       setNewJob(null);
+      setIsAccepted(false);
       localStorage.removeItem("pendingJob");
       localStorage.removeItem("pendingTimer");
     }
@@ -628,30 +679,30 @@ function HomeContent() {
               <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-100 relative z-10">
                 {/* Pickup Payout */}
                 {newJob.pickupPayout !== undefined && newJob.pickupPayout > 0 && (
-                  <div className="flex justify-between items-center bg-emerald-50/50 p-2.5 rounded-[12px]">
-                    <span className="text-[12px] font-bold text-emerald-800">Pickup Pay</span>
-                    <span className="font-black text-emerald-700">₹{newJob.pickupPayout}</span>
+                  <div className="flex justify-between items-center bg-emerald-50/50 p-2.5 rounded-[12px] border border-emerald-100">
+                    <span className="text-[12px] uppercase font-bold text-emerald-600 tracking-wider">Pickup Pay</span>
+                    <span className="text-[18px] font-black text-emerald-700">₹{parseFloat(newJob.pickupPayout).toFixed(1)}</span>
                   </div>
                 )}
                 
                 {/* Delivery Base Payout */}
-                <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-[12px]">
+                <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-[12px] border border-slate-100">
                     <span className="text-[12px] uppercase font-bold text-slate-500 tracking-wider">Delivery Pay</span>
                     <span className="text-[18px] font-black text-slate-700">₹{parseFloat(newJob.earnings || newJob.deliveryPay || "15").toFixed(1)}</span>
                   </div>
 
                 {/* Return Payout */}
                 {newJob.returnPayout !== undefined && newJob.returnPayout > 0 && (
-                  <div className="flex justify-between items-center bg-blue-50/50 p-2.5 rounded-[12px]">
-                    <span className="text-[12px] font-bold text-blue-800">Return Pay</span>
-                    <span className="font-black text-blue-700">₹{newJob.returnPayout}</span>
+                  <div className="flex justify-between items-center bg-blue-50/50 p-2.5 rounded-[12px] border border-blue-100">
+                    <span className="text-[12px] uppercase font-bold text-blue-600 tracking-wider">Return Pay</span>
+                    <span className="text-[18px] font-black text-blue-700">₹{parseFloat(newJob.returnPayout).toFixed(1)}</span>
                   </div>
                 )}
               </div>
 
               <div className="flex justify-between items-end pt-4 mt-2 relative z-10">
                 <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Total Payout</span>
-                <span className="text-[32px] font-black tracking-tighter text-[#10B981] leading-none">₹{(parseFloat(newJob.earnings || newJob.deliveryPay || "15") + parseFloat(newJob.pickupPayout || "0") + parseFloat(newJob.returnPayout || "0")).toFixed(1)}</span>
+                <span className="text-[32px] font-black tracking-tighter text-[#10B981] leading-none">₹{parseFloat(newJob.totalPayout || newJob.earnings || newJob.deliveryPay || "15").toFixed(1)}</span>
               </div>
             </div>
 
@@ -666,15 +717,21 @@ function HomeContent() {
                   dragSnapToOrigin={!isAccepted}
                   dragElastic={0.05}
                   onDragEnd={(e, info) => {
-                    if (info.offset.x > 120) {
+                    if (info.offset.x > 80) {
                       setIsAccepted(true);
                       acceptJob();
                     }
                   }}
-                  className="w-[56px] h-[56px] ml-1.5 bg-[#10B981] rounded-[20px] flex items-center justify-center shadow-[0_4px_16px_rgba(16,185,129,0.3)] relative z-10 cursor-grab active:cursor-grabbing"
+                  className={`w-[56px] h-[56px] ml-1.5 rounded-[20px] flex items-center justify-center shadow-[0_4px_16px_rgba(16,185,129,0.3)] relative z-10 cursor-grab active:cursor-grabbing ${isAccepted ? 'bg-slate-400' : 'bg-[#10B981]'}`}
                 >
-                  <ChevronRight className="text-white ml-1" size={28} strokeWidth={3} />
-                  <ChevronRight className="text-white/40 -ml-4" size={28} strokeWidth={3} />
+                  {isAccepted ? (
+                    <Loader2 className="animate-spin text-white" size={28} strokeWidth={3} />
+                  ) : (
+                    <>
+                      <ChevronRight className="text-white ml-1" size={28} strokeWidth={3} />
+                      <ChevronRight className="text-white/40 -ml-4" size={28} strokeWidth={3} />
+                    </>
+                  )}
                 </motion.div>
               </div>
             </div>

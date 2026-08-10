@@ -226,7 +226,8 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
             deliveryInstructions: order.customer?.instructions || "",
             earnings: order.earnings || 45,
             paymentMethod: order.paymentMethod,
-            totalAmount: order.totalAmount
+            totalAmount: order.totalAmount,
+            items: order.items
           });
           
           if (order.status === 'heading_to_customer') setStageIndex(2);
@@ -515,6 +516,12 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
               {/* Action Button */}
               {stageIndex === 1 ? (
                 <div className="w-full bg-slate-50 border border-slate-100 p-5 rounded-[20px] text-center shadow-sm">
+                  {orderData?.items && (
+                    <div className="mb-4 text-left border-b border-slate-200 pb-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-slate-400">Order Items</p>
+                      <p className="text-[14px] font-bold text-slate-700">{orderData.items}</p>
+                    </div>
+                  )}
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-slate-400">Pickup Verification</p>
                   <p className="text-[15px] font-bold text-slate-700">Provide PIN <span className="font-black text-3xl tracking-widest text-[#10B981] mx-1">{String((parseInt(orderId) * 83) % 10000).padStart(4, '0')}</span> to Merchant</p>
                   <div className="flex items-center justify-center gap-2 mt-3">

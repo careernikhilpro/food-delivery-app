@@ -11,14 +11,16 @@ export default function Earnings() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchEarnings = async () => {
-    setLoading(true);
+  const fetchEarnings = async (background = false) => {
+    if (!background) setLoading(true);
     try {
       const res = await api.get('/delivery/earnings');
       if (res.data && res.data.data) {
         setData(res.data.data);
+        sessionStorage.setItem("earningsData", JSON.stringify(res.data.data));
       } else if (res.data) {
         setData(res.data);
+        sessionStorage.setItem("earningsData", JSON.stringify(res.data));
       }
     } catch (err) {
       console.log("Failed to fetch earnings");
@@ -28,7 +30,15 @@ export default function Earnings() {
   };
 
   useEffect(() => {
-    fetchEarnings();
+    const cachedData = sessionStorage.getItem("earningsData");
+    if (cachedData) {
+      try {
+        setData(JSON.parse(cachedData));
+      } catch (e) {}
+      fetchEarnings(true); // Fetch in background
+    } else {
+      fetchEarnings(false);
+    }
   }, []);
 
   const dailyBreakdown = data?.dailyBreakdown || Array(7).fill({ earnings: 0, dayName: '?' });

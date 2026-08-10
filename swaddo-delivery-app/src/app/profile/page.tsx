@@ -28,13 +28,16 @@ export default function Profile() {
   const [kycForm, setKycForm] = useState({ aadharNumber: '', dlNumber: '', rcNumber: '' });
   const [isSavingKyc, setIsSavingKyc] = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (background = false) => {
+    if (!background) setLoading(true);
     try {
       const res = await api.get('/delivery/profile');
       if (res.data && res.data.data) {
         setProfile(res.data.data);
+        sessionStorage.setItem("profileData", JSON.stringify(res.data.data));
       } else if (res.data) {
         setProfile(res.data);
+        sessionStorage.setItem("profileData", JSON.stringify(res.data));
       }
     } catch (err) {
       console.error("Failed to fetch profile", err);
@@ -44,7 +47,15 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    fetchProfile();
+    const cachedData = sessionStorage.getItem("profileData");
+    if (cachedData) {
+      try {
+        setProfile(JSON.parse(cachedData));
+      } catch (e) {}
+      fetchProfile(true); // Fetch in background
+    } else {
+      fetchProfile(false);
+    }
   }, []);
 
   const handleSaveProfile = async () => {
@@ -95,9 +106,16 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("Are you sure you want to log out?")) {
+      try {
+        await api.post('/delivery/status', { status: 'offline' });
+      } catch (err) {
+        console.error("Failed to set offline status during logout", err);
+      }
       localStorage.removeItem("swaddo_delivery_token");
+      localStorage.removeItem("isOnline");
+      localStorage.removeItem("riderId");
       Preferences.remove({ key: 'swaddo_delivery_token' });
       document.cookie = 'token=; Max-Age=-99999999; path=/';
       document.cookie = 'role=; Max-Age=-99999999; path=/';

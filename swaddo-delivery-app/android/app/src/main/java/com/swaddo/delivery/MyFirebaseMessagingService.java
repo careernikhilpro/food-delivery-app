@@ -44,6 +44,14 @@ public class MyFirebaseMessagingService extends MessagingService {
                 return;
             }
             
+            // Check if user is logged in
+            android.content.SharedPreferences prefs = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
+            String token = prefs.getString("swaddo_delivery_token", null);
+            if (token == null || token.isEmpty()) {
+                android.util.Log.d(TAG, "User is logged out. Ignoring FCM push notification.");
+                return;
+            }
+            
             String title = remoteMessage.getData().get("title");
             String body = remoteMessage.getData().get("body");
             String orderId = remoteMessage.getData().get("orderId");
@@ -96,6 +104,12 @@ public class MyFirebaseMessagingService extends MessagingService {
                 }
                 if (remoteMessage.getData().containsKey("totalPayout")) {
                     fullScreenIntent.putExtra("totalPayout", remoteMessage.getData().get("totalPayout"));
+                }
+                if (remoteMessage.getData().containsKey("pickupPayout")) {
+                    fullScreenIntent.putExtra("pickupPayout", remoteMessage.getData().get("pickupPayout"));
+                }
+                if (remoteMessage.getData().containsKey("returnPayout")) {
+                    fullScreenIntent.putExtra("returnPayout", remoteMessage.getData().get("returnPayout"));
                 }
                 fullScreenIntent.putExtra("notificationId", notificationId);
                 fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
