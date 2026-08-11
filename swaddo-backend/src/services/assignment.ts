@@ -196,7 +196,7 @@ eligible=${eligible}`);
     }
   }
 
-  private checkPendingJobsForRider(riderId: string) {
+  public checkPendingJobsForRider(riderId: string) {
     const rider = this.onlineRiders.get(riderId);
     if (!rider || rider.isBusy || !rider.lat || !rider.lng) return;
 
