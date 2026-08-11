@@ -140,7 +140,7 @@ export const notificationService = {
           ...data,
           title: title,
           body: body,
-          channelId: 'swaddo_alerts_v6'
+          channelId: 'swaddo_alerts_v7'
         }),
         android: {
           priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode

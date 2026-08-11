@@ -421,17 +421,13 @@ reason=${isStacked ? 'Within distance' : 'Distance exceeded or invalid route'}`)
            continue;
         }
         
-        // Prevent simultaneous overlapping rings: If this rider is already ringing for another job, skip them!
-        let isRingingForOtherJob = false;
+        // Find if this rider is already ringing for another job (for logging)
+        let ringingJobId: string | null = null;
         for (const [otherJobId, notifiedSet] of this.activeJobs.entries()) {
            if (otherJobId !== jobPayload.id && notifiedSet.has(rId)) {
-               isRingingForOtherJob = true;
+               ringingJobId = otherJobId;
                break;
            }
-        }
-        if (isRingingForOtherJob) {
-           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true socketConnected=${!!memRider?.socketId} activeOrderCount=${activeCount} isBusy=${isStacked || memRider?.isBusy} lat=${row.last_lat} lng=${row.last_lng} eligible=false reason=Ringing for other job`);
-           continue;
         }
         
         let lat = parseFloat(row.last_lat);
@@ -447,6 +443,8 @@ reason=${isStacked ? 'Within distance' : 'Distance exceeded or invalid route'}`)
 
         console.log(`[ASSIGN_CHECK]
 riderId=${rId}
+jobId=${jobPayload.id}
+ringingJobId=${ringingJobId || 'none'}
 online=true
 socketConnected=${!!memRider?.socketId}
 activeOrderCount=${activeCount}

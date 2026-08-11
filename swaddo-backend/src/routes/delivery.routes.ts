@@ -362,6 +362,9 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       if (parseInt(activeCountRes.rows[0].count) >= 2) {
         await pool.query(`UPDATE delivery_partners SET cooldown = true WHERE user_id = $1`, [req.user!.id]);
         console.log(`[Database] Rider ${req.user!.id} hit 2 active orders, entering cooldown mode.`);
+      } else {
+        // If they have less than 2 orders, check if they can get another one immediately!
+        assignmentManager.checkPendingJobsForRider(req.user!.id.toString());
       }
     } catch (e) {
       console.error("Error setting cooldown state", e);
