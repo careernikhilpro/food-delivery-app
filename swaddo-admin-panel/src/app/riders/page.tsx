@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Loader2, Bike, User, MapPin, CheckCircle2, XCircle, Search } from "lucide-react";
+import { Loader2, Bike, User, MapPin, CheckCircle2, XCircle, Search, Trash2 } from "lucide-react";
 
 export default function Riders() {
   const [riders, setRiders] = useState<any[]>([]);
@@ -30,6 +30,20 @@ export default function Riders() {
     } catch (err) {
       console.error("Failed to update status", err);
       alert("Failed to update status");
+    }
+  };
+
+  const handleDeleteRider = async (id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete rider ${name}? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/riders/${id}`);
+      setRiders(riders.filter(r => r.id !== id));
+      alert(`Rider ${name} deleted successfully`);
+    } catch (err) {
+      console.error("Failed to delete rider", err);
+      alert("Failed to delete rider");
     }
   };
 
@@ -116,9 +130,14 @@ export default function Riders() {
               </div>
             </div>
 
-            <button className="w-full mt-6 py-2.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl font-bold transition-colors">
-              View Profile
-            </button>
+            <div className="flex gap-2 mt-6">
+              <button className="flex-1 py-2.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl font-bold transition-colors">
+                View Profile
+              </button>
+              <button onClick={() => handleDeleteRider(r.id, r.name)} className="px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors" title="Delete Rider">
+                <Trash2 size={20} />
+              </button>
+            </div>
           </div>
         ))}
       </div>

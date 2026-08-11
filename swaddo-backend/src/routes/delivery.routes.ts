@@ -245,7 +245,7 @@ router.get('/assignments/active', authenticate, requireDelivery, async (req: Aut
       JOIN orders o ON da.order_id = o.id
       JOIN stalls s ON o.stall_id = s.id
       LEFT JOIN users c ON o.customer_id = c.id
-      WHERE da.delivery_partner_id = $1 AND da.status IN ('accepted', 'picked_up')
+      WHERE da.delivery_partner_id = $1 AND da.status IN ('assigned', 'accepted', 'picked_up')
       ORDER BY da.assigned_at ASC
     `;
     const result = await pool.query(activeQuery, [partnerId]);

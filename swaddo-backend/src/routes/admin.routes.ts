@@ -105,6 +105,39 @@ router.patch('/vendors/:id/status', async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/riders/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get user_id first
+    const rider = await pool.query('SELECT user_id FROM delivery_partners WHERE id = $1', [id]);
+    if (rider.rows.length === 0) {
+      return res.status(404).json({ message: 'Rider not found' });
+    }
+    const userId = rider.rows[0].user_id;
+
+    await pool.query('BEGIN');
+    
+    // Delete stats and deposits related to this rider
+    await pool.query('DELETE FROM rider_daily_stats WHERE delivery_partner_id = $1', [id]);
+    await pool.query('DELETE FROM deposit_history WHERE delivery_partner_id = $1', [id]);
+    await pool.query('DELETE FROM delivery_assignments WHERE delivery_partner_id = $1', [id]);
+    
+    // Delete the rider profile
+    await pool.query('DELETE FROM delivery_partners WHERE id = $1', [id]);
+    
+    // Delete the user account if they are only a delivery partner
+    await pool.query('DELETE FROM users WHERE id = $1 AND role = $2', [userId, 'delivery']);
+    
+    await pool.query('COMMIT');
+    res.json({ message: 'Rider deleted successfully' });
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error deleting rider:', error);
+    res.status(500).json({ message: 'Error deleting rider' });
+  }
+});
+
 router.delete('/vendors/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);

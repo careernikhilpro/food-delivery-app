@@ -317,7 +317,7 @@ export default function Orders() {
                     <Bike className="w-4 h-4" /> Delivery Partner
                   </h3>
                   {selectedOrder.rider ? (
-                    <div className="bg-bg-main p-4 rounded-2xl border border-border-subtle space-y-3">
+                    <div className="bg-bg-main p-4 rounded-2xl border border-border-subtle space-y-3 mb-4">
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Assigned Rider</span>
                         <span className="font-semibold text-text-primary">{selectedOrder.rider.name}</span>
@@ -331,34 +331,34 @@ export default function Orders() {
                         <span className="text-sm font-bold uppercase text-primary">{selectedOrder.rider.status}</span>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-bg-main p-5 rounded-2xl border border-border-subtle">
-                      <p className="text-sm text-text-muted mb-4">No rider assigned yet.</p>
-                      <div className="flex gap-2">
-                        <select 
-                          className="flex-1 bg-bg-alt border border-border-subtle rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:border-primary"
-                          value={assignRiderId}
-                          onChange={(e) => setAssignRiderId(e.target.value)}
-                          disabled={fetchingRiders}
-                        >
-                          <option value="">{fetchingRiders ? 'Fetching nearby riders...' : 'Select a nearby online rider...'}</option>
-                          {availableRiders.map((r) => (
-                            <option key={r.delivery_partner_id} value={r.delivery_partner_id}>
-                              {r.name} - {r.distance !== null ? `${r.distance.toFixed(1)} km away` : 'Distance unknown'} - {r.active_orders === 0 ? 'Free' : '1 Order'}
-                            </option>
-                          ))}
-                        </select>
-                        <button 
-                          disabled={assigning || !assignRiderId || fetchingRiders}
-                          onClick={() => handleAssignRider(selectedOrder.id)}
-                          className="bg-primary text-white font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-50 flex items-center gap-2"
-                        >
-                          {assigning && <Loader2 className="w-4 h-4 animate-spin" />}
-                          Assign
-                        </button>
-                      </div>
+                  ) : null}
+
+                  <div className="bg-bg-main p-5 rounded-2xl border border-border-subtle">
+                    <p className="text-sm font-bold text-text-primary mb-4">{selectedOrder.rider ? 'Re-assign Order to Another Rider' : 'Assign to a Rider'}</p>
+                    <div className="flex gap-2">
+                      <select 
+                        className="flex-1 bg-bg-alt border border-border-subtle rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:border-primary"
+                        value={assignRiderId}
+                        onChange={(e) => setAssignRiderId(e.target.value)}
+                        disabled={fetchingRiders}
+                      >
+                        <option value="">{fetchingRiders ? 'Fetching nearby riders...' : 'Select a nearby online rider...'}</option>
+                        {availableRiders.map((r) => (
+                          <option key={r.delivery_partner_id} value={r.delivery_partner_id}>
+                            {r.name} - {r.distance !== null ? `${r.distance.toFixed(1)} km away` : 'Distance unknown'} - {r.active_orders === 0 ? 'Free' : '1 Order'}
+                          </option>
+                        ))}
+                      </select>
+                      <button 
+                        disabled={assigning || !assignRiderId || fetchingRiders}
+                        onClick={() => handleAssignRider(selectedOrder.id)}
+                        className="bg-primary text-white font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {assigning && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {selectedOrder.rider ? 'Reassign' : 'Assign'}
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
                 
                 {/* Spacer for bottom */}

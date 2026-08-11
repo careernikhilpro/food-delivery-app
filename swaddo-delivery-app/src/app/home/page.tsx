@@ -142,7 +142,29 @@ function HomeContent() {
       try {
         const res = await api.get('/delivery/assignments/active');
         if (res.data && res.data.data) {
-           setActiveAssignments(res.data.data);
+           const allAssignments = res.data.data;
+           const active = allAssignments.filter((a: any) => a.assignmentStatus !== 'assigned');
+           setActiveAssignments(active);
+           
+           const assigned = allAssignments.find((a: any) => a.assignmentStatus === 'assigned');
+           if (assigned) {
+             const payload = {
+                id: 'job_' + assigned.orderId,
+                dropoffDistance: assigned.pickupDistance,
+                earnings: assigned.earnings,
+                customerName: assigned.customerName,
+                itemCount: 1, 
+                itemsSummary: "Accept to see details",
+                stallName: assigned.stallName,
+                pickupLat: assigned.stallLat,
+                pickupLng: assigned.stallLng,
+                deliveryLat: assigned.deliveryLat,
+                deliveryLng: assigned.deliveryLng,
+                returnPayout: assigned.pickupPayout || 0
+             };
+             setNewJob((prev: any) => prev ? prev : payload);
+             localStorage.setItem("pendingJob", JSON.stringify(payload));
+           }
         }
       } catch (e) {
         console.error("Failed to fetch active assignments", e);
@@ -387,7 +409,31 @@ function HomeContent() {
         setStats(prev => ({ ...prev, hours: prev.hours + 1 }));
 
         api.get('/delivery/assignments/active').then(res => {
-          if (res.data && res.data.data) setActiveAssignments(res.data.data);
+          if (res.data && res.data.data) {
+             const allAssignments = res.data.data;
+             const active = allAssignments.filter((a: any) => a.assignmentStatus !== 'assigned');
+             setActiveAssignments(active);
+             
+             const assigned = allAssignments.find((a: any) => a.assignmentStatus === 'assigned');
+             if (assigned) {
+               const payload = {
+                  id: 'job_' + assigned.orderId,
+                  dropoffDistance: assigned.pickupDistance,
+                  earnings: assigned.earnings,
+                  customerName: assigned.customerName,
+                  itemCount: 1, 
+                  itemsSummary: "Accept to see details",
+                  stallName: assigned.stallName,
+                  pickupLat: assigned.stallLat,
+                  pickupLng: assigned.stallLng,
+                  deliveryLat: assigned.deliveryLat,
+                  deliveryLng: assigned.deliveryLng,
+                  returnPayout: assigned.pickupPayout || 0
+               };
+               setNewJob((prev: any) => prev ? prev : payload);
+               localStorage.setItem("pendingJob", JSON.stringify(payload));
+             }
+          }
         }).catch(() => {});
 
         // Force a location ping every 15s so the rider stays fresh in the 30s assignment window
