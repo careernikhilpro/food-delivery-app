@@ -94,7 +94,7 @@ export class AssignmentManager {
           }
           
           const payload = {
-            id: order.id.toString(),
+            id: 'job_' + order.id,
             dropoffDistance,
             earnings,
             customerName: order.customer_name,

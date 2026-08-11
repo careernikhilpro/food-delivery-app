@@ -271,8 +271,8 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       return res.status(400).json({ message: 'Job no longer available or already accepted by someone else.' });
     }
 
-    // Extract real order ID from job string (e.g. "job_11" -> "11")
-    const orderId = jobId.split('_')[1];
+    // Extract real order ID from job string (e.g. "job_11" -> "11") or handle direct ID
+    const orderId = jobId.includes('_') ? jobId.split('_')[1] : jobId;
 
     const { pool } = require('../db');
 
