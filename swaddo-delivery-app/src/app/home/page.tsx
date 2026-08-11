@@ -8,7 +8,7 @@ import { Navigation, Menu, Settings, LogOut, CheckCircle, Clock, MapPin, Store, 
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
-const BackgroundGeolocation = registerPlugin<any>('BackgroundGeolocation');
+const LocationService = registerPlugin<any>('LocationService');
 import { Preferences } from '@capacitor/preferences';
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
@@ -224,38 +224,27 @@ function HomeContent() {
              }
           }
           
-          let watcherId;
-          watcherId = await BackgroundGeolocation.addWatcher(
-            {
-              backgroundMessage: "Swaddo is tracking your location to assign deliveries.",
-              backgroundTitle: "Delivery Tracking Active",
-              requestPermissions: true,
-              stale: false,
-              distanceFilter: 10 // meters
-            },
-            function callback(location: any, error: any) {
-              if (error) {
-                if (error.code === "NOT_AUTHORIZED") {
-                  if (window.confirm("This app needs your location to assign orders, but does not have permission.")) {
-                    BackgroundGeolocation.openSettings();
-                  }
-                }
-                return;
-              }
-              
-              if (location) {
-                setCurrentLocation({ lat: location.latitude, lng: location.longitude });
-                api.post("/delivery/ping", { lat: location.latitude, lng: location.longitude }).catch(() => {});
-                
-                const currentSocket = getSocket();
-                if (currentSocket) {
-                  const riderId = riderIdRef.current || localStorage.getItem("riderId");
-                  currentSocket.emit("rider_sync_location", { riderId, lat: location.latitude, lng: location.longitude });
-                }
-              }
-            }
-          );
-          setWatchId(watcherId);
+          const riderId = riderIdRef.current || localStorage.getItem("riderId");
+          const token = localStorage.getItem("token") || "";
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://food-delivery-app-wfv0.onrender.com";
+          
+          await LocationService.startService({
+             riderId: riderId,
+             apiUrl: apiUrl,
+             authToken: token
+          });
+          
+          // Listen to native broadcast for local UI updates
+          if ((window as any).locationListener) {
+              (window as any).locationListener.remove();
+          }
+          (window as any).locationListener = await LocationService.addListener('locationUpdate', (location: any) => {
+             setCurrentLocation({ lat: location.lat, lng: location.lng });
+             const currentSocket = getSocket();
+             if (currentSocket && riderId) {
+                 currentSocket.emit("rider_sync_location", { riderId, lat: location.lat, lng: location.lng });
+             }
+          });
           
           // Get first location to ensure we have a fix before going online
           // BackgroundGeolocation doesn't have getCurrentPosition natively, so we use Capacitor standard for the very first fix
@@ -280,9 +269,11 @@ function HomeContent() {
       }
     } else {
       try {
-        if (Capacitor.isNativePlatform() && watchId !== null) {
-          BackgroundGeolocation.removeWatcher({ id: watchId as string });
-          setWatchId(null);
+        if (Capacitor.isNativePlatform()) {
+          await LocationService.stopService();
+          if ((window as any).locationListener) {
+              (window as any).locationListener.remove();
+          }
         }
         await api.post("/delivery/status", { status: "offline" });
         setIsOnline(false);

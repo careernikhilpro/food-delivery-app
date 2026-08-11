@@ -32,6 +32,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        registerPlugin(LocationPlugin.class);
+        
         // Request Display over other apps permission to forcefully open RingingActivity from background
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             if (!android.provider.Settings.canDrawOverlays(this)) {
