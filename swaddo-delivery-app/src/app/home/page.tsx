@@ -46,7 +46,7 @@ function HomeContent() {
   const riderIdRef = useRef<string>("");
   const alarmAudio = useRef<HTMLAudioElement | null>(null);
   const acceptSliderRef = useRef<HTMLDivElement>(null);
-  const [isAccepted, setIsAccepted] = useState(false);
+  const [acceptingJobId, setAcceptingJobId] = useState<string | null>(null);
 
   // Load persisted state on mount
   useEffect(() => {
@@ -357,6 +357,32 @@ function HomeContent() {
       const emitOnline = () => {
           const riderId = riderIdRef.current || localStorage.getItem("riderId");
           socket?.emit("rider_online", { riderId, lat: currentLocation?.lat, lng: currentLocation?.lng });
+          
+          // Fallback: Sync pending assignments when socket reconnects
+          api.get('/delivery/assignments/active').then(res => {
+            if (res.data && res.data.data) {
+               const allAssignments = res.data.data;
+               const assigned = allAssignments.find((a: any) => a.assignmentStatus === 'assigned');
+               if (assigned) {
+                 const payload = {
+                    id: 'job_' + assigned.orderId,
+                    dropoffDistance: assigned.pickupDistance,
+                    earnings: assigned.earnings,
+                    customerName: assigned.customerName,
+                    itemCount: 1, 
+                    itemsSummary: "Accept to see details",
+                    stallName: assigned.stallName,
+                    pickupLat: assigned.stallLat,
+                    pickupLng: assigned.stallLng,
+                    deliveryLat: assigned.deliveryLat,
+                    deliveryLng: assigned.deliveryLng,
+                    returnPayout: assigned.pickupPayout || 0
+                 };
+                 setNewJob((prev: any) => prev ? prev : payload);
+                 localStorage.setItem("pendingJob", JSON.stringify(payload));
+               }
+            }
+          }).catch(() => {});
         };
         
         socket?.on("connect", emitOnline);
@@ -365,6 +391,7 @@ function HomeContent() {
         }
 
         socket?.on("job_offer", (data) => {
+          console.log(`[MULTI] received job ${data.id} via socket`);
           setNewJob(data);
           setTimer(300);
           localStorage.setItem("pendingJob", JSON.stringify(data));
@@ -392,6 +419,7 @@ function HomeContent() {
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'NEW_ORDER_PUSH') {
+              console.log(`[MULTI] received job ${event.data.data.id} via FCM`);
               setNewJob(event.data.data);
             }
           });
@@ -446,7 +474,13 @@ function HomeContent() {
     }
 
     return () => {
-      disconnectSocket();
+      const currentSocket = getSocket();
+      if (currentSocket) {
+        currentSocket.off("connect");
+        currentSocket.off("job_offer");
+        currentSocket.off("job_revoked");
+        currentSocket.off("job_accepted_by_me");
+      }
       if (pingTimer) clearInterval(pingTimer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -469,25 +503,50 @@ function HomeContent() {
 
   // Timer auto-decline logic REMOVED intentionally 
   // so the order stays on screen indefinitely until the rider acts on it.
+  const stopRingtone = useCallback(() => {
+    if (alarmAudio.current && !alarmAudio.current.paused) {
+      alarmAudio.current.pause();
+      alarmAudio.current.currentTime = 0;
+    }
+  }, []);
+
   // Robust State-Driven Ringing Logic
   useEffect(() => {
     if (newJob && soundEnabled && alarmAudio.current && alarmAudio.current.paused) {
       alarmAudio.current.play().catch(e => console.log('Autoplay blocked:', e));
-    } else if (!newJob && alarmAudio.current && !alarmAudio.current.paused) {
-      alarmAudio.current.pause();
-      alarmAudio.current.currentTime = 0;
+    } else if (!newJob) {
+      stopRingtone();
     }
-  }, [newJob, soundEnabled]);
+    
+    return () => stopRingtone();
+  }, [newJob, soundEnabled, stopRingtone]);
 
   const acceptJob = useCallback(async (jobIdToAccept?: string | any) => {
     const targetJobId = (typeof jobIdToAccept === 'string') ? jobIdToAccept : newJob?.id;
+    console.log(`[MULTI] accept clicked ${targetJobId}`);
+    
     if (!targetJobId) return;
+    
+    setAcceptingJobId(targetJobId);
+    stopRingtone();
     try {
-      const res = await api.patch(`/delivery/assignments/${targetJobId}/accept`, {
-        riderId: riderIdRef.current,
+      const riderId = riderIdRef.current || localStorage.getItem('riderId');
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out. Please try again.")), 15000)
+      );
+
+      console.log(`[MULTI] API started ${targetJobId}`);
+      const apiPromise = api.patch(`/delivery/assignments/${targetJobId}/accept`, {
+        riderId: riderId,
         lat: currentLocation?.lat,
         lng: currentLocation?.lng
       });
+
+      const res = await Promise.race([apiPromise, timeoutPromise]);
+      
+      console.log(`[MULTI] API success ${targetJobId}`);
+      
       // Store active delivery to prevent navigating away
       localStorage.setItem('activeDelivery', targetJobId);
       
@@ -496,21 +555,59 @@ function HomeContent() {
       setNewJob(null);
       router.push(`/active-delivery?id=${targetJobId}`);
     } catch (err: any) {
-      console.log(err.message);
-      alert(err.response?.data?.message || "Failed to accept job");
-      setNewJob(null);
-      setIsAccepted(false);
-      localStorage.removeItem("pendingJob");
-      localStorage.removeItem("pendingTimer");
+      console.error("[ACCEPT] API failed/timed out:", err.message);
+      if (err.response) {
+         console.error("[ACCEPT] API error status:", err.response.status);
+         console.error("[ACCEPT] API error body:", err.response.data);
+      }
+      
+      const errMsg = err.response?.data?.message || err.message;
+      
+      // Perform state reconciliation / recovery check
+      try {
+        const actualOrderId = targetJobId.replace('job_', '');
+        console.log("[ACCEPT] Checking backend recovery state for orderId:", actualOrderId);
+        const activeRes = await api.get('/delivery/assignments/active');
+        const activeAssignments = activeRes.data.data;
+        const found = activeAssignments.find((a: any) => a.orderId.toString() === actualOrderId);
+        
+        if (found) {
+           console.log("[ACCEPT] Recovery SUCCESS! Found order in active assignments:", found.orderId);
+           // The assignment exists, meaning it was successfully accepted despite the error/timeout!
+           localStorage.setItem('activeDelivery', targetJobId);
+           localStorage.removeItem("pendingJob");
+           localStorage.removeItem("pendingTimer");
+           setNewJob(null);
+           router.push(`/active-delivery?id=${targetJobId}`);
+           return;
+        } else {
+           console.log("[ACCEPT] Recovery failed: Order not found in active assignments list.");
+        }
+      } catch (recoveryErr) {
+        console.error("[ACCEPT] Backend reconciliation API failed:", recoveryErr);
+      }
+      
+      console.log("[ACCEPT] Displaying error and resetting state. Order remains retryable unless 404/409.");
+      if (errMsg === 'ORDER_ALREADY_ACCEPTED' || errMsg === 'Order not found in DB') {
+         setTimeout(() => alert("This order was already accepted by someone else or is no longer available."), 100);
+         setNewJob(null);
+         localStorage.removeItem("pendingJob");
+         localStorage.removeItem("pendingTimer");
+      } else {
+         setTimeout(() => alert(errMsg || "Failed to accept job. Please check your network and try again."), 100);
+      }
+    } finally {
+      setAcceptingJobId(null);
     }
-  }, [newJob?.id, currentLocation, router]);
+  }, [newJob?.id, currentLocation, router, stopRingtone]);
 
   const rejectJob = useCallback((jobIdToReject?: string) => {
+    stopRingtone();
     // Optionally call an endpoint to explicitly reject
     setNewJob(null);
     localStorage.removeItem("pendingJob");
     localStorage.removeItem("pendingTimer");
-  }, []);
+  }, [stopRingtone]);
 
   // Handle Push Notification Actions (from URL or active Window)
   useEffect(() => {
@@ -843,19 +940,18 @@ function HomeContent() {
             <div className="w-full">
               <button
                 onClick={() => {
-                  if (!isAccepted) {
-                    setIsAccepted(true);
+                  if (acceptingJobId !== newJob.id) {
                     acceptJob();
                   }
                 }}
-                disabled={isAccepted}
+                disabled={acceptingJobId === newJob.id}
                 className={`w-full h-[68px] rounded-[24px] flex items-center justify-center font-black tracking-widest text-[16px] shadow-[0_8px_24px_rgba(16,185,129,0.3)] transition-all ${
-                  isAccepted 
+                  acceptingJobId === newJob.id
                     ? 'bg-slate-400 text-white cursor-not-allowed' 
                     : 'bg-[#10B981] text-white active:scale-[0.98] active:bg-[#059669]'
                 }`}
               >
-                {isAccepted ? (
+                {acceptingJobId === newJob.id ? (
                   <Loader2 className="animate-spin text-white" size={28} strokeWidth={3} />
                 ) : (
                   "ACCEPT ORDER"

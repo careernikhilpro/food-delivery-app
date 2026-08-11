@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense, useMemo } from "react";
+import { useState, useEffect, useRef, Suspense, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Phone, CheckCircle, Store, User, Loader2, Home, ChevronRight } from "lucide-react";
@@ -142,6 +142,63 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
   const [cashCollected, setCashCollected] = useState(false);
   const [deliveryPin, setDeliveryPin] = useState("");
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [newJob, setNewJob] = useState<any>(null);
+  const [acceptingJobId, setAcceptingJobId] = useState<string | null>(null);
+  const riderIdRef = useRef<string | null>(null);
+
+  const stopRingtone = () => {
+    const audio = document.getElementById('ringtone') as HTMLAudioElement;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  };
+
+  const rejectJob = useCallback((jobIdToReject?: string) => {
+    const targetJobId = jobIdToReject || newJob?.id;
+    if (targetJobId) {
+      const riderId = riderIdRef.current || localStorage.getItem('riderId');
+      api.patch(`/delivery/assignments/${targetJobId}/reject`, { riderId }).catch(() => {});
+    }
+    stopRingtone();
+    setNewJob(null);
+  }, [newJob]);
+
+  const acceptJob = useCallback(async (jobIdToAccept?: string) => {
+    const targetJobId = jobIdToAccept || newJob?.id;
+    if (!targetJobId) return;
+    
+    setAcceptingJobId(targetJobId);
+    stopRingtone();
+    try {
+      const riderId = riderIdRef.current || localStorage.getItem('riderId');
+      const apiPromise = api.patch(`/delivery/assignments/${targetJobId}/accept`, {
+        riderId: riderId,
+        lat: riderLocRef.current?.lat,
+        lng: riderLocRef.current?.lng
+      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out. Please try again.")), 15000)
+      );
+      
+      await Promise.race([apiPromise, timeoutPromise]);
+      
+      setNewJob(null);
+      // Reload active-delivery to show both orders in bottom sheet or navigate home
+      router.push('/home');
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message;
+      if (errMsg === 'ORDER_ALREADY_ACCEPTED' || errMsg === 'Order not found in DB') {
+         setTimeout(() => alert("This order was already accepted by someone else or is no longer available."), 100);
+      } else {
+         setTimeout(() => alert(errMsg || "Failed to accept job."), 100);
+      }
+      setNewJob(null);
+    } finally {
+      setAcceptingJobId(null);
+    }
+  }, [newJob, router]);
+
 
   const [orderData, setOrderData] = useState<any>(null);
   const [riderLocation, setRiderLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -194,6 +251,35 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
   }, [riderLocation, stallLocation, customerLocation, stageIndex]);
 
   
+
+  useEffect(() => {
+    const handleCustomNewJob = (e: any) => {
+      const payload = e.detail;
+      if (payload && payload.action === 'NEW_ORDER' && payload.orderId) {
+         setNewJob({
+           id: 'job_' + payload.orderId,
+           dropoffDistance: payload.dropoffDistance || 'N/A',
+           earnings: payload.earnings || 0,
+           customerName: payload.customerName || 'Customer',
+           itemCount: payload.itemCount || 1,
+           itemsSummary: payload.itemsSummary || 'Accept to see details',
+           stallName: payload.stallName || 'Stall',
+           pickupLat: payload.pickupLat,
+           pickupLng: payload.pickupLng,
+           deliveryLat: payload.deliveryLat,
+           deliveryLng: payload.deliveryLng,
+           returnPayout: payload.pickupPayout || 0
+         });
+         const audio = document.getElementById('ringtone') as HTMLAudioElement;
+         if (audio) {
+           audio.loop = true;
+           audio.play().catch(e => console.error("Audio play failed:", e));
+         }
+      }
+    };
+    window.addEventListener('swaddo_new_job', handleCustomNewJob);
+    return () => window.removeEventListener('swaddo_new_job', handleCustomNewJob);
+  }, []);
 
   useEffect(() => {
     // Fetch order locations
