@@ -841,33 +841,26 @@ function HomeContent() {
             </div>
 
             <div className="w-full">
-              <div ref={acceptSliderRef} className="relative w-full h-[68px] bg-white rounded-[24px] overflow-hidden flex items-center border border-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-                <span className="absolute inset-0 flex items-center justify-center font-black text-slate-300 tracking-[0.2em] text-[13px] z-0 pointer-events-none">
-                  SLIDE TO ACCEPT
-                </span>
-                <motion.div
-                  drag="x"
-                  dragConstraints={acceptSliderRef}
-                  dragSnapToOrigin={!isAccepted}
-                  dragElastic={0.05}
-                  onDragEnd={(e, info) => {
-                    if (info.offset.x > 80) {
-                      setIsAccepted(true);
-                      acceptJob();
-                    }
-                  }}
-                  className={`w-[56px] h-[56px] ml-1.5 rounded-[20px] flex items-center justify-center shadow-[0_4px_16px_rgba(16,185,129,0.3)] relative z-10 cursor-grab active:cursor-grabbing ${isAccepted ? 'bg-slate-400' : 'bg-[#10B981]'}`}
-                >
-                  {isAccepted ? (
-                    <Loader2 className="animate-spin text-white" size={28} strokeWidth={3} />
-                  ) : (
-                    <>
-                      <ChevronRight className="text-white ml-1" size={28} strokeWidth={3} />
-                      <ChevronRight className="text-white/40 -ml-4" size={28} strokeWidth={3} />
-                    </>
-                  )}
-                </motion.div>
-              </div>
+              <button
+                onClick={() => {
+                  if (!isAccepted) {
+                    setIsAccepted(true);
+                    acceptJob();
+                  }
+                }}
+                disabled={isAccepted}
+                className={`w-full h-[68px] rounded-[24px] flex items-center justify-center font-black tracking-widest text-[16px] shadow-[0_8px_24px_rgba(16,185,129,0.3)] transition-all ${
+                  isAccepted 
+                    ? 'bg-slate-400 text-white cursor-not-allowed' 
+                    : 'bg-[#10B981] text-white active:scale-[0.98] active:bg-[#059669]'
+                }`}
+              >
+                {isAccepted ? (
+                  <Loader2 className="animate-spin text-white" size={28} strokeWidth={3} />
+                ) : (
+                  "ACCEPT ORDER"
+                )}
+              </button>
             </div>
           </motion.div>
         )}

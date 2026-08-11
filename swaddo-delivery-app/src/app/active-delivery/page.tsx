@@ -562,7 +562,7 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
                 </div>
               ) : (
                 <button 
-                  onClick={handleNextStage}
+                  onClick={() => handleNextStage()}
                   disabled={stageIndex === 3 && orderData?.paymentMethod === 'cod' && !cashCollected}
                   className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-black py-4 rounded-[20px] transition-all shadow-[0_8px_24px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.4)] active:scale-95 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2"
                 >
