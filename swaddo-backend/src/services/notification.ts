@@ -22,6 +22,18 @@ if (!getApps().length) {
   }
 }
 
+// Ensure all data values for FCM are strings, otherwise FCM throws invalid-payload
+const stringifyData = (data: any) => {
+  if (!data) return undefined;
+  const strData: { [key: string]: string } = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== null && value !== undefined) {
+      strData[key] = String(value);
+    }
+  }
+  return strData;
+};
+
 export const notificationService = {
   
   /**
@@ -124,12 +136,12 @@ export const notificationService = {
       
       const payload = {
         token: token,
-        data: {
+        data: stringifyData({
           ...data,
           title: title,
           body: body,
           channelId: 'swaddo_alerts_v5'
-        },
+        }),
         android: {
           priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode
         }
@@ -157,9 +169,7 @@ export const notificationService = {
           title,
           body
         },
-        data: {
-          ...data
-        },
+        data: stringifyData(data) || {},
         tokens
       };
 
@@ -184,9 +194,7 @@ export const notificationService = {
           title,
           body
         },
-        data: {
-          ...data
-        },
+        data: stringifyData(data) || {},
         token
       };
 
@@ -218,12 +226,12 @@ export const notificationService = {
     try {
       const message = {
         // NO 'notification' block here! This forces Android to deliver it to MyFirebaseMessagingService
-        data: {
+        data: stringifyData({
           title,
           body,
           ...data,
           android_channel_id: channelId
-        },
+        }),
         android: {
           priority: 'high' as const // CRITICAL: Wakes up the app from Doze mode
         },
