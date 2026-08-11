@@ -260,6 +260,7 @@ router.get('/assignments/active', authenticate, requireDelivery, async (req: Aut
 
 router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
   const jobId = req.params.id;
+  let client;
   
   try {
     const { riderId } = req.body;
