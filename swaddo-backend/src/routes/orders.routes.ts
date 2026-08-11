@@ -456,7 +456,7 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
              AND status IN ('accepted', 'picked_up')`,
             [riderUserId]
           );
-          if (parseInt(activeCountRes.rows[0].count) === 0) {
+          if (parseInt(activeCountRes.rows[0].count) < 2) {
             await pool.query(`UPDATE delivery_partners SET cooldown = false WHERE user_id = $1`, [riderUserId]);
           }
         }
