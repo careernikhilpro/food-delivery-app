@@ -296,8 +296,8 @@ export class AssignmentManager {
       const dbRes = await pool.query(`
         SELECT dp.user_id, dp.last_lat, dp.last_lng,
                COUNT(da.id) as active_count,
-               MAX(o.pickup_lat) as active_pickup_lat,
-               MAX(o.pickup_lng) as active_pickup_lng,
+               MAX(s.latitude) as active_pickup_lat,
+               MAX(s.longitude) as active_pickup_lng,
                MAX(o.delivery_lat) as active_delivery_lat,
                MAX(o.delivery_lng) as active_delivery_lng
         FROM delivery_partners dp
@@ -305,6 +305,7 @@ export class AssignmentManager {
           ON da.delivery_partner_id = dp.id 
           AND da.status IN ('accepted', 'picked_up')
         LEFT JOIN orders o ON da.order_id = o.id
+        LEFT JOIN stalls s ON o.stall_id = s.id
         WHERE dp.current_status = 'online' 
           AND dp.last_ping >= NOW() - INTERVAL '5 minutes'
         GROUP BY dp.id, dp.user_id, dp.last_lat, dp.last_lng
