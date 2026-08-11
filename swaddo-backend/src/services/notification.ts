@@ -140,7 +140,7 @@ export const notificationService = {
           ...data,
           title: title,
           body: body,
-          channelId: 'swaddo_alerts_v5'
+          channelId: 'swaddo_alerts_v6'
         }),
         android: {
           priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode
@@ -205,16 +205,10 @@ export const notificationService = {
       const response = await getMessaging().send(message);
       logger.info(`Successfully sent message: ${response}`);
       return true;
-    } catch (error: any) {
+     } catch (error: any) {
       if (error?.code === 'messaging/registration-token-not-registered' || error?.message?.includes('NotRegistered')) {
          try {
            const { pool } = require('../db');
-           await pool.query(`
-             UPDATE delivery_partners dp 
-             SET current_status = 'offline' 
-             FROM users u 
-             WHERE dp.user_id = u.id AND u.fcm_token = $1
-           `, [token]);
            await pool.query('UPDATE users SET fcm_token = NULL WHERE fcm_token = $1', [token]);
            logger.info(`Cleared stale FCM token for user: ${token}`);
          } catch (dbErr) {}
@@ -230,7 +224,7 @@ export const notificationService = {
    * This is REQUIRED for Android to allow background processes to wake up and ring.
    * If we include a "notification" block, Android OS swallows it and keeps it silent!
    */
-  async sendNativePush(token: string, title: string, body: string, data?: any, channelId: string = 'swaddo_alerts_v5') {
+  async sendNativePush(token: string, title: string, body: string, data?: any, channelId: string = 'swaddo_alerts_v6') {
     if (!getApps().length) return false;
     
     try {
@@ -255,12 +249,6 @@ export const notificationService = {
       if (error?.code === 'messaging/registration-token-not-registered' || error?.message?.includes('NotRegistered')) {
          try {
            const { pool } = require('../db');
-           await pool.query(`
-             UPDATE delivery_partners dp 
-             SET current_status = 'offline' 
-             FROM users u 
-             WHERE dp.user_id = u.id AND u.fcm_token = $1
-           `, [token]);
            await pool.query('UPDATE users SET fcm_token = NULL WHERE fcm_token = $1', [token]);
            logger.info(`Cleared stale NATIVE FCM token: ${token}`);
          } catch (dbErr) {}

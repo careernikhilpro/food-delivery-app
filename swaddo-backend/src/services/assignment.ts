@@ -126,10 +126,56 @@ export class AssignmentManager {
     return Array.from(this.onlineRiders.entries()).filter(([_, data]) => !data.isBusy);
   }
 
-  registerRider(riderId: string, socketId: string, lat?: number, lng?: number) {
-    this.onlineRiders.set(riderId, { socketId, isBusy: false, lat, lng });
-    console.log(`[Assignment] Rider ${riderId} registered with socket ${socketId} at ${lat}, ${lng}`);
-    this.checkPendingJobsForRider(riderId);
+  async registerRider(riderId: string, socketId: string, lat?: number, lng?: number) {
+    let finalLat = lat;
+    let finalLng = lng;
+
+    const existing = this.onlineRiders.get(riderId);
+    if (existing) {
+       finalLat = finalLat ?? existing.lat;
+       finalLng = finalLng ?? existing.lng;
+    }
+
+    let dbLat: number | undefined;
+    let dbLng: number | undefined;
+
+    if (finalLat === undefined || finalLng === undefined) {
+      try {
+        const { pool } = require('../db');
+        const res = await pool.query(`SELECT last_lat, last_lng FROM delivery_partners WHERE user_id = $1`, [riderId]);
+        if (res.rows.length > 0) {
+          dbLat = parseFloat(res.rows[0].last_lat) || undefined;
+          dbLng = parseFloat(res.rows[0].last_lng) || undefined;
+          finalLat = finalLat ?? dbLat;
+          finalLng = finalLng ?? dbLng;
+        }
+      } catch (e) {
+         console.error("[Assignment] Error fetching location on register:", e);
+      }
+    }
+    
+    // Explicitly validate location
+    const hasValidLocation = finalLat !== undefined && finalLng !== undefined && !isNaN(finalLat) && !isNaN(finalLng) && !(finalLat === 0 && finalLng === 0);
+    const eligible = hasValidLocation;
+
+    const isBusy = existing ? existing.isBusy : false;
+    
+    this.onlineRiders.set(riderId, { socketId, isBusy, lat: finalLat, lng: finalLng });
+    
+    console.log(`[RIDER_REGISTER]
+riderId=${riderId}
+socketId=${socketId}
+payloadLat=${lat}
+payloadLng=${lng}
+dbLat=${dbLat}
+dbLng=${dbLng}
+finalLat=${finalLat}
+finalLng=${finalLng}
+eligible=${eligible}`);
+
+    if (eligible) {
+      this.checkPendingJobsForRider(riderId);
+    }
   }
 
   updateRiderLocation(riderId: string, lat: number, lng: number) {
@@ -137,6 +183,7 @@ export class AssignmentManager {
     if (rider) {
       rider.lat = lat;
       rider.lng = lng;
+      console.log(`[LOCATION] Rider ${riderId} lat=${lat} lng=${lng}`);
       
       // Update the database so `last_ping` stays fresh and broadcastJob doesn't filter them out
       const { pool } = require('../db');
@@ -265,8 +312,10 @@ export class AssignmentManager {
   unregisterSocket(socketId: string) {
     for (const [riderId, data] of this.onlineRiders.entries()) {
       if (data.socketId === socketId) {
-        this.onlineRiders.delete(riderId);
-        console.log(`[Assignment] Rider ${riderId} disconnected`);
+        // Do NOT remove the rider from onlineRiders, just clear the socket to prevent stale emissions.
+        // The rider remains ONLINE and eligible for background FCM assignments until explicit logout or 10-min DB timeout.
+        data.socketId = '';
+        console.log(`[Assignment] Rider ${riderId} socket ${socketId} disconnected, but rider remains ONLINE.`);
         break;
       }
     }
@@ -338,25 +387,39 @@ export class AssignmentManager {
           const dLat = parseFloat(row.active_delivery_lat);
           const dLng = parseFloat(row.active_delivery_lng);
           
+          let pickupDiff = 999;
+          let dropDiff = 999;
+          
           if (!isNaN(pLat) && !isNaN(pLng) && !isNaN(dLat) && !isNaN(dLng)) {
-             const pickupDiff = getDistance(stallLat, stallLng, pLat, pLng);
-             const dropDiff = getDistance(deliveryLat, deliveryLng, dLat, dLng);
+             pickupDiff = getDistance(stallLat, stallLng, pLat, pLng);
+             dropDiff = getDistance(deliveryLat, deliveryLng, dLat, dLng);
              
-             if (pickupDiff <= 0.7 && dropDiff <= 1.0) {
+             if (pickupDiff <= 0.7 && dropDiff <= 1.2) {
                isStacked = true;
-             } else {
-               // Rider has an active assignment and new order is NOT on route. Skip.
-               continue;
              }
-          } else {
-            // Cannot verify route. Skip.
-            continue;
           }
+          
+          console.log(`[MULTI_CHECK]
+riderId=${rId}
+order1=${pLat},${pLng}->${dLat},${dLng}
+order2=${stallLat},${stallLng}->${deliveryLat},${deliveryLng}
+activeOrderCount=${activeCount}
+pickupDistance=${pickupDiff.toFixed(2)}
+dropDistance=${dropDiff.toFixed(2)}
+pickupLimit=0.70
+dropLimit=1.20
+eligible=${isStacked}
+reason=${isStacked ? 'Within distance' : 'Distance exceeded or invalid route'}`);
+
+          if (!isStacked) continue;
         }
 
         // Fallback: check in-memory busy state just in case (only if activeCount == 0, we trust DB more now, but let's keep it for safety if they aren't stacked)
         const memRider = this.onlineRiders.get(rId);
-        if (activeCount === 0 && memRider && memRider.isBusy) continue;
+        if (activeCount === 0 && memRider && memRider.isBusy) {
+           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true socketConnected=${!!memRider.socketId} activeOrderCount=0 isBusy=true lat=${row.last_lat} lng=${row.last_lng} eligible=false reason=Memory isBusy`);
+           continue;
+        }
         
         // Prevent simultaneous overlapping rings: If this rider is already ringing for another job, skip them!
         let isRingingForOtherJob = false;
@@ -366,7 +429,10 @@ export class AssignmentManager {
                break;
            }
         }
-        if (isRingingForOtherJob) continue;
+        if (isRingingForOtherJob) {
+           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true socketConnected=${!!memRider?.socketId} activeOrderCount=${activeCount} isBusy=${isStacked || memRider?.isBusy} lat=${row.last_lat} lng=${row.last_lng} eligible=false reason=Ringing for other job`);
+           continue;
+        }
         
         let lat = parseFloat(row.last_lat);
         let lng = parseFloat(row.last_lng);
@@ -374,9 +440,20 @@ export class AssignmentManager {
         if (isNaN(lat) && memRider && memRider.lat) lat = memRider.lat;
         if (isNaN(lng) && memRider && memRider.lng) lng = memRider.lng;
         
-        // Final fallback to 0 if really missing to avoid NaNs, though they will be filtered by distance
-        if (isNaN(lat)) lat = 0;
-        if (isNaN(lng)) lng = 0;
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true socketConnected=${!!memRider?.socketId} activeOrderCount=${activeCount} isBusy=${isStacked || memRider?.isBusy} lat=${lat} lng=${lng} eligible=false reason=Invalid location`);
+           continue;
+        }
+
+        console.log(`[ASSIGN_CHECK]
+riderId=${rId}
+online=true
+socketConnected=${!!memRider?.socketId}
+activeOrderCount=${activeCount}
+isBusy=${isStacked || (memRider ? memRider.isBusy : false)}
+lat=${lat}
+lng=${lng}
+eligible=true`);
 
         totalAvailable.push([rId, { lat, lng, isStacked }]);
       }
@@ -513,11 +590,11 @@ export class AssignmentManager {
       console.log(`[Assignment] Job ${jobPayload.id} broadcasted to rider ${rider.riderId} (Distance: ${actualPickupDistance.toFixed(2)} km)`);
     }
     
-    // If not accepted by ANYONE in 300 seconds, retry broadcast
+    // If not accepted by ANYONE in 45 seconds, retry broadcast
     this.jobTimers.set(jobPayload.id, setTimeout(() => {
       console.log(`[Assignment] Job ${jobPayload.id} ignored by all riders, restarting broadcast...`);
       this.broadcastJob(jobPayload);
-    }, 300000));
+    }, 45000));
   }
 
   acceptJob(jobId: string, acceptedByRiderId: string): any | null {
@@ -565,13 +642,43 @@ export class AssignmentManager {
     return promisedOffer;
   }
 
-  markRiderAvailable(riderId: string) {
+  async markRiderAvailable(riderId: string) {
     const rider = this.onlineRiders.get(riderId);
-    if (rider) {
-      rider.isBusy = false;
-      console.log(`[Assignment] Rider ${riderId} marked as available.`);
-      this.checkPendingJobsForRider(riderId);
+    if (!rider) return;
+
+    let activeOrderCount = 0;
+    try {
+      const { pool } = require('../db');
+      
+      // Calculate active order count
+      const activeCountRes = await pool.query(
+        `SELECT COUNT(id) as count 
+         FROM delivery_assignments 
+         WHERE delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $1)
+         AND status IN ('accepted', 'picked_up')`,
+        [riderId]
+      );
+      activeOrderCount = parseInt(activeCountRes.rows[0].count) || 0;
+      
+      // Refresh last_ping
+      await pool.query(`UPDATE delivery_partners SET last_ping = NOW() WHERE user_id = $1`, [riderId]);
+    } catch (err) {
+      console.error(`[Assignment] Failed to refresh state for Rider ${riderId}:`, err);
     }
+    
+    // Core Lifecycle: 0 = AVAILABLE, 1 = BUSY/Stack-eligible, 2 = Completely BUSY
+    rider.isBusy = activeOrderCount > 0;
+    
+    console.log(`[RIDER_AVAILABLE]
+riderId=${riderId}
+activeOrderCount=${activeOrderCount}
+isBusy=${rider.isBusy}
+online=true
+socketConnected=${!!rider.socketId}
+lat=${rider.lat}
+lng=${rider.lng}`);
+
+    this.checkPendingJobsForRider(riderId);
   }
 
   revokeJob(jobId: string) {

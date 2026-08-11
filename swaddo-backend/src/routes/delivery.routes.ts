@@ -259,61 +259,95 @@ router.get('/assignments/active', authenticate, requireDelivery, async (req: Aut
 });
 
 router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const jobId = req.params.id;
+  
   try {
-    const jobId = req.params.id;
     const { riderId } = req.body;
+    
+    console.log(`[ACCEPT] RECEIVED
+[ACCEPT] riderId=${riderId}
+[ACCEPT] orderId=${jobId.includes('_') ? jobId.split('_')[1] : jobId}`);
 
     if (!riderId) {
+      console.log(`[ACCEPT] Missing riderId`);
       return res.status(400).json({ message: 'Rider ID is required' });
     }
 
     const promisedOffer = assignmentManager.acceptJob(jobId, riderId);
     
+    const { pool } = require('../db');
+    const orderId = jobId.includes('_') ? jobId.split('_')[1] : jobId;
+
     if (!promisedOffer) {
+      // It might be a duplicate request from the same rider who already successfully accepted it.
+      const assignmentCheck = await pool.query(
+        `SELECT * FROM delivery_assignments WHERE order_id = $1 AND delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $2)`,
+        [orderId, req.user!.id]
+      );
+      if (assignmentCheck.rows.length > 0) {
+        console.log(`[ACCEPT] HTTP_200 (idempotent)`);
+        return res.json({ message: 'Job accepted successfully (idempotent)' });
+      }
+      console.log(`[ACCEPT] ERROR: Job no longer available`);
       return res.status(400).json({ message: 'Job no longer available or already accepted by someone else.' });
     }
 
-    // Extract real order ID from job string (e.g. "job_11" -> "11") or handle direct ID
-    const orderId = jobId.includes('_') ? jobId.split('_')[1] : jobId;
+    client = await pool.connect();
+    
+    await client.query('BEGIN');
+    await client.query("SET LOCAL statement_timeout = '10s'");
 
-    const { pool } = require('../db');
+    // ATOMIC DB LOCK: Only update if the order is still in 'assigned' state
+    const checkBeforeUpdate = await client.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
+    const currentStatus = checkBeforeUpdate.rows.length > 0 ? checkBeforeUpdate.rows[0].status : 'unknown';
+    console.log(`[ACCEPT] currentStatus=${currentStatus}`);
 
+    const updateRes = await client.query(
+      `UPDATE orders SET status = 'heading_to_stall' WHERE id = $1 AND status = 'assigned' RETURNING *`,
+      [orderId]
+    );
+    
+    console.log(`[ACCEPT] UPDATE_ROWS=${updateRes.rowCount}`);
+
+    if (updateRes.rows.length === 0) {
+      // Order could not be claimed. Check why.
+      const checkStatus = await client.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
+      assignmentManager.revokeJob(jobId);
+      
+      await client.query('ROLLBACK');
+      
+      if (checkStatus.rows.length > 0) {
+          const assignmentCheck = await pool.query(
+            `SELECT * FROM delivery_assignments WHERE order_id = $1 AND delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $2)`,
+            [orderId, req.user!.id]
+          );
+          if (assignmentCheck.rows.length > 0) {
+             console.log(`[ACCEPT] HTTP_200 (after rollback)`);
+             return res.json({ message: 'Job accepted successfully (idempotent)' });
+          }
+          console.log(`[ACCEPT] ERROR: 409 Conflict`);
+          return res.status(409).json({ message: 'ORDER_ALREADY_ACCEPTED' });
+      }
+      console.log(`[ACCEPT] ERROR: 404 Not Found`);
+      return res.status(404).json({ message: 'Order not found in DB' });
+    }
+    
     const totalPayout = promisedOffer.totalPayout || 0;
     const actualPickupDist = promisedOffer.pickupDistance || 0;
     const actualDeliveryDist = promisedOffer.dropoffDistance || 0;
-
     const pickupPayout = promisedOffer.pickupPayout || 0;
     const returnPayout = promisedOffer.returnPayout || 0;
 
     // INSERT into delivery_assignments to track earnings and distances exactly as promised
-    try {
-      await pool.query(
-        `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount, pickup_payout, return_payout)
-         VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (order_id) DO UPDATE SET 
-            delivery_partner_id = EXCLUDED.delivery_partner_id, 
-            status = EXCLUDED.status,
-            pickup_distance_km = EXCLUDED.pickup_distance_km,
-            delivery_distance_km = EXCLUDED.delivery_distance_km,
-            earnings_amount = EXCLUDED.earnings_amount,
-            pickup_payout = EXCLUDED.pickup_payout,
-            return_payout = EXCLUDED.return_payout`,
-        [orderId, req.user!.id, 'accepted', actualPickupDist, actualDeliveryDist, totalPayout, pickupPayout, returnPayout]
-      );
-    } catch (e) {
-      console.error("Error creating delivery_assignment record", e);
-    }
-
-    // Update database status
-    const updateRes = await pool.query(
-      `UPDATE orders SET status = 'heading_to_stall' WHERE id = $1 RETURNING *`,
-      [orderId]
+    await client.query(
+      `INSERT INTO delivery_assignments (order_id, delivery_partner_id, status, pickup_distance_km, delivery_distance_km, earnings_amount, pickup_payout, return_payout)
+       VALUES ($1, (SELECT id FROM delivery_partners WHERE user_id = $2), $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (order_id) DO NOTHING`,
+      [orderId, req.user!.id, 'accepted', actualPickupDist, actualDeliveryDist, totalPayout, pickupPayout, returnPayout]
     );
 
-    if (updateRes.rows.length === 0) {
-      assignmentManager.revokeJob(jobId);
-      return res.status(404).json({ message: 'Order not found in DB (cleared from ghost memory)' });
-    }
+    await client.query('COMMIT');
+    console.log(`[ACCEPT] COMMIT`);
 
     // Set cooldown to true if rider has reached 2 active orders
     try {
@@ -334,11 +368,10 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
 
     // Fetch real rider info
     const riderRes = await pool.query(
-      `SELECT u.name, u.phone, dp.vehicle_details 
-
-       FROM delivery_partners dp
-       JOIN users u ON dp.user_id = u.id
-       WHERE dp.user_id = $1`,
+       `SELECT u.name, u.phone, dp.vehicle_details 
+        FROM delivery_partners dp
+        JOIN users u ON dp.user_id = u.id
+        WHERE dp.user_id = $1`,
       [req.user!.id]
     );
 
@@ -367,9 +400,19 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       }
     }
     
+    console.log(`[ACCEPT] HTTP_200`);
     res.json({ message: 'Job accepted successfully' });
   } catch (err) {
+    if (client) {
+       console.log(`[ACCEPT] Rolling back transaction due to error.`);
+       try { await client.query('ROLLBACK'); } catch (e) {}
+    }
+    console.error("[ACCEPT] Error in transaction:", err);
     next(err);
+  } finally {
+    if (client) {
+       client.release();
+    }
   }
 });
 // GET Dashboard Stats
