@@ -446,7 +446,7 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
         );
         if (assignmentRes.rows.length > 0) {
           const riderUserId = assignmentRes.rows[0].user_id;
-          assignmentManager.markRiderAvailable(riderUserId);
+          assignmentManager.markRiderAvailable(riderUserId.toString());
           
           // Clear cooldown if active orders drop to 0
           const activeCountRes = await pool.query(
