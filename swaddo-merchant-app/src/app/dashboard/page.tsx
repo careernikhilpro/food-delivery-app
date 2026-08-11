@@ -669,17 +669,17 @@ function DashboardContent() {
                 )}
 
                 {['ready', 'assigned', 'heading_to_stall', 'at_stall'].includes(order.status) && (
-                  <button 
-                    onClick={() => setHandoverOrderId(order.id)}
-                    className="w-full py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <CheckCircle2 size={18} /> Handover to Rider
-                  </button>
+                  <div className="w-full bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">Pickup PIN for Rider</p>
+                    <p className="text-2xl font-black text-blue-600 tracking-[0.2em]">
+                      {String((parseInt(order.id) * 83) % 10000).padStart(4, '0')}
+                    </p>
+                  </div>
                 )}
   
                 {['heading_to_customer', 'at_customer'].includes(order.status) && (
-                  <div className="w-full py-3 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-sm flex items-center justify-center gap-2">
-                    <Navigation size={18} /> Out with Rider
+                  <div className="w-full py-3 rounded-xl bg-orange-50 text-orange-600 font-bold text-sm flex items-center justify-center gap-2 border border-orange-100">
+                    <Navigation size={18} /> Out for Delivery
                   </div>
                 )}
 

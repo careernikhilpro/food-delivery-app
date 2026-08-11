@@ -341,20 +341,31 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
     };
   }, [orderId]);
 
-  const handleNextStage = async () => {
-    if (stageIndex === 3) {
-      if (orderData?.paymentMethod === 'cod' && !cashCollected) {
-        alert("Please confirm you have collected the cash from the customer.");
+  const handleNextStage = async (pin?: string) => {
+    if (!orderId) return;
+
+    try {
+      if (stageIndex === 3) {
+        if (orderData?.paymentMethod === 'cod' && !cashCollected) {
+          alert("Please confirm you have collected the cash from the customer.");
+          return;
+        }
+        setShowDeliveryModal(true);
         return;
       }
-      setShowDeliveryModal(true);
-      return;
-    }
-
-    if (stageIndex < STAGES.length - 1) {
-      const nextStage = STAGES[stageIndex + 1].id;
-      setStageIndex(prev => prev + 1);
-      api.patch(`/orders/${orderId}/status`, { status: nextStage }).catch(() => {});
+  
+      if (stageIndex < STAGES.length - 1) {
+        const nextStage = STAGES[stageIndex + 1].id;
+        
+        // Pass pin if provided
+        const payload: any = { status: nextStage };
+        if (pin) payload.pin = pin;
+        
+        await api.patch(`/orders/${orderId}/status`, payload);
+        setStageIndex(prev => prev + 1);
+      }
+    } catch (err: any) {
+      alert("Error: " + (err.response?.data?.message || "Something went wrong"));
     }
   };
 
@@ -530,11 +541,24 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
                     </div>
                   )}
                   <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-slate-400">Pickup Verification</p>
-                  <p className="text-[15px] font-bold text-slate-700">Provide PIN <span className="font-black text-3xl tracking-widest text-[#10B981] mx-1">{String((parseInt(orderId) * 83) % 10000).padStart(4, '0')}</span> to Merchant</p>
-                  <div className="flex items-center justify-center gap-2 mt-3">
-                    <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
-                    <p className="text-[12px] font-bold text-slate-500">Waiting for merchant to handover...</p>
-                  </div>
+                  <p className="text-[14px] font-bold text-slate-700 mb-3">Ask the Merchant for the 4-digit Pickup PIN</p>
+                  <input 
+                    type="text" 
+                    maxLength={4}
+                    placeholder="----"
+                    className="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-4 text-center font-black text-3xl tracking-[1em] text-slate-700 focus:outline-none focus:border-[#10B981] transition-colors mb-4"
+                    id="merchantPinInput"
+                  />
+                  <button 
+                    onClick={() => {
+                      const input = (document.getElementById('merchantPinInput') as HTMLInputElement).value;
+                      if(input.length === 4) handleNextStage(input);
+                      else alert("Please enter the 4-digit Merchant PIN");
+                    }}
+                    className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-black py-4 rounded-[20px] transition-all shadow-[0_8px_24px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_32px_rgba(16,185,129,0.4)] active:scale-95 text-lg"
+                  >
+                    Verify & Confirm Pickup
+                  </button>
                 </div>
               ) : (
                 <button 
