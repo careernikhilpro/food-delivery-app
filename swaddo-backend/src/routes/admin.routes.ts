@@ -399,6 +399,44 @@ router.post('/orders/:id/assign', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/orders/:id/cancel-assignment', async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    await client.query('BEGIN');
+    
+    // Check if assignment exists
+    const existingAssignment = await client.query('SELECT delivery_partner_id FROM delivery_assignments WHERE order_id = $1', [id]);
+    
+    if (existingAssignment.rows.length > 0) {
+      const rider_id = existingAssignment.rows[0].delivery_partner_id;
+      // Delete the assignment
+      await client.query('DELETE FROM delivery_assignments WHERE order_id = $1', [id]);
+      
+      // Update rider status to not busy
+      const dpRes = await pool.query('SELECT user_id FROM delivery_partners WHERE id = $1', [rider_id]);
+      if (dpRes.rows.length > 0) {
+        const riderUserId = dpRes.rows[0].user_id.toString();
+        const onlineRider = assignmentManager.getOnlineRider(riderUserId);
+        if (onlineRider) {
+          onlineRider.isBusy = false; 
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Assignment cancelled successfully' });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    logger.error('Error cancelling assignment from admin:', error);
+    res.status(500).json({ message: error.message || 'Error cancelling assignment' });
+  } finally {
+    client.release();
+  }
+});
+
+
 router.get('/orders/:id/available-riders', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

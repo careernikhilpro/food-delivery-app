@@ -86,6 +86,23 @@ export default function Orders() {
     }
   };
 
+  const handleCancelAssignment = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this rider's assignment?")) return;
+    try {
+      await api.post(`/admin/orders/${orderId}/cancel-assignment`);
+      toast.success("Assignment cancelled successfully");
+      fetchData();
+      // Update UI
+      setOrders(orders.map(o => o.id === orderId ? { ...o, rider: null } : o));
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, rider: null });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to cancel assignment");
+    }
+  };
+
   if (loading) return (
     <div className="p-8 flex justify-center items-center h-[80vh]">
       <Loader2 className="animate-spin text-primary w-12 h-12" />
@@ -329,6 +346,14 @@ export default function Orders() {
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Assignment Status</span>
                         <span className="text-sm font-bold uppercase text-primary">{selectedOrder.rider.status}</span>
+                      </div>
+                      <div className="pt-3 border-t border-border-subtle flex justify-end">
+                        <button 
+                          onClick={() => handleCancelAssignment(selectedOrder.id)}
+                          className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+                        >
+                          Cancel Assignment
+                        </button>
                       </div>
                     </div>
                   ) : null}

@@ -120,11 +120,6 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       {stageIndex < 2 && storeLoc && (
         <MarkerF
           position={storeLoc}
-          icon={{
-            url: '/images/store-icon.png',
-            scaledSize: window.google ? new window.google.maps.Size(40, 44) : undefined,
-            anchor: window.google ? new window.google.maps.Point(20, 44) : undefined,
-          }}
           zIndex={10}
         />
       )}
