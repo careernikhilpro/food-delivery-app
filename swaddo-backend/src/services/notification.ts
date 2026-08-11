@@ -132,10 +132,14 @@ export const notificationService = {
       }
       
       logger.info(`DIAGNOSTIC: Rider FCM token found`);
-      logger.info(`DIAGNOSTIC: Sending DATA-ONLY FCM message`);
+      logger.info(`DIAGNOSTIC: Sending VISIBLE FCM message with channelId`);
       
       const payload = {
         token: token,
+        notification: {
+          title: title,
+          body: body,
+        },
         data: stringifyData({
           ...data,
           title: title,
@@ -143,7 +147,11 @@ export const notificationService = {
           channelId: 'swaddo_alerts_v7'
         }),
         android: {
-          priority: 'high' as const // CRITICAL: Wakes up the app from Doze/Killed mode
+          priority: 'high' as const, // CRITICAL: Wakes up the app from Doze/Killed mode
+          notification: {
+            channelId: 'swaddo_alerts_v7',
+            sound: 'orderring'
+          }
         }
       };
 
