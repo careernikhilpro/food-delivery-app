@@ -28,7 +28,7 @@ function calculatePickupPayout(distance: number): number {
 
 export class AssignmentManager {
   private io: Server | null = null;
-  private onlineRiders: Map<string, OnlineRider> = new Map();
+  public onlineRiders: Map<string, OnlineRider> = new Map();
   private activeJobs: Map<string, Set<string>> = new Map();
   private jobPayloads: Map<string, any> = new Map();
   private jobTimers: Map<string, NodeJS.Timeout> = new Map();
