@@ -23,6 +23,16 @@ export default function Riders() {
     }
   };
 
+  const handleToggleActive = async (id: number, currentStatus: boolean) => {
+    try {
+      await api.patch(`/admin/riders/${id}/kyc`, { is_active: !currentStatus });
+      setRiders(riders.map(r => r.id === id ? { ...r, is_active: !currentStatus } : r));
+    } catch (err) {
+      console.error("Failed to update status", err);
+      alert("Failed to update status");
+    }
+  };
+
   const getStatusBadge = (isOnline: boolean) => {
     if (isOnline) {
       return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online</span>;
@@ -78,10 +88,13 @@ export default function Riders() {
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-border-subtle">
-                <span className="text-sm text-text-muted flex items-center gap-2"><MapPin size={16} /> Activity Status</span>
-                <span className={`text-sm font-bold uppercase ${r.is_active ? 'text-primary' : 'text-red-500'}`}>
-                  {r.is_active ? 'Active' : 'Inactive'}
-                </span>
+                <span className="text-sm text-text-muted flex items-center gap-2"><MapPin size={16} /> App Access</span>
+                <button 
+                  onClick={() => handleToggleActive(r.id, r.is_active)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${r.is_active ? 'bg-primary' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${r.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-border-subtle">
                 <span className="text-sm text-text-muted flex items-center gap-2"><Bike size={16} /> Vehicle Details</span>

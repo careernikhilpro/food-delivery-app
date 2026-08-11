@@ -103,6 +103,12 @@ router.post('/login-pin', async (req: Request, res: Response) => {
       let riderRes = await client.query('SELECT * FROM delivery_partners WHERE user_id = $1', [user.id]);
       if (riderRes.rows.length === 0) {
         await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+        return res.status(403).json({ message: 'Your account is under review. Please wait for approval from Team Swaddo.' });
+      }
+      
+      const rider = riderRes.rows[0];
+      if (!rider.is_active) {
+        return res.status(403).json({ message: 'Your account is under review. Please wait for approval from Team Swaddo.' });
       }
     }
 
@@ -153,9 +159,14 @@ router.post('/register-pin', async (req: Request, res: Response) => {
             await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
           }
         } else if (role === 'delivery') {
-          const dpCheck = await client.query('SELECT id FROM delivery_partners WHERE user_id = $1', [user.id]);
-          if (dpCheck.rows.length === 0) {
+          const riderCheck = await client.query('SELECT id, is_active FROM delivery_partners WHERE user_id = $1', [user.id]);
+          if (riderCheck.rows.length === 0) {
             await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+            await client.query('COMMIT');
+            return res.status(403).json({ message: 'Your account is under review. Please wait for approval from Team Swaddo.' });
+          } else if (!riderCheck.rows[0].is_active) {
+            await client.query('COMMIT');
+            return res.status(403).json({ message: 'Your account is under review. Please wait for approval from Team Swaddo.' });
           }
         }
       }
@@ -173,6 +184,8 @@ router.post('/register-pin', async (req: Request, res: Response) => {
         await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
       } else if (role === 'delivery') {
         await client.query('INSERT INTO delivery_partners (user_id, is_active, id_proof_status) VALUES ($1, false, $2)', [user.id, 'pending']);
+        await client.query('COMMIT');
+        return res.status(403).json({ message: 'Your account is under review. Please wait for approval from Team Swaddo.' });
       }
     }
 
