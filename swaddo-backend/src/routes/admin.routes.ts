@@ -471,7 +471,10 @@ router.get('/riders', async (req: Request, res: Response) => {
       return {
         ...r,
         current_status: isOnline ? 'online' : 'offline',
-        is_busy: isOnline ? memData.isBusy : false
+        is_busy: isOnline ? memData.isBusy : false,
+        isOnline: isOnline,
+        lat: memData?.lat,
+        lng: memData?.lng
       };
     });
     
