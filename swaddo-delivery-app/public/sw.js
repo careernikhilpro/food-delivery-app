@@ -9,12 +9,6 @@ self.addEventListener('push', function (event) {
         badge: '/icons/icon-72x72.png',
         vibrate: [200, 100, 200, 100, 200, 100, 200],
         data: data.data,
-        actions: [
-          {
-            action: 'open',
-            title: 'Open App'
-          }
-        ],
         requireInteraction: true // Keeps the notification on screen until the user dismisses it
       };
 

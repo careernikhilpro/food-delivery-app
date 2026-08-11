@@ -21,19 +21,17 @@ if (firebaseConfig.apiKey !== "REPLACE_ME") {
   messaging.onBackgroundMessage(function(payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
     
-    const notificationTitle = payload.notification.title;
+    // Fallback to payload.data since we send data-only pushes for Android Doze wakeups
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'New Assignment';
     const notificationOptions = {
-      body: payload.notification.body,
+      body: payload.notification?.body || payload.data?.body || 'Open app to view details',
       icon: '/icon.192x192.png',
       vibrate: [500, 250, 500, 250, 500, 250, 500, 250, 500], // Intense vibration for new orders
       tag: 'swaddo-rider-new-order',
       renotify: true,
       requireInteraction: true,
-      data: payload,
-      actions: [
-        { action: 'accept', title: 'Accept Order' },
-        { action: 'reject', title: 'Reject' }
-      ]
+      data: payload
+      // Actions array removed as requested: rider must open the app to accept/reject
     };
 
     // Wake up any backgrounded tabs to fetch the new order and ring
