@@ -240,7 +240,7 @@ router.get('/assignments/active', authenticate, requireDelivery, async (req: Aut
              o.status as "orderStatus", o.delivery_lat as "deliveryLat", o.delivery_lng as "deliveryLng",
              o.delivery_address as "deliveryAddress", o.total_amount as "totalAmount", o.payment_method as "paymentMethod",
              s.name as "stallName", s.latitude as "stallLat", s.longitude as "stallLng", s.location as "stallAddress", v_u.phone as "stallPhone",
-             c.name as "customerName", c.phone as "customerPhone", c.instructions as "deliveryInstructions"
+             c.name as "customerName", c.phone as "customerPhone", o.delivery_instructions as "deliveryInstructions"
       FROM delivery_assignments da
       JOIN orders o ON da.order_id = o.id
       JOIN stalls s ON o.stall_id = s.id
