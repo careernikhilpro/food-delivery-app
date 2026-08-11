@@ -26,13 +26,8 @@ export function useAuth() {
       return;
     }
       
-    // Strict Active Delivery Lock
-    const activeDelivery = localStorage.getItem('activeDelivery');
-    if (activeDelivery && !pathname.startsWith('/active-delivery')) {
-      // If they have an active delivery but aren't on the delivery screen, force them back
-      router.push(`/active-delivery?id=${activeDelivery}`);
-      return;
-    }
+    // Strict Active Delivery Lock REMOVED for Stacked Orders support.
+    // Riders can now navigate between home and multiple active delivery screens.
       
     // Ensure redirect mapping handles login -> appropriate page
     if (pathname === '/login') {

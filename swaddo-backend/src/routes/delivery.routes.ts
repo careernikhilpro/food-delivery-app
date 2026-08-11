@@ -226,6 +226,36 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
 });
 
 
+router.get('/assignments/active', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { pool } = require('../db');
+    const partnerRes = await pool.query(`SELECT id FROM delivery_partners WHERE user_id = $1`, [req.user!.id]);
+    if (partnerRes.rows.length === 0) return res.status(404).json({ message: 'Delivery partner not found' });
+    const partnerId = partnerRes.rows[0].id;
+
+    // Fetch all active assignments for this rider
+    const activeQuery = `
+      SELECT da.order_id as "orderId", da.status as "assignmentStatus", da.pickup_distance_km as "pickupDistance", 
+             da.earnings_amount as "earnings", da.pickup_payout as "pickupPayout",
+             o.status as "orderStatus", o.delivery_lat as "deliveryLat", o.delivery_lng as "deliveryLng",
+             o.delivery_address as "deliveryAddress", o.total_amount as "totalAmount", o.payment_method as "paymentMethod",
+             s.name as "stallName", s.latitude as "stallLat", s.longitude as "stallLng", s.address as "stallAddress", s.phone as "stallPhone",
+             c.name as "customerName", c.phone as "customerPhone", c.instructions as "deliveryInstructions"
+      FROM delivery_assignments da
+      JOIN orders o ON da.order_id = o.id
+      JOIN stalls s ON o.stall_id = s.id
+      LEFT JOIN users c ON o.customer_id = c.id
+      WHERE da.delivery_partner_id = $1 AND da.status IN ('accepted', 'picked_up')
+      ORDER BY da.assigned_at ASC
+    `;
+    const result = await pool.query(activeQuery, [partnerId]);
+    
+    res.json({ data: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const jobId = req.params.id;

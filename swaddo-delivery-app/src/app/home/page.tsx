@@ -35,6 +35,7 @@ function HomeContent() {
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('soundPermission') === 'granted';
@@ -135,7 +136,20 @@ function HomeContent() {
         console.error("Failed to fetch dashboard stats", err);
       }
     };
+    
+    const fetchActiveAssignments = async () => {
+      try {
+        const res = await api.get('/delivery/assignments/active');
+        if (res.data && res.data.data) {
+           setActiveAssignments(res.data.data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch active assignments", e);
+      }
+    };
+    
     fetchDashboardStats();
+    fetchActiveAssignments();
     
     setMounted(true);
   }, []);
@@ -340,6 +354,10 @@ function HomeContent() {
         // Send heartbeat for online hours
         api.post('/delivery/ping-time').catch(console.error);
         setStats(prev => ({ ...prev, hours: prev.hours + 1 }));
+
+        api.get('/delivery/assignments/active').then(res => {
+          if (res.data && res.data.data) setActiveAssignments(res.data.data);
+        }).catch(() => {});
 
         // Force a location ping every 15s so the rider stays fresh in the 30s assignment window
         // even if they are stationary and the background watcher doesn't trigger.
@@ -569,6 +587,40 @@ function HomeContent() {
           </button>
         </div>
       </div>
+
+      {/* Active Assignments */}
+      {activeAssignments.length > 0 && (
+        <div className="mb-5">
+          <h2 className="text-[16px] font-black text-slate-800 mb-3 tracking-tight px-1 flex items-center justify-between">
+            <span>Current Tasks</span>
+            <span className="bg-[#10B981] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">{activeAssignments.length} ACTIVE</span>
+          </h2>
+          <div className="flex flex-col gap-3">
+            {activeAssignments.map((a: any, idx: number) => {
+               const isHeadingToStall = a.orderStatus === 'heading_to_stall' || a.orderStatus === 'assigned';
+               const isAtStall = a.orderStatus === 'at_stall';
+               return (
+                 <div key={a.orderId} onClick={() => router.push(`/active-delivery?id=job_${a.orderId}`)} className="bg-white rounded-[20px] p-4 border-2 border-[#10B981]/20 shadow-[0_4px_16px_rgba(16,185,129,0.05)] cursor-pointer active:scale-[0.98] transition-transform flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981]">
+                         {isHeadingToStall || isAtStall ? <Store size={20} /> : <User size={20} />}
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-[#10B981] mb-0.5 uppercase tracking-wide">
+                          {isHeadingToStall ? 'Go to Stall' : isAtStall ? 'Pickup Order' : 'Deliver Order'}
+                        </p>
+                        <p className="text-[14px] font-black text-slate-800">
+                          Order #{String(a.orderId).slice(-4).toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={20} className="text-slate-400" />
+                 </div>
+               )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <h2 className="text-[16px] font-black text-slate-800 mb-3 tracking-tight px-1">Today's Performance</h2>

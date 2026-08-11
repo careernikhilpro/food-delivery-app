@@ -67,7 +67,7 @@ export class AssignmentManager {
 
         for (const order of res.rows) {
           const itemsRes = await pool.query(`
-            SELECT mi.name, oi.quantity, oi.price
+            SELECT mi.name, oi.quantity, mi.price
             FROM order_items oi
             JOIN menu_items mi ON oi.menu_item_id = mi.id
             WHERE oi.order_id = $1
@@ -290,25 +290,73 @@ export class AssignmentManager {
       console.error(`[Assignment] Error verifying order status for ${jobPayload.id}:`, e);
     }
     
-    // DB-Driven: Find all online riders with fresh GPS (< 2 minutes) who don't have an active assignment
+    // DB-Driven: Find all online riders with fresh GPS (< 5 minutes) who have < 2 active assignments
     let totalAvailable: [string, any][] = [];
     try {
       const dbRes = await pool.query(`
-        SELECT dp.user_id, dp.last_lat, dp.last_lng 
+        SELECT dp.user_id, dp.last_lat, dp.last_lng,
+               COUNT(da.id) as active_count,
+               MAX(o.pickup_lat) as active_pickup_lat,
+               MAX(o.pickup_lng) as active_pickup_lng,
+               MAX(o.delivery_lat) as active_delivery_lat,
+               MAX(o.delivery_lng) as active_delivery_lng
         FROM delivery_partners dp
         LEFT JOIN delivery_assignments da 
           ON da.delivery_partner_id = dp.id 
           AND da.status IN ('accepted', 'picked_up')
+        LEFT JOIN orders o ON da.order_id = o.id
         WHERE dp.current_status = 'online' 
           AND dp.last_ping >= NOW() - INTERVAL '5 minutes'
-          AND da.id IS NULL
+        GROUP BY dp.id, dp.user_id, dp.last_lat, dp.last_lng
+        HAVING COUNT(da.id) < 2
       `);
       
+      const stallLat = jobPayload.stallLat || jobPayload.stall?.lat || jobPayload.pickupLat || 25.611;
+      const stallLng = jobPayload.stallLng || jobPayload.stall?.lng || jobPayload.pickupLng || 85.130;
+      const deliveryLat = jobPayload.deliveryLat || 25.611;
+      const deliveryLng = jobPayload.deliveryLng || 85.130;
+
       for (const row of dbRes.rows) {
         const rId = row.user_id.toString();
-        // Fallback: check in-memory busy state just in case
+        const activeCount = parseInt(row.active_count);
+        let isStacked = false;
+
+        if (activeCount === 1) {
+          // Check stacking constraints
+          const pLat = parseFloat(row.active_pickup_lat);
+          const pLng = parseFloat(row.active_pickup_lng);
+          const dLat = parseFloat(row.active_delivery_lat);
+          const dLng = parseFloat(row.active_delivery_lng);
+          
+          if (!isNaN(pLat) && !isNaN(pLng) && !isNaN(dLat) && !isNaN(dLng)) {
+             const pickupDiff = getDistance(stallLat, stallLng, pLat, pLng);
+             const dropDiff = getDistance(deliveryLat, deliveryLng, dLat, dLng);
+             
+             if (pickupDiff <= 0.7 && dropDiff <= 1.0) {
+               isStacked = true;
+             } else {
+               // Rider has an active assignment and new order is NOT on route. Skip.
+               continue;
+             }
+          } else {
+            // Cannot verify route. Skip.
+            continue;
+          }
+        }
+
+        // Fallback: check in-memory busy state just in case (only if activeCount == 0, we trust DB more now, but let's keep it for safety if they aren't stacked)
         const memRider = this.onlineRiders.get(rId);
-        if (memRider && memRider.isBusy) continue;
+        if (activeCount === 0 && memRider && memRider.isBusy) continue;
+        
+        // Prevent simultaneous overlapping rings: If this rider is already ringing for another job, skip them!
+        let isRingingForOtherJob = false;
+        for (const [otherJobId, notifiedSet] of this.activeJobs.entries()) {
+           if (otherJobId !== jobPayload.id && notifiedSet.has(rId)) {
+               isRingingForOtherJob = true;
+               break;
+           }
+        }
+        if (isRingingForOtherJob) continue;
         
         let lat = parseFloat(row.last_lat);
         let lng = parseFloat(row.last_lng);
@@ -320,7 +368,7 @@ export class AssignmentManager {
         if (isNaN(lat)) lat = 0;
         if (isNaN(lng)) lng = 0;
 
-        totalAvailable.push([rId, { lat, lng }]);
+        totalAvailable.push([rId, { lat, lng, isStacked }]);
       }
     } catch (err) {
       console.error("[Assignment] Error querying available riders from DB:", err);
@@ -341,8 +389,8 @@ export class AssignmentManager {
     }
 
     // Calculate distance for each available rider
-    const stallLat = jobPayload.stallLat || jobPayload.stall?.lat || 25.611;
-    const stallLng = jobPayload.stallLng || jobPayload.stall?.lng || 85.130;
+    const stallLat = jobPayload.stallLat || jobPayload.stall?.lat || jobPayload.pickupLat || 25.611;
+    const stallLng = jobPayload.stallLng || jobPayload.stall?.lng || jobPayload.pickupLng || 85.130;
     
     let ridersWithDistance = availableRiders.map(([riderId, data]) => {
       // Default to a large distance if no GPS available
@@ -390,83 +438,75 @@ export class AssignmentManager {
       return;
     }
 
-    // Sort by nearest
-    ridersWithDistance.sort((a, b) => a.distance - b.distance);
-    const nearestRider = ridersWithDistance[0];
+    // Broadcast to ALL eligible riders simultaneously (First-Come-First-Serve)
+    for (const rider of ridersWithDistance) {
+      // Use haversine distance + 20% as an approximation for road distance to avoid Google Maps API rate limits on mass broadcast
+      let actualPickupDistance = rider.distance * 1.2; 
+      
+      notifiedRiders.add(rider.riderId);
+      
+      let pickupPayout = calculatePickupPayout(actualPickupDistance);
+      let deliveryPay = jobPayload.earnings || 0;
+      let returnPay = jobPayload.returnPayout || 0;
+      let totalPayout = deliveryPay + pickupPayout + returnPay;
 
-    // Calculate real distance using Google Maps for accurate payout
-    let actualPickupDistance = nearestRider.distance;
-    try {
-      if (nearestRider.data.lat && nearestRider.data.lng && stallLat && stallLng) {
-        const googleRes = await routeETA(nearestRider.data.lat, nearestRider.data.lng, stallLat, stallLng);
-        if (googleRes && googleRes.distanceKm) {
-          actualPickupDistance = googleRes.distanceKm;
-        }
+      // STACKED ORDER OVERRIDE: Flat 15 Rs
+      if (rider.data.isStacked) {
+         pickupPayout = 0;
+         deliveryPay = 15;
+         returnPay = 0;
+         totalPayout = 15;
       }
-    } catch (error) {
-      console.error("[Assignment] Google Maps Route failed for pickup distance, using haversine fallback", error);
-    }
 
-    // Emit ONLY to the nearest rider
-    notifiedRiders.add(nearestRider.riderId);
-    
-    // Calculate pickup payout based on actual shortest road distance
-    const pickupPayout = calculatePickupPayout(actualPickupDistance);
-    
-    const deliveryPay = jobPayload.earnings || 0;
-    const returnPay = jobPayload.returnPayout || 0;
-    const totalPayout = deliveryPay + pickupPayout + returnPay;
-
-    // Inject exact pickup distance and payout
-    const jobWithDistance = { 
-      ...jobPayload, 
-      pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
-      pickupPayout: pickupPayout,
-      deliveryPay: deliveryPay,
-      totalPayout: totalPayout
-    };
-    
-    // Store exact promised payout and distance for this specific rider
-    this.jobOffers.set(`${jobPayload.id}_${nearestRider.riderId}`, {
-      pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
-      dropoffDistance: jobPayload.dropoffDistance || 0,
-      totalPayout: totalPayout,
-      pickupPayout: pickupPayout,
-      returnPayout: returnPay
-    });
-    
-    if (this.io) {
-      this.io.to(`rider_${nearestRider.riderId}`).emit('job_offer', jobWithDistance);
-      // Send a high-priority FCM Push Notification so the app rings in the background
-      let numericRiderId = parseInt(nearestRider.riderId.replace('rider_', ''), 10);
-      notificationService.sendToRider(
-        numericRiderId,
-        'New Delivery Assignment! 🛵',
-        `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${totalPayout}`,
-        { 
-          orderId: jobPayload.id.toString(), 
-          type: 'new_job',
-          customerName: jobPayload.customerName,
-          customerAddress: jobPayload.customerAddress,
-          itemCount: jobPayload.itemCount?.toString() || "0",
-          itemsSummary: jobPayload.itemsSummary,
-          stallName: jobPayload.stallName || "Restaurant",
-          pickupDistance: actualPickupDistance.toFixed(1),
-          dropoffDistance: (jobPayload.dropoffDistance || 0).toString(),
-          deliveryPay: deliveryPay.toString(),
-          totalPayout: totalPayout.toString(),
-          pickupPayout: pickupPayout.toString(),
-          returnPayout: returnPay.toString()
-        }
-      );
+      const jobWithDistance = { 
+        ...jobPayload, 
+        pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
+        pickupPayout: pickupPayout,
+        deliveryPay: deliveryPay,
+        totalPayout: totalPayout,
+        isStacked: rider.data.isStacked || false
+      };
+      
+      this.jobOffers.set(`${jobPayload.id}_${rider.riderId}`, {
+        pickupDistance: parseFloat(actualPickupDistance.toFixed(1)),
+        dropoffDistance: jobPayload.dropoffDistance || 0,
+        totalPayout: totalPayout,
+        pickupPayout: pickupPayout,
+        returnPayout: returnPay
+      });
+      
+      if (this.io) {
+        this.io.to(`rider_${rider.riderId}`).emit('job_offer', jobWithDistance);
+        let numericRiderId = parseInt(rider.riderId.replace('rider_', ''), 10);
+        notificationService.sendToRider(
+          numericRiderId,
+          'New Delivery Assignment! 🛵',
+          `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${totalPayout}`,
+          { 
+            orderId: jobPayload.id.toString(), 
+            type: 'new_job',
+            customerName: jobPayload.customerName,
+            customerAddress: jobPayload.customerAddress,
+            itemCount: jobPayload.itemCount?.toString() || "0",
+            itemsSummary: jobPayload.itemsSummary,
+            stallName: jobPayload.stallName || "Restaurant",
+            pickupDistance: actualPickupDistance.toFixed(1),
+            dropoffDistance: (jobPayload.dropoffDistance || 0).toString(),
+            deliveryPay: deliveryPay.toString(),
+            totalPayout: totalPayout.toString(),
+            pickupPayout: pickupPayout.toString(),
+            returnPayout: returnPay.toString()
+          }
+        );
+      }
+      
+      console.log(`[Assignment] Job ${jobPayload.id} broadcasted to rider ${rider.riderId} (Distance: ${actualPickupDistance.toFixed(2)} km)`);
     }
     
-    console.log(`[Assignment] Job ${jobPayload.id} offered to nearest rider ${nearestRider.riderId} (Distance: ${actualPickupDistance.toFixed(2)} km)`);
-    
-    // If not accepted in 300 seconds, try the next rider
+    // If not accepted by ANYONE in 300 seconds, retry broadcast
     this.jobTimers.set(jobPayload.id, setTimeout(() => {
-      console.log(`[Assignment] Rider ${nearestRider.riderId} ignored job ${jobPayload.id}, trying next nearest...`);
-      this.broadcastJob(jobPayload); // original payload without distance, distance will be recalculated for the next rider
+      console.log(`[Assignment] Job ${jobPayload.id} ignored by all riders, restarting broadcast...`);
+      this.broadcastJob(jobPayload);
     }, 300000));
   }
 
@@ -505,7 +545,12 @@ export class AssignmentManager {
     }
     
     const accepter = this.onlineRiders.get(acceptedByRiderId);
-    if (accepter) accepter.isBusy = true;
+    if (accepter) {
+       // We can no longer assume they are universally 'busy' and unavailable for stacked orders. 
+       // The DB query handles this by checking COUNT(da.id) < 2.
+       // However, we still set isBusy = true as a hint for other memory checks if needed.
+       accepter.isBusy = true;
+    }
 
     return promisedOffer;
   }

@@ -193,8 +193,16 @@ export const notificationService = {
       const response = await getMessaging().send(message);
       logger.info(`Successfully sent message: ${response}`);
       return true;
-    } catch (error) {
-      logger.error('Error sending message:', error);
+    } catch (error: any) {
+      if (error?.code === 'messaging/registration-token-not-registered' || error?.message?.includes('NotRegistered')) {
+         try {
+           const { pool } = require('../db');
+           await pool.query('UPDATE users SET fcm_token = NULL WHERE fcm_token = $1', [token]);
+           logger.info(`Cleared stale FCM token for user: ${token}`);
+         } catch (dbErr) {}
+      } else {
+         logger.error('Error sending message:', error);
+      }
       return false;
     }
   },
@@ -225,8 +233,16 @@ export const notificationService = {
       const response = await getMessaging().send(message);
       logger.info(`Successfully sent NATIVE background push: ${response}`);
       return true;
-    } catch (error) {
-      logger.error('Error sending NATIVE push:', error);
+    } catch (error: any) {
+      if (error?.code === 'messaging/registration-token-not-registered' || error?.message?.includes('NotRegistered')) {
+         try {
+           const { pool } = require('../db');
+           await pool.query('UPDATE users SET fcm_token = NULL WHERE fcm_token = $1', [token]);
+           logger.info(`Cleared stale NATIVE FCM token: ${token}`);
+         } catch (dbErr) {}
+      } else {
+         logger.error('Error sending NATIVE push:', error);
+      }
       return false;
     }
   }

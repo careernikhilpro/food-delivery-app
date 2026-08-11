@@ -247,10 +247,9 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
     fetchLocations();
     const orderPollInterval = setInterval(fetchLocations, 3000);
 
-    // Intercept and disable Android hardware back button
+    // Intercept Android hardware back button to allow navigating back to Home for Stacked Orders
     const backListener = App.addListener('backButton', () => {
-      // Do nothing, effectively disabling the back button
-      console.log('Back button disabled during active delivery');
+      router.push('/home');
     });
 
     // Setup Socket
@@ -395,9 +394,17 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
 
         {/* Top Header overlay */}
         <div className="absolute top-8 pt-safe-8 px-5 w-full z-10 flex justify-between items-start pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.1)] pointer-events-auto border border-white/40 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span className="font-black text-slate-800 tracking-wider text-[13px]">ORDER #{String(orderId).slice(-4).toUpperCase() || '102A'}</span>
+          <div className="flex flex-col gap-2 pointer-events-auto">
+            <button 
+              onClick={() => router.push('/home')}
+              className="bg-white/90 backdrop-blur-md w-10 h-10 rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-white/40 flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <ChevronRight className="rotate-180 text-slate-800" size={24} />
+            </button>
+            <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-white/40 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+              <span className="font-black text-slate-800 tracking-wider text-[13px]">ORDER #{String(orderId).slice(-4).toUpperCase() || '102A'}</span>
+            </div>
           </div>
           {orderData && (
             <div className="bg-[#10B981] px-5 py-2.5 rounded-full shadow-[0_4px_16px_rgba(16,185,129,0.3)] font-black text-white pointer-events-auto text-[15px]">
