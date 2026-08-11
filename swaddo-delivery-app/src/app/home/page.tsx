@@ -292,9 +292,9 @@ function HomeContent() {
 
           // Now start the background service safely
           await LocationService.startService({
-             riderId: riderId,
-             apiUrl: apiUrl,
-             authToken: token
+             riderId: String(riderId),
+             apiUrl: String(apiUrl),
+             authToken: String(token)
           });
           
           // Listen to native broadcast for local UI updates
