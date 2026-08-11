@@ -274,7 +274,7 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       return res.status(400).json({ message: 'Rider ID is required' });
     }
 
-    const promisedOffer = assignmentManager.acceptJob(jobId, riderId);
+    const promisedOffer = assignmentManager.getPromisedOffer(jobId, riderId);
     
     const { pool } = require('../db');
     const orderId = jobId.includes('_') ? jobId.split('_')[1] : jobId;
@@ -290,7 +290,7 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
         return res.json({ message: 'Job accepted successfully (idempotent)' });
       }
       console.log(`[ACCEPT] ERROR: Job no longer available`);
-      return res.status(400).json({ message: 'Job no longer available or already accepted by someone else.' });
+      return res.status(409).json({ message: 'ORDER_ALREADY_ACCEPTED' });
     }
 
     client = await pool.connect();
@@ -298,13 +298,13 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
     await client.query('BEGIN');
     await client.query("SET LOCAL statement_timeout = '10s'");
 
-    // ATOMIC DB LOCK: Only update if the order is still in 'assigned' state
+    // ATOMIC DB LOCK: Only update if the order is still in 'assigned' or 'ready' state
     const checkBeforeUpdate = await client.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
     const currentStatus = checkBeforeUpdate.rows.length > 0 ? checkBeforeUpdate.rows[0].status : 'unknown';
     console.log(`[ACCEPT] currentStatus=${currentStatus}`);
 
     const updateRes = await client.query(
-      `UPDATE orders SET status = 'heading_to_stall' WHERE id = $1 AND status = 'assigned' RETURNING *`,
+      `UPDATE orders SET status = 'heading_to_stall' WHERE id = $1 AND status IN ('ready', 'assigned') RETURNING *`,
       [orderId]
     );
     
@@ -349,6 +349,7 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
 
     await client.query('COMMIT');
     console.log(`[ACCEPT] COMMIT`);
+    assignmentManager.markJobClaimed(jobId, riderId);
 
     // Set cooldown to true if rider has reached 2 active orders
     try {

@@ -595,7 +595,7 @@ eligible=true`);
     }, 45000));
   }
 
-  acceptJob(jobId: string, acceptedByRiderId: string): any | null {
+  getPromisedOffer(jobId: string, acceptedByRiderId: string): any | null {
     if (!this.activeJobs.has(jobId)) return null;
 
     // Retrieve the exact promised payout for THIS specific rider
@@ -606,6 +606,12 @@ eligible=true`);
       return null;
     }
 
+    return promisedOffer;
+  }
+
+  markJobClaimed(jobId: string, acceptedByRiderId: string) {
+    if (!this.activeJobs.has(jobId)) return;
+    
     if (this.jobTimers.has(jobId)) {
       clearTimeout(this.jobTimers.get(jobId)!);
       this.jobTimers.delete(jobId);
@@ -614,7 +620,7 @@ eligible=true`);
     const notifiedRiders = this.activeJobs.get(jobId)!;
     
     for (const riderId of notifiedRiders) {
-      if (this.io) {
+      if (riderId !== acceptedByRiderId && this.io) {
         this.io.to(`rider_${riderId}`).emit('job_revoked', { id: jobId });
         console.log(`[Assignment] Job ${jobId} revoked from Rider ${riderId}`);
       }
@@ -628,7 +634,7 @@ eligible=true`);
         this.jobOffers.delete(key);
       }
     }
-    
+
     const accepter = this.onlineRiders.get(acceptedByRiderId);
     if (accepter) {
        // We can no longer assume they are universally 'busy' and unavailable for stacked orders. 
@@ -636,8 +642,6 @@ eligible=true`);
        // However, we still set isBusy = true as a hint for other memory checks if needed.
        accepter.isBusy = true;
     }
-
-    return promisedOffer;
   }
 
   async markRiderAvailable(riderId: string) {
