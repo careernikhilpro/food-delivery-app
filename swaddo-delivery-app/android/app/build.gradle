@@ -18,7 +18,7 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("D:/swaddoapk/swaddo-release.keystore")
+            storeFile file("../../../swaddo-release.keystore")
             storePassword "swaddo123"
             keyAlias "swaddo-key"
             keyPassword "swaddo123"
