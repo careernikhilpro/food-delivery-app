@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { Navigation, Menu, Settings, LogOut, CheckCircle, Clock, MapPin, Store, ChevronRight, X, User, Volume2, Siren, CheckCircle2, XCircle, Package, BellRing, Loader2 } from "lucide-react";
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 const LocationService = registerPlugin<any>('LocationService');
 import { Preferences } from '@capacitor/preferences';
@@ -151,8 +152,27 @@ function HomeContent() {
     fetchDashboardStats();
     fetchActiveAssignments();
     
+    // Auto-refresh stats every 30 seconds
+    const statsInterval = setInterval(() => {
+        fetchDashboardStats();
+        fetchActiveAssignments();
+    }, 30000);
+    
+    // Refresh stats when app returns to foreground
+    const appStateListener = App.addListener('appStateChange', ({ isActive }) => {
+       if (isActive) {
+           fetchDashboardStats();
+           fetchActiveAssignments();
+       }
+    });
+    
     setMounted(true);
-  }, []);
+    
+    return () => {
+        clearInterval(statsInterval);
+        appStateListener.then(listener => listener.remove()).catch(() => {});
+    };
+  }, [isOnline]);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -228,6 +248,27 @@ function HomeContent() {
           const token = localStorage.getItem("token") || "";
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://food-delivery-app-wfv0.onrender.com";
           
+          // Request permissions FIRST before starting Native Location Service
+          const { Geolocation } = await import('@capacitor/geolocation');
+          
+          let perm = await Geolocation.checkPermissions();
+          if (perm.location !== 'granted') {
+             perm = await Geolocation.requestPermissions();
+             if (perm.location !== 'granted') {
+                 alert("Location permission is required to go online.");
+                 return;
+             }
+          }
+
+          // Get first location to ensure we have a fix before going online
+          try {
+              const firstPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+              await api.post("/delivery/ping", { lat: firstPos.coords.latitude, lng: firstPos.coords.longitude });
+          } catch (e) {
+              console.log("Initial location fetch timed out, proceeding anyway", e);
+          }
+
+          // Now start the background service safely
           await LocationService.startService({
              riderId: riderId,
              apiUrl: apiUrl,
@@ -245,12 +286,6 @@ function HomeContent() {
                  currentSocket.emit("rider_sync_location", { riderId, lat: location.lat, lng: location.lng });
              }
           });
-          
-          // Get first location to ensure we have a fix before going online
-          // BackgroundGeolocation doesn't have getCurrentPosition natively, so we use Capacitor standard for the very first fix
-          const { Geolocation } = await import('@capacitor/geolocation');
-          const firstPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-          await api.post("/delivery/ping", { lat: firstPos.coords.latitude, lng: firstPos.coords.longitude });
         } else {
           // Web fallback
           const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -270,7 +305,11 @@ function HomeContent() {
     } else {
       try {
         if (Capacitor.isNativePlatform()) {
-          await LocationService.stopService();
+          try {
+              await LocationService.stopService();
+          } catch (e) {
+              console.log("Error stopping native service", e);
+          }
           if ((window as any).locationListener) {
               (window as any).locationListener.remove();
           }
@@ -729,21 +768,21 @@ function HomeContent() {
                 {newJob.pickupPayout !== undefined && newJob.pickupPayout > 0 && (
                   <div className="flex justify-between items-center bg-emerald-50/50 p-2.5 rounded-[12px] border border-emerald-100">
                     <span className="text-[12px] uppercase font-bold text-emerald-600 tracking-wider">Pickup Pay</span>
-                    <span className="text-[18px] font-black text-emerald-700">₹{parseFloat(newJob.pickupPayout).toFixed(1)}</span>
+                    <span className="text-[18px] font-black text-emerald-700">₹{parseFloat(newJob.pickupPayout).toFixed(2)}</span>
                   </div>
                 )}
                 
                 {/* Delivery Base Payout */}
                 <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-[12px] border border-slate-100">
                     <span className="text-[12px] uppercase font-bold text-slate-500 tracking-wider">Delivery Pay</span>
-                    <span className="text-[18px] font-black text-slate-700">₹{parseFloat(newJob.earnings || newJob.deliveryPay || "15").toFixed(1)}</span>
+                    <span className="text-[18px] font-black text-slate-700">₹{parseFloat(newJob.earnings || newJob.deliveryPay || "15").toFixed(2)}</span>
                   </div>
 
                 {/* Return Payout */}
                 {newJob.returnPayout !== undefined && newJob.returnPayout > 0 && (
                   <div className="flex justify-between items-center bg-blue-50/50 p-2.5 rounded-[12px] border border-blue-100">
                     <span className="text-[12px] uppercase font-bold text-blue-600 tracking-wider">Return Pay</span>
-                    <span className="text-[18px] font-black text-blue-700">₹{parseFloat(newJob.returnPayout).toFixed(1)}</span>
+                    <span className="text-[18px] font-black text-blue-700">₹{parseFloat(newJob.returnPayout).toFixed(2)}</span>
                   </div>
                 )}
               </div>
