@@ -150,8 +150,12 @@ export const notificationService = {
       const response = await getMessaging().send(payload);
       logger.info(`DIAGNOSTIC: FCM message sent successfully`);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       logger.error('DIAGNOSTIC: Backend Error sending push notification to rider:', error);
+      if (error?.errorInfo?.code === 'messaging/registration-token-not-registered' || error?.code === 'messaging/registration-token-not-registered') {
+        pool.query('UPDATE users SET fcm_token = NULL WHERE id = $1', [userId]).catch(() => {});
+        logger.info(`DIAGNOSTIC: Auto-removed unregistered FCM token for userId=${userId}`);
+      }
       return false;
     }
   },
