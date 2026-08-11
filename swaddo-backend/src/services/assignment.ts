@@ -137,6 +137,14 @@ export class AssignmentManager {
     if (rider) {
       rider.lat = lat;
       rider.lng = lng;
+      
+      // Update the database so `last_ping` stays fresh and broadcastJob doesn't filter them out
+      const { pool } = require('../db');
+      pool.query(
+        `UPDATE delivery_partners SET last_lat = $1, last_lng = $2, last_ping = NOW() WHERE user_id = $3`,
+        [lat, lng, riderId]
+      ).catch((e: any) => console.error(`[Assignment] Failed to update location ping for rider ${riderId}`, e));
+
       this.checkPendingJobsForRider(riderId);
     }
   }
