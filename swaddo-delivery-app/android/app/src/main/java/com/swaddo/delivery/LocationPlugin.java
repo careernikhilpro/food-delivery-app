@@ -61,13 +61,16 @@ public class LocationPlugin extends Plugin {
         intent.putExtra("authToken", authToken);
         intent.setAction("START_SERVICE");
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            getContext().startForegroundService(intent);
-        } else {
-            getContext().startService(intent);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                getContext().startForegroundService(intent);
+            } else {
+                getContext().startService(intent);
+            }
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Native Service Error: " + e.getMessage());
         }
-
-        call.resolve();
     }
 
     @PluginMethod

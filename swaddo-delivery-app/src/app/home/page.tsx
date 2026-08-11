@@ -298,9 +298,10 @@ function HomeContent() {
         setIsOnline(true);
         localStorage.setItem("isOnline", "true");
         
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to go online", err);
-        alert("Failed to access location or backend. Cannot go online.");
+        const errorMsg = err?.message || err?.toString() || "Unknown error";
+        alert("Error going online: " + errorMsg);
       }
     } else {
       try {

@@ -76,6 +76,23 @@ io.on('connection', (socket) => {
 // Setup mock background workers
 setupWorkers();
 
+// Auto-mark riders offline if they haven't pinged in 10 minutes (App killed/device off)
+setInterval(async () => {
+  try {
+    const result = await pool.query(`
+      UPDATE delivery_partners 
+      SET current_status = 'offline' 
+      WHERE current_status = 'online' 
+        AND last_ping < NOW() - INTERVAL '10 minutes'
+    `);
+    if (result.rowCount && result.rowCount > 0) {
+      logger.info(`Auto-marked ${result.rowCount} inactive riders as offline.`);
+    }
+  } catch (err) {
+    logger.error('Error auto-marking riders offline:', err);
+  }
+}, 5 * 60 * 1000); // Check every 5 minutes
+
 // Auto-migrate FCM columns on startup to fix Render DB issues
 const migrateDB = async () => {
   try {

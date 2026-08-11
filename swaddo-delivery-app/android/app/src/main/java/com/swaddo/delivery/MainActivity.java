@@ -30,9 +30,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        
         registerPlugin(LocationPlugin.class);
+        super.onCreate(savedInstanceState);
         
         // Request Display over other apps permission to forcefully open RingingActivity from background
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {

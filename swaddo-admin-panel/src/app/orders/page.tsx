@@ -344,7 +344,7 @@ export default function Orders() {
                           <option value="">{fetchingRiders ? 'Fetching nearby riders...' : 'Select a nearby online rider...'}</option>
                           {availableRiders.map((r) => (
                             <option key={r.delivery_partner_id} value={r.delivery_partner_id}>
-                              {r.name} - {r.distance !== null ? `${r.distance.toFixed(1)} km away` : 'Distance unknown'}
+                              {r.name} - {r.distance !== null ? `${r.distance.toFixed(1)} km away` : 'Distance unknown'} - {r.active_orders === 0 ? 'Free' : '1 Order'}
                             </option>
                           ))}
                         </select>

@@ -23,8 +23,8 @@ export default function Riders() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    if (status === 'online') {
+  const getStatusBadge = (isOnline: boolean) => {
+    if (isOnline) {
       return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online</span>;
     }
     return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold uppercase"><span className="w-2 h-2 rounded-full bg-gray-400"></span> Offline</span>;
@@ -67,7 +67,7 @@ export default function Riders() {
                   <p className="text-sm text-text-muted font-medium">{r.phone}</p>
                 </div>
               </div>
-              {getStatusBadge(r.current_status)}
+              {getStatusBadge(r.isOnline)}
             </div>
 
             <div className="space-y-3 mt-6">
@@ -83,10 +83,22 @@ export default function Riders() {
                   {r.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-2">
+              <div className="flex items-center justify-between py-2 border-b border-border-subtle">
                 <span className="text-sm text-text-muted flex items-center gap-2"><Bike size={16} /> Vehicle Details</span>
                 <span className="text-sm font-semibold text-text-primary">
                   {r.vehicle_details || 'N/A'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-text-muted flex items-center gap-2"><MapPin size={16} /> Current Location</span>
+                <span className="text-sm font-semibold text-text-primary">
+                  {r.isOnline && r.lat && r.lng ? (
+                    <a href={`https://maps.google.com/?q=${r.lat},${r.lng}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      View on Map
+                    </a>
+                  ) : (
+                    <span className="text-text-muted">Unavailable</span>
+                  )}
                 </span>
               </div>
             </div>

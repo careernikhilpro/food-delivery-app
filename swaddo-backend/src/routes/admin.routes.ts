@@ -381,35 +381,39 @@ router.get('/orders/:id/available-riders', async (req: Request, res: Response) =
     if (orderRes.rows.length === 0) return res.status(404).json({ message: 'Order not found' });
     const stall = orderRes.rows[0];
 
-    // Filter available riders from memory
-    const availableOnline = assignmentManager.getAvailableRiders();
-    const userIds = availableOnline.map(([userId]) => userId);
+    // Get ALL online riders from memory, not just 'available' (isBusy) ones, so we can check active orders < 2
+    const allOnline = Array.from(assignmentManager.onlineRiders.entries());
+    const userIds = allOnline.map(([userId]) => userId);
 
     if (userIds.length === 0) {
       return res.json([]);
     }
 
-    // Get their DB info
+    // Get their DB info and active order count
     const ridersRes = await pool.query(`
-      SELECT dp.id as delivery_partner_id, dp.user_id, u.name, u.phone 
+      SELECT dp.id as delivery_partner_id, dp.user_id, u.name, u.phone,
+        (SELECT COUNT(*) FROM delivery_assignments da WHERE da.delivery_partner_id = dp.id AND da.status IN ('assigned', 'accepted', 'picked_up')) as active_orders
       FROM delivery_partners dp 
       JOIN users u ON dp.user_id = u.id 
       WHERE dp.user_id = ANY($1::int[])
     `, [userIds]);
 
-    const result = ridersRes.rows.map(r => {
-      const memData = assignmentManager.getOnlineRider(r.user_id.toString());
-      let distance = null;
-      if (memData && memData.lat && memData.lng && stall.latitude && stall.longitude) {
-        distance = getDistance(stall.latitude, stall.longitude, memData.lat, memData.lng);
-      }
-      return {
-        ...r,
-        distance,
-        lat: memData?.lat,
-        lng: memData?.lng
-      };
-    });
+    const result = ridersRes.rows
+      .filter(r => parseInt(r.active_orders) <= 1) // Only free or 1 order
+      .map(r => {
+        const memData = assignmentManager.getOnlineRider(r.user_id.toString());
+        let distance = null;
+        if (memData && memData.lat && memData.lng && stall.latitude && stall.longitude) {
+          distance = getDistance(stall.latitude, stall.longitude, memData.lat, memData.lng);
+        }
+        return {
+          ...r,
+          active_orders: parseInt(r.active_orders),
+          distance,
+          lat: memData?.lat,
+          lng: memData?.lng
+        };
+      });
 
     // Sort by distance
     result.sort((a, b) => {

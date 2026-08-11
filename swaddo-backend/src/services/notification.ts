@@ -205,6 +205,12 @@ export const notificationService = {
       if (error?.code === 'messaging/registration-token-not-registered' || error?.message?.includes('NotRegistered')) {
          try {
            const { pool } = require('../db');
+           await pool.query(`
+             UPDATE delivery_partners dp 
+             SET current_status = 'offline' 
+             FROM users u 
+             WHERE dp.user_id = u.id AND u.fcm_token = $1
+           `, [token]);
            await pool.query('UPDATE users SET fcm_token = NULL WHERE fcm_token = $1', [token]);
            logger.info(`Cleared stale FCM token for user: ${token}`);
          } catch (dbErr) {}
@@ -245,6 +251,12 @@ export const notificationService = {
       if (error?.code === 'messaging/registration-token-not-registered' || error?.message?.includes('NotRegistered')) {
          try {
            const { pool } = require('../db');
+           await pool.query(`
+             UPDATE delivery_partners dp 
+             SET current_status = 'offline' 
+             FROM users u 
+             WHERE dp.user_id = u.id AND u.fcm_token = $1
+           `, [token]);
            await pool.query('UPDATE users SET fcm_token = NULL WHERE fcm_token = $1', [token]);
            logger.info(`Cleared stale NATIVE FCM token: ${token}`);
          } catch (dbErr) {}
