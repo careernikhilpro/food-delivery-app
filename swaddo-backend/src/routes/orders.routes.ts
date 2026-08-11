@@ -447,6 +447,18 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
         if (assignmentRes.rows.length > 0) {
           const riderUserId = assignmentRes.rows[0].user_id;
           assignmentManager.markRiderAvailable(riderUserId);
+          
+          // Clear cooldown if active orders drop to 0
+          const activeCountRes = await pool.query(
+            `SELECT COUNT(id) as count 
+             FROM delivery_assignments 
+             WHERE delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $1)
+             AND status IN ('accepted', 'picked_up')`,
+            [riderUserId]
+          );
+          if (parseInt(activeCountRes.rows[0].count) === 0) {
+            await pool.query(`UPDATE delivery_partners SET cooldown = false WHERE user_id = $1`, [riderUserId]);
+          }
         }
       } catch (err) {
         console.error("Error freeing rider:", err);

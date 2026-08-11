@@ -307,6 +307,7 @@ export class AssignmentManager {
         LEFT JOIN orders o ON da.order_id = o.id
         LEFT JOIN stalls s ON o.stall_id = s.id
         WHERE dp.current_status = 'online' 
+          AND (dp.cooldown IS NULL OR dp.cooldown = false)
           AND dp.last_ping >= NOW() - INTERVAL '5 minutes'
         GROUP BY dp.id, dp.user_id, dp.last_lat, dp.last_lng
         HAVING COUNT(da.id) < 2

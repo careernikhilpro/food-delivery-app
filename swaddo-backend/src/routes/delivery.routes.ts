@@ -315,9 +315,27 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
       return res.status(404).json({ message: 'Order not found in DB (cleared from ghost memory)' });
     }
 
+    // Set cooldown to true if rider has reached 2 active orders
+    try {
+      const activeCountRes = await pool.query(
+        `SELECT COUNT(id) as count 
+         FROM delivery_assignments 
+         WHERE delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $1)
+         AND status IN ('accepted', 'picked_up')`,
+        [req.user!.id]
+      );
+      if (parseInt(activeCountRes.rows[0].count) >= 2) {
+        await pool.query(`UPDATE delivery_partners SET cooldown = true WHERE user_id = $1`, [req.user!.id]);
+        console.log(`[Database] Rider ${req.user!.id} hit 2 active orders, entering cooldown mode.`);
+      }
+    } catch (e) {
+      console.error("Error setting cooldown state", e);
+    }
+
     // Fetch real rider info
     const riderRes = await pool.query(
       `SELECT u.name, u.phone, dp.vehicle_details 
+
        FROM delivery_partners dp
        JOIN users u ON dp.user_id = u.id
        WHERE dp.user_id = $1`,
