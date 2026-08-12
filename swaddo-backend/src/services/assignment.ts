@@ -380,12 +380,40 @@ eligible=${eligible}`);
         const activeCount = parseInt(row.active_count);
         let isStacked = false;
 
-        if (activeCount === 1) {
+        // Find if this rider is already ringing for another job
+        let ringingJobId: string | null = null;
+        for (const [otherJobId, notifiedSet] of this.activeJobs.entries()) {
+           if (otherJobId !== jobPayload.id && notifiedSet.has(rId)) {
+               ringingJobId = otherJobId;
+               break;
+           }
+        }
+
+        const totalOrders = activeCount + (ringingJobId ? 1 : 0);
+        
+        if (totalOrders >= 2) {
+           console.log(`[ASSIGN_CHECK] riderId=${rId} jobId=${jobPayload.id} ringingJobId=${ringingJobId || 'none'} eligible=false reason=Already has ${totalOrders} orders (active+ringing)`);
+           continue;
+        }
+
+        let isStacked = false;
+
+        if (totalOrders === 1) {
           // Check stacking constraints
-          const pLat = parseFloat(row.active_pickup_lat);
-          const pLng = parseFloat(row.active_pickup_lng);
-          const dLat = parseFloat(row.active_delivery_lat);
-          const dLng = parseFloat(row.active_delivery_lng);
+          let pLat: number, pLng: number, dLat: number, dLng: number;
+          
+          if (activeCount === 1) {
+             pLat = parseFloat(row.active_pickup_lat);
+             pLng = parseFloat(row.active_pickup_lng);
+             dLat = parseFloat(row.active_delivery_lat);
+             dLng = parseFloat(row.active_delivery_lng);
+          } else {
+             const ringingJob = this.jobPayloads.get(ringingJobId!);
+             pLat = ringingJob?.stallLat || ringingJob?.stall?.lat || ringingJob?.pickupLat || 25.611;
+             pLng = ringingJob?.stallLng || ringingJob?.stall?.lng || ringingJob?.pickupLng || 85.130;
+             dLat = ringingJob?.deliveryLat || 25.611;
+             dLng = ringingJob?.deliveryLng || 85.130;
+          }
           
           let pickupDiff = 999;
           let dropDiff = 999;
@@ -401,33 +429,24 @@ eligible=${eligible}`);
           
           console.log(`[MULTI_CHECK]
 riderId=${rId}
+jobId=${jobPayload.id}
 order1=${pLat},${pLng}->${dLat},${dLng}
 order2=${stallLat},${stallLng}->${deliveryLat},${deliveryLng}
-activeOrderCount=${activeCount}
+totalOrders=${totalOrders}
 pickupDistance=${pickupDiff.toFixed(2)}
 dropDistance=${dropDiff.toFixed(2)}
 pickupLimit=0.70
 dropLimit=1.20
-eligible=${isStacked}
-reason=${isStacked ? 'Within distance' : 'Distance exceeded or invalid route'}`);
+allowed=${isStacked}
+reason=${isStacked ? 'Within distance' : 'Distance condition failed'}`);
 
           if (!isStacked) continue;
         }
 
-        // Fallback: check in-memory busy state just in case (only if activeCount == 0, we trust DB more now, but let's keep it for safety if they aren't stacked)
         const memRider = this.onlineRiders.get(rId);
-        if (activeCount === 0 && memRider && memRider.isBusy) {
-           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true socketConnected=${!!memRider.socketId} activeOrderCount=0 isBusy=true lat=${row.last_lat} lng=${row.last_lng} eligible=false reason=Memory isBusy`);
+        if (totalOrders === 0 && memRider && memRider.isBusy) {
+           console.log(`[ASSIGN_CHECK] riderId=${rId} jobId=${jobPayload.id} online=true activeOrderCount=0 isBusy=true eligible=false reason=Already has active/ringing job`);
            continue;
-        }
-        
-        // Find if this rider is already ringing for another job (for logging)
-        let ringingJobId: string | null = null;
-        for (const [otherJobId, notifiedSet] of this.activeJobs.entries()) {
-           if (otherJobId !== jobPayload.id && notifiedSet.has(rId)) {
-               ringingJobId = otherJobId;
-               break;
-           }
         }
         
         let lat = parseFloat(row.last_lat);
@@ -437,7 +456,7 @@ reason=${isStacked ? 'Within distance' : 'Distance exceeded or invalid route'}`)
         if (isNaN(lng) && memRider && memRider.lng) lng = memRider.lng;
         
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true socketConnected=${!!memRider?.socketId} activeOrderCount=${activeCount} isBusy=${isStacked || memRider?.isBusy} lat=${lat} lng=${lng} eligible=false reason=Invalid location`);
+           console.log(`[ASSIGN_CHECK] riderId=${rId} online=true activeOrderCount=${activeCount} isBusy=${isStacked || memRider?.isBusy} lat=${lat} lng=${lng} eligible=false reason=Invalid location`);
            continue;
         }
 
