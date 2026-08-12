@@ -286,7 +286,14 @@ router.patch('/assignments/:id/accept', authenticate, requireDelivery, async (re
         [orderId, req.user!.id]
       );
       if (assignmentCheck.rows.length > 0) {
-        console.log(`[ACCEPT] HTTP_200 (idempotent)`);
+        const currentAssignmentStatus = assignmentCheck.rows[0].status;
+        if (currentAssignmentStatus === 'assigned') {
+            console.log(`[ACCEPT] Processing admin manual assignment for order ${orderId}`);
+            await pool.query('UPDATE delivery_assignments SET status = $1 WHERE order_id = $2 AND delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $3)', ['accepted', orderId, req.user!.id]);
+            await pool.query("UPDATE orders SET status = 'heading_to_stall' WHERE id = $1 AND status IN ('assigned', 'ready')", [orderId]);
+            assignmentManager.revokeJob(jobId);
+        }
+        console.log(`[ACCEPT] HTTP_200 (idempotent or manual accept)`);
         return res.json({ message: 'Job accepted successfully (idempotent)' });
       }
       console.log(`[ACCEPT] ERROR: Job no longer available`);
