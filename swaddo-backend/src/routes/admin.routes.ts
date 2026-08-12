@@ -530,7 +530,7 @@ router.patch('/disputes/:id/resolve', async (req: Request, res: Response) => {
 router.get('/riders', async (req: Request, res: Response) => {
   try {
     const riders = await pool.query(`
-      SELECT d.*, u.name, u.phone 
+      SELECT d.*, u.name, u.phone, u.float_limit 
       FROM delivery_partners d 
       JOIN users u ON d.user_id = u.id 
       ORDER BY d.id DESC
@@ -592,6 +592,24 @@ router.patch('/riders/:id/kyc', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error('Error updating kyc', error);
     res.status(500).json({ message: 'Error updating kyc' });
+  }
+});
+
+router.patch('/riders/:id/float-limit', async (req: Request, res: Response) => {
+  try {
+    const { float_limit } = req.body;
+    const { id } = req.params;
+
+    // We need to update the float_limit in the users table, but :id is the delivery_partners id
+    const partnerRes = await pool.query(`SELECT user_id FROM delivery_partners WHERE id = $1`, [id]);
+    if (partnerRes.rows.length === 0) return res.status(404).json({ message: 'Rider not found' });
+    const userId = partnerRes.rows[0].user_id;
+
+    await pool.query(`UPDATE users SET float_limit = $1 WHERE id = $2`, [float_limit, userId]);
+
+    res.json({ message: 'Float limit updated successfully', float_limit });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating float limit' });
   }
 });
 

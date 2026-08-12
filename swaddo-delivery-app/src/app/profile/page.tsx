@@ -24,6 +24,10 @@ export default function Profile() {
   const [bankForm, setBankForm] = useState({ bankName: '', accountName: '', accountNumber: '', ifscCode: '' });
   const [isSavingBank, setIsSavingBank] = useState(false);
 
+  // Cashout History States
+  const [cashoutHistory, setCashoutHistory] = useState<any[]>([]);
+  const [cashoutLoading, setCashoutLoading] = useState(false);
+
   // KYC Form States
   const [kycForm, setKycForm] = useState({ aadharNumber: '', dlNumber: '', rcNumber: '' });
   const [isSavingKyc, setIsSavingKyc] = useState(false);
@@ -48,6 +52,18 @@ export default function Profile() {
     }
   };
 
+  const fetchCashoutHistory = async () => {
+    try {
+      setCashoutLoading(true);
+      const res = await api.get('/cashout/history');
+      setCashoutHistory(res.data);
+    } catch (err) {
+      console.error("Failed to fetch cashout history", err);
+    } finally {
+      setCashoutLoading(false);
+    }
+  };
+
   useEffect(() => {
     const cachedData = sessionStorage.getItem("profileData");
     if (cachedData) {
@@ -59,6 +75,7 @@ export default function Profile() {
     } else {
       fetchProfile(false);
     }
+    fetchCashoutHistory();
   }, []);
 
   const handleSaveProfile = async () => {
@@ -372,6 +389,50 @@ export default function Profile() {
                 </div>
               ) : (
                 <p className="text-[12px] font-bold text-slate-400 mt-4 text-center py-4">No deposits found.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Cashout History */}
+        <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)] mt-4">
+          <button 
+            onClick={() => toggleTab('cashouts')}
+            className="w-full flex items-center justify-between p-5 active:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Landmark size={20} className="text-emerald-500" strokeWidth={2.5} />
+              <span className="font-black text-slate-800 text-[16px]">Cashout History</span>
+            </div>
+            <ChevronDown size={22} className={`text-slate-400 transition-transform duration-300 ${activeTab === 'cashouts' ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {activeTab === 'cashouts' && (
+            <div className="p-5 pt-0 border-t border-slate-100 bg-slate-50/50">
+              {cashoutLoading ? (
+                <p className="text-[12px] font-bold text-slate-400 mt-4 text-center py-4">Loading...</p>
+              ) : cashoutHistory.length > 0 ? (
+                <div className="space-y-3 mt-4">
+                  {cashoutHistory.map((history: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-200 last:border-0">
+                      <div>
+                        <p className="font-black text-[15px] text-slate-800">₹{history.amount}</p>
+                        <p className="text-[11px] font-bold text-slate-400">
+                          {new Date(history.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-md ${
+                        history.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 
+                        history.status === 'rejected' ? 'bg-red-50 text-red-600' : 
+                        'bg-amber-50 text-amber-600'
+                      }`}>
+                        {history.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[12px] font-bold text-slate-400 mt-4 text-center py-4">No cashout history found.</p>
               )}
             </div>
           )}

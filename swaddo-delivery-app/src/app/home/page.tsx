@@ -32,7 +32,7 @@ function HomeContent() {
   const [watchId, setWatchId] = useState<string | number | null>(null);
   const [newJob, setNewJob] = useState<any>(null);
   const [timer, setTimer] = useState(300);
-  const [stats, setStats] = useState({ deliveries: 0, earnings: 0, floatingCash: 0, hours: 0 });
+  const [stats, setStats] = useState({ deliveries: 0, earnings: 0, hours: 0, floatingCash: 0, floatLimit: 2000 });
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -117,7 +117,8 @@ function HomeContent() {
             deliveries: res.data.deliveries || 0,
             earnings: res.data.earnings || 0,
             floatingCash: res.data.floatingCash || 0,
-            hours: res.data.hours || 0
+            hours: res.data.hours || 0,
+            floatLimit: res.data.floatLimit || 2000
           };
           
           const newStr = JSON.stringify(newStats);
@@ -246,8 +247,8 @@ function HomeContent() {
 
   const toggleOnlineStatus = async (newStatus: boolean) => {
     if (newStatus) {
-      if (stats.floatingCash >= 800) {
-        alert("Your floating cash limit (₹800) has been reached. Please deposit cash to go online and receive new orders.");
+      if (stats.floatingCash >= stats.floatLimit) {
+        alert(`Your floating cash limit (₹${stats.floatLimit}) has been reached. Please deposit cash to go online and receive new orders.`);
         return;
       }
       try {
@@ -322,7 +323,7 @@ function HomeContent() {
         
       } catch (err: any) {
         console.error("Failed to go online", err);
-        const errorMsg = err?.message || err?.toString() || "Unknown error";
+        const errorMsg = err.response?.data?.message || err?.message || err?.toString() || "Unknown error";
         alert("Error going online: " + errorMsg);
       }
     } else {
@@ -818,15 +819,15 @@ function HomeContent() {
             </span>
           </div>
         </div>
-        <Link href="/floating-cash" className={`bg-white rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-all hover:-translate-y-0.5 active:scale-95 ${stats.floatingCash >= 2000 ? 'border-2 border-red-500 bg-red-50/50' : 'border border-slate-100 relative overflow-hidden'}`}>
-          {stats.floatingCash < 2000 && <div className="absolute top-0 right-0 w-12 h-12 bg-orange-500/5 rounded-bl-[24px] -z-0"></div>}
+        <Link href="/floating-cash" className={`bg-white rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-all hover:-translate-y-0.5 active:scale-95 ${stats.floatingCash >= stats.floatLimit ? 'border-2 border-red-500 bg-red-50/50' : 'border border-slate-100 relative overflow-hidden'}`}>
+          {stats.floatingCash < stats.floatLimit && <div className="absolute top-0 right-0 w-12 h-12 bg-orange-500/5 rounded-bl-[24px] -z-0"></div>}
           <div className="flex justify-between items-center mb-1 relative z-10">
-            <span className={`text-[10px] font-bold uppercase tracking-[0.1em] ${stats.floatingCash >= 2000 ? 'text-red-600' : 'text-slate-400'}`}>Float Cash</span>
+            <span className={`text-[10px] font-bold uppercase tracking-[0.1em] ${stats.floatingCash >= stats.floatLimit ? 'text-red-600' : 'text-slate-400'}`}>Float Cash</span>
           </div>
-          <span className={`text-[26px] font-black tracking-tighter relative z-10 leading-none ${stats.floatingCash >= 2000 ? 'text-red-600' : 'text-orange-500'}`}>₹{stats.floatingCash}</span>
+          <span className={`text-[26px] font-black tracking-tighter relative z-10 leading-none ${stats.floatingCash >= stats.floatLimit ? 'text-red-600' : 'text-orange-500'}`}>₹{stats.floatingCash}</span>
           <div className="flex items-center gap-1.5 mt-1.5">
-             <span className="text-[9px] font-semibold text-slate-400">Limit: ₹2000</span>
-             {stats.floatingCash >= 2000 && (
+             <span className="text-[9px] font-semibold text-slate-400">Limit: ₹{stats.floatLimit}</span>
+             {stats.floatingCash >= stats.floatLimit && (
                <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Deposit!</span>
              )}
           </div>

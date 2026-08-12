@@ -216,7 +216,9 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
     const partnerId = partnerRes.rows[0].id;
 
     if (status === 'online') {
-      // Check floating cash limit
+      const userRes = await pool.query(`SELECT float_limit FROM users WHERE id = $1`, [req.user!.id]);
+      const floatLimit = parseFloat(userRes.rows[0].float_limit || 2000);
+
       const floatRes = await pool.query(`
         SELECT COALESCE(SUM(o.total_amount), 0) as floating_cash
         FROM delivery_assignments da
@@ -229,9 +231,9 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
       `, [partnerId]);
       
       const floatingCash = parseFloat(floatRes.rows[0].floating_cash);
-      if (floatingCash >= 800) {
+      if (floatingCash >= floatLimit) {
         return res.status(403).json({ 
-          message: 'Floating cash limit (₹800) reached. Please deposit cash to go online.',
+          message: `Floating cash limit (₹${floatLimit}) reached. Please deposit cash to go online.`,
           code: 'FLOATING_CASH_LIMIT'
         });
       }
@@ -470,6 +472,9 @@ router.get('/dashboard', authenticate, requireDelivery, async (req: AuthRequest,
       WHERE delivery_partner_id = $1 AND status = 'completed' AND DATE(assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')
     `, [partnerId]);
 
+    const userRes = await pool.query(`SELECT float_limit FROM users WHERE id = $1`, [req.user!.id]);
+    const floatLimit = parseFloat(userRes.rows[0].float_limit || 2000);
+
     // Floating Cash (All completed COD deliveries where cash_collected is true, assuming rider hasn't deposited yet)
     // In reality, you would subtract any deposits made by the rider.
     const floatRes = await pool.query(`
@@ -504,6 +509,7 @@ router.get('/dashboard', authenticate, requireDelivery, async (req: AuthRequest,
       deliveries: parseInt(statsRes.rows[0].total_deliveries),
       earnings: parseFloat(statsRes.rows[0].total_earnings),
       floatingCash: parseFloat(floatRes.rows[0].floating_cash),
+      floatLimit: floatLimit,
       hours: totalMinutes, // Frontend will interpret this as total minutes and format it
       hasPendingDeposit: hasPendingDeposit
     });

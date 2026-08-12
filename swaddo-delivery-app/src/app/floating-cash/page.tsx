@@ -11,6 +11,7 @@ export default function FloatingCashPage() {
   useAuth();
   const router = useRouter();
   const [floatingCash, setFloatingCash] = useState(0);
+  const [floatLimit, setFloatLimit] = useState(2000);
   const [hasPendingDeposit, setHasPendingDeposit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -25,6 +26,7 @@ export default function FloatingCashPage() {
         const res = await api.get('/delivery/dashboard');
         if (res.data) {
           setFloatingCash(res.data.floatingCash || 0);
+          setFloatLimit(res.data.floatLimit || 2000);
           setHasPendingDeposit(!!res.data.hasPendingDeposit);
         }
       } catch (err) {
@@ -71,8 +73,8 @@ export default function FloatingCashPage() {
     }
   };
 
-  const limitReached = floatingCash >= 800;
-  const progressPercent = Math.min((floatingCash / 800) * 100, 100);
+  const limitReached = floatingCash >= floatLimit;
+  const progressPercent = Math.min((floatingCash / floatLimit) * 100, 100);
 
   if (loading) {
     return <AppLoader type="floating-cash" />;
@@ -106,7 +108,7 @@ export default function FloatingCashPage() {
           <div className={`mt-2 flex flex-col items-center ${limitReached ? 'text-red-600' : 'text-[#8B4513]'}`}>
             <span className="text-sm font-bold uppercase tracking-wider mb-1">Current Balance</span>
             <span className="text-5xl font-heading font-bold">₹{floatingCash}</span>
-            <span className="text-sm mt-1 opacity-80">Limit: ₹800</span>
+            <span className="text-sm mt-1 opacity-80">Limit: ₹{floatLimit}</span>
           </div>
 
           <div className="mt-6 w-full h-3 bg-border-subtle rounded-full overflow-hidden">

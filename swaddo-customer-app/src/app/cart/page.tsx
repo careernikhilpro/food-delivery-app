@@ -310,22 +310,8 @@ export default function Cart() {
           targetLat,
           targetLng,
         );
-        let fee = 18;
-        if (haversineDist <= 1.4) {
-          fee = 18;
-        } else if (haversineDist <= 2.0) {
-          fee = 18 + ((haversineDist - 1.4) / 0.6) * 5;
-        } else if (haversineDist <= 3.0) {
-          fee = 23 + ((haversineDist - 2.0) / 1.0) * 6;
-        } else if (haversineDist <= 4.0) {
-          fee = 29 + ((haversineDist - 3.0) / 1.0) * 7;
-        } else {
-          fee = 36;
-        }
-        fee = Math.round(fee * 100) / 100;
-        setDeliveryFee(fee);
-        setDistanceKms(haversineDist.toFixed(1));
-
+        
+        let actualDist = haversineDist;
         let newMarkup = 0;
         try {
           const baseUrl =
@@ -342,7 +328,7 @@ export default function Cart() {
           });
           const data = await routeRes.json();
           if (data.status === "success" && data.data && data.data.distanceKm) {
-             setDistanceKms(data.data.distanceKm.toFixed(1));
+             actualDist = data.data.distanceKm;
           }
           if (
             data.status === "success" &&
@@ -355,7 +341,22 @@ export default function Cart() {
           if (haversineDist >= 3.2) newMarkup = 20;
         }
 
+        let fee = 18;
+        if (actualDist <= 1.4) {
+          fee = 18;
+        } else if (actualDist <= 2.0) {
+          fee = 18 + ((actualDist - 1.4) / 0.6) * 5;
+        } else if (actualDist <= 3.0) {
+          fee = 23 + ((actualDist - 2.0) / 1.0) * 6;
+        } else if (actualDist <= 4.0) {
+          fee = 29 + ((actualDist - 3.0) / 1.0) * 7;
+        } else {
+          fee = 36;
+        }
+        fee = Math.round(fee * 100) / 100;
 
+        setDeliveryFee(fee);
+        setDistanceKms(actualDist.toFixed(1));
         setFoodMarkup(newMarkup);
       }
     };

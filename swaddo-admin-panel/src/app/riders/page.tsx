@@ -47,6 +47,25 @@ export default function Riders() {
     }
   };
 
+  const handleUpdateLimit = async (id: number, currentLimit: number) => {
+    const newLimit = window.prompt("Enter new float cash limit for this rider:", String(currentLimit || 2000));
+    if (!newLimit) return;
+    const numLimit = parseFloat(newLimit);
+    if (isNaN(numLimit) || numLimit < 0) {
+      alert("Invalid limit amount");
+      return;
+    }
+
+    try {
+      await api.patch(`/admin/riders/${id}/float-limit`, { float_limit: numLimit });
+      setRiders(riders.map(r => r.id === id ? { ...r, float_limit: numLimit } : r));
+      alert("Float limit updated successfully");
+    } catch (err) {
+      console.error("Failed to update float limit", err);
+      alert("Failed to update float limit");
+    }
+  };
+
   const getStatusBadge = (isOnline: boolean) => {
     if (isOnline) {
       return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online</span>;
@@ -109,6 +128,15 @@ export default function Riders() {
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${r.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border-subtle">
+                <span className="text-sm text-text-muted flex items-center gap-2"><MapPin size={16} /> Float Limit</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-text-primary">
+                    ₹{r.float_limit || 2000}
+                  </span>
+                  <button onClick={() => handleUpdateLimit(r.id, r.float_limit)} className="text-xs text-primary underline font-medium">Edit</button>
+                </div>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-border-subtle">
                 <span className="text-sm text-text-muted flex items-center gap-2"><Bike size={16} /> Vehicle Details</span>

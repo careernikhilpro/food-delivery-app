@@ -63,8 +63,8 @@ export default function Earnings() {
   };
 
   const dailyBreakdown = data?.dailyBreakdown || Array(7).fill({ earnings: 0, dayName: '?' });
-  const chartData = dailyBreakdown.map((d: any) => d.earnings);
-  const maxEarnings = Math.max(...chartData, 1);
+  const chartData = dailyBreakdown.map((d: any) => Number(d.earnings).toFixed(2));
+  const maxEarnings = Math.max(...chartData.map((d: any) => Number(d)), 1);
   const deliveries = data?.deliveryHistory || [];
 
   if (loading && !data) {
@@ -89,7 +89,7 @@ export default function Earnings() {
           <Wallet size={120} />
         </div>
         <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-widest mb-1 relative z-10">Available to Cashout</p>
-        <h2 className="text-4xl font-black tracking-tighter relative z-10">₹{data?.availableCashout || 0}</h2>
+        <h2 className="text-4xl font-black tracking-tighter relative z-10">₹{Number(data?.availableCashout || 0).toFixed(2)}</h2>
         
         <button
           onClick={handleCashout}
@@ -107,11 +107,11 @@ export default function Earnings() {
       <div className="grid grid-cols-2 gap-3 mb-5">
         <div className="bg-white border border-slate-100 rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">This Week</p>
-          <h2 className="text-3xl font-black tracking-tighter text-slate-800">₹{data?.weekEarnings || 0}</h2>
+          <h2 className="text-3xl font-black tracking-tighter text-slate-800">₹{Number(data?.weekEarnings || 0).toFixed(2)}</h2>
         </div>
         <div className="bg-white border border-slate-100 rounded-tl-[24px] rounded-br-[24px] rounded-tr-[8px] rounded-bl-[8px] p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center transition-transform hover:-translate-y-0.5">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">This Month</p>
-          <h2 className="text-3xl font-black tracking-tighter text-[#10B981]">₹{data?.monthEarnings || 0}</h2>
+          <h2 className="text-3xl font-black tracking-tighter text-[#10B981]">₹{Number(data?.monthEarnings || 0).toFixed(2)}</h2>
         </div>
       </div>
 
@@ -141,43 +141,6 @@ export default function Earnings() {
         </div>
       </div>
 
-      {/* Cashout History */}
-      {cashoutHistory.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <History size={16} className="text-slate-700" />
-            <h3 className="text-[16px] font-black tracking-tight text-slate-800">Cashout History</h3>
-          </div>
-          <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-            {cashoutHistory.map((history, i) => (
-              <div key={history.id} className={`p-4 flex items-center justify-between ${i !== cashoutHistory.length - 1 ? 'border-b border-slate-100' : ''}`}>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    {history.status === 'approved' ? (
-                      <CheckCircle2 size={14} className="text-emerald-500" />
-                    ) : history.status === 'rejected' ? (
-                      <AlertTriangle size={14} className="text-red-500" />
-                    ) : (
-                      <Clock size={14} className="text-amber-500" />
-                    )}
-                    <span className="font-bold text-slate-800 text-[14px]">₹{history.amount}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    {new Date(history.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  history.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 
-                  history.status === 'rejected' ? 'bg-red-50 text-red-600' : 
-                  'bg-amber-50 text-amber-600'
-                }`}>
-                  {history.status}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Recent Deliveries List */}
       <h3 className="text-[16px] font-black tracking-tight text-slate-800 mb-3 px-1">Recent Deliveries</h3>
