@@ -3,29 +3,34 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { RefreshCw, PackageX } from "lucide-react";
+import { RefreshCw, PackageX, Wallet, History, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import AppLoader from "@/components/AppLoader";
 
 export default function Earnings() {
   useAuth();
   const [data, setData] = useState<any>(null);
+  const [cashoutHistory, setCashoutHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState(false);
 
-  const fetchEarnings = async (background = false) => {
+  const fetchData = async (background = false) => {
     if (!background) setLoading(true);
     try {
-      const res = await api.get('/delivery/earnings');
-      let newData = res.data?.data || res.data;
-      if (newData) {
-        const newStr = JSON.stringify(newData);
-        const oldStr = sessionStorage.getItem("earningsData");
-        if (newStr !== oldStr) {
-          setData(newData);
-          sessionStorage.setItem("earningsData", newStr);
-        }
+      const [resEarnings, resHistory] = await Promise.all([
+        api.get('/delivery/earnings'),
+        api.get('/delivery/cashout/history')
+      ]);
+      
+      let newEarningsData = resEarnings.data?.data || resEarnings.data;
+      if (newEarningsData) {
+        setData(newEarningsData);
+        sessionStorage.setItem("earningsData", JSON.stringify(newEarningsData));
+      }
+      if (resHistory.data) {
+        setCashoutHistory(resHistory.data);
       }
     } catch (err) {
-      console.log("Failed to fetch earnings");
+      console.log("Failed to fetch earnings or history");
     } finally {
       setLoading(false);
     }
@@ -36,13 +41,26 @@ export default function Earnings() {
     if (cachedData) {
       try {
         setData(JSON.parse(cachedData));
-        setLoading(false);
       } catch (e) {}
-      fetchEarnings(true); // Fetch in background
+      fetchData(true); // Fetch in background
     } else {
-      fetchEarnings(false);
+      fetchData(false);
     }
   }, []);
+
+  const handleCashout = async () => {
+    if (!data?.availableCashout || data.availableCashout <= 0) return;
+    setRequesting(true);
+    try {
+      const res = await api.post('/delivery/cashout/request');
+      alert(res.data.message || "Cashout requested successfully. Processing takes 6-10 hours.");
+      fetchData(true); // refresh data
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to request cashout.");
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   const dailyBreakdown = data?.dailyBreakdown || Array(7).fill({ earnings: 0, dayName: '?' });
   const chartData = dailyBreakdown.map((d: any) => d.earnings);
@@ -58,11 +76,31 @@ export default function Earnings() {
       <div className="flex justify-between items-center mb-3">
         <h1 className="text-[24px] font-black tracking-tight text-slate-900 leading-none mt-1">Earnings</h1>
         <button 
-          onClick={() => fetchEarnings(false)}
+          onClick={() => fetchData(false)}
           className={`p-2 rounded-full bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md active:scale-95 ${loading ? 'animate-spin text-[#10B981]' : 'text-slate-500 hover:text-[#10B981]'}`}
         >
           <RefreshCw size={20} strokeWidth={2.5} />
         </button>
+      </div>
+
+      {/* Available Cashout Card */}
+      <div className="bg-emerald-600 rounded-[20px] p-5 mb-4 text-white shadow-[0_8px_24px_rgba(16,185,129,0.3)] relative overflow-hidden">
+        <div className="absolute -right-4 -top-4 opacity-10">
+          <Wallet size={120} />
+        </div>
+        <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-widest mb-1 relative z-10">Available to Cashout</p>
+        <h2 className="text-4xl font-black tracking-tighter relative z-10">₹{data?.availableCashout || 0}</h2>
+        
+        <button
+          onClick={handleCashout}
+          disabled={!data?.availableCashout || data.availableCashout <= 0 || requesting}
+          className="mt-4 w-full bg-white text-emerald-700 font-bold py-3 rounded-[12px] shadow-sm hover:bg-emerald-50 active:scale-[0.98] transition-all disabled:opacity-70 disabled:active:scale-100 relative z-10"
+        >
+          {requesting ? "Requesting..." : "Request Cashout"}
+        </button>
+        <p className="text-[9px] text-emerald-100/70 text-center mt-2 font-medium relative z-10">
+          Cashout requests take 6-10 hours to process. Limit 1 per day.
+        </p>
       </div>
 
       {/* Summary Cards */}
@@ -103,8 +141,45 @@ export default function Earnings() {
         </div>
       </div>
 
-      {/* History List */}
-      {/* History List */}
+      {/* Cashout History */}
+      {cashoutHistory.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <History size={16} className="text-slate-700" />
+            <h3 className="text-[16px] font-black tracking-tight text-slate-800">Cashout History</h3>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+            {cashoutHistory.map((history, i) => (
+              <div key={history.id} className={`p-4 flex items-center justify-between ${i !== cashoutHistory.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    {history.status === 'approved' ? (
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                    ) : history.status === 'rejected' ? (
+                      <AlertTriangle size={14} className="text-red-500" />
+                    ) : (
+                      <Clock size={14} className="text-amber-500" />
+                    )}
+                    <span className="font-bold text-slate-800 text-[14px]">₹{history.amount}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    {new Date(history.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  history.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 
+                  history.status === 'rejected' ? 'bg-red-50 text-red-600' : 
+                  'bg-amber-50 text-amber-600'
+                }`}>
+                  {history.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Deliveries List */}
       <h3 className="text-[16px] font-black tracking-tight text-slate-800 mb-3 px-1">Recent Deliveries</h3>
       <div className="space-y-3">
         {deliveries.length === 0 ? (
