@@ -388,6 +388,8 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
         stallAddress: stall?.location || "Food Court",
         stallLat: stall?.latitude,
         stallLng: stall?.longitude,
+        deliveryLat: order.delivery_lat,
+        deliveryLng: order.delivery_lng,
         pickupDistance: null, // This will be injected by AssignmentManager based on exact GPS
         customerName: customerName,
         customerAddress: order.delivery_address || "Customer Location",
