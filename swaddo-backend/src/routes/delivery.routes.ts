@@ -210,6 +210,33 @@ router.post('/status', authenticate, requireDelivery, async (req: AuthRequest, r
       return res.status(400).json({ message: 'Status must be online or offline' });
     }
 
+    const { pool } = require('../db');
+    const partnerRes = await pool.query(`SELECT id FROM delivery_partners WHERE user_id = $1`, [req.user!.id]);
+    if (partnerRes.rows.length === 0) return res.status(404).json({ message: 'Delivery partner not found' });
+    const partnerId = partnerRes.rows[0].id;
+
+    if (status === 'online') {
+      // Check floating cash limit
+      const floatRes = await pool.query(`
+        SELECT COALESCE(SUM(o.total_amount), 0) as floating_cash
+        FROM delivery_assignments da
+        JOIN orders o ON da.order_id = o.id
+        WHERE da.delivery_partner_id = $1 
+          AND da.status = 'completed' 
+          AND da.cash_collected = true 
+          AND da.cash_deposited = false
+          AND o.payment_method = 'cod'
+      `, [partnerId]);
+      
+      const floatingCash = parseFloat(floatRes.rows[0].floating_cash);
+      if (floatingCash >= 800) {
+        return res.status(403).json({ 
+          message: 'Floating cash limit (₹800) reached. Please deposit cash to go online.',
+          code: 'FLOATING_CASH_LIMIT'
+        });
+      }
+    }
+
     await pool.query(
       `UPDATE delivery_partners SET current_status = $1, last_ping = NOW() WHERE user_id = $2`,
       [status, req.user!.id]
@@ -464,12 +491,21 @@ router.get('/dashboard', authenticate, requireDelivery, async (req: AuthRequest,
     `, [partnerId]);
     
     let totalMinutes = sessionRes.rows.length > 0 ? sessionRes.rows[0].online_minutes : 0;
+
+    // Check if there is a pending floating cash deposit
+    const pendingRes = await pool.query(`
+      SELECT id FROM floating_cash_deposits 
+      WHERE delivery_partner_id = $1 AND status = 'pending' LIMIT 1
+    `, [partnerId]);
+
+    const hasPendingDeposit = pendingRes.rows.length > 0;
     
     res.json({
       deliveries: parseInt(statsRes.rows[0].total_deliveries),
       earnings: parseFloat(statsRes.rows[0].total_earnings),
       floatingCash: parseFloat(floatRes.rows[0].floating_cash),
       hours: totalMinutes, // Frontend will interpret this as total minutes and format it
+      hasPendingDeposit: hasPendingDeposit
     });
   } catch (err) {
     next(err);
@@ -498,29 +534,22 @@ router.post('/deposit', authenticate, requireDelivery, async (req: AuthRequest, 
 
     const amount = parseFloat(floatRes.rows[0].floating_cash);
 
-    if (amount > 0) {
-      // Mark all currently collected but un-deposited cash as deposited
-      const updateRes = await pool.query(`
-        UPDATE delivery_assignments da
-        SET cash_deposited = true
-        FROM orders o
-        WHERE da.order_id = o.id
-          AND da.delivery_partner_id = $1
-          AND da.status = 'completed'
-          AND da.cash_collected = true
-          AND da.cash_deposited = false
-          AND o.payment_method = 'cod'
-        RETURNING da.id
-      `, [partnerId]);
-
-      // Add to deposit history
-      await pool.query(`
-        INSERT INTO deposit_history (delivery_partner_id, amount, status)
-        VALUES ($1, $2, 'completed')
-      `, [partnerId, amount]);
+    if (amount <= 0) {
+        return res.status(400).json({ message: 'No floating cash to deposit' });
     }
 
-    res.json({ message: 'Cash successfully marked as deposited' });
+    const { transactionId, screenshotBase64 } = req.body;
+    if (!transactionId || !screenshotBase64) {
+        return res.status(400).json({ message: 'Transaction ID and screenshot are required' });
+    }
+
+    // Insert into floating_cash_deposits as pending
+    await pool.query(`
+        INSERT INTO floating_cash_deposits (delivery_partner_id, amount, transaction_id, screenshot_url, status)
+        VALUES ($1, $2, $3, $4, 'pending')
+    `, [partnerId, amount, transactionId, screenshotBase64]);
+
+    res.json({ message: 'Deposit request submitted successfully. Pending admin approval.' });
   } catch (err) {
     next(err);
   }

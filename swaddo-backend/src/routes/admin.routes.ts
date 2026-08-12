@@ -595,6 +595,89 @@ router.patch('/riders/:id/kyc', async (req: Request, res: Response) => {
   }
 });
 
+// Floating Cash Admin Endpoints
+router.get('/floating-cash/pending', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT fcd.*, u.name as rider_name, u.phone as rider_phone 
+      FROM floating_cash_deposits fcd
+      JOIN delivery_partners dp ON fcd.delivery_partner_id = dp.id
+      JOIN users u ON dp.user_id = u.id
+      WHERE fcd.status = 'pending'
+      ORDER BY fcd.created_at ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching pending deposits' });
+  }
+});
+
+router.get('/floating-cash/history', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT fcd.*, u.name as rider_name, u.phone as rider_phone 
+      FROM floating_cash_deposits fcd
+      JOIN delivery_partners dp ON fcd.delivery_partner_id = dp.id
+      JOIN users u ON dp.user_id = u.id
+      WHERE fcd.status IN ('approved', 'rejected')
+      ORDER BY fcd.updated_at DESC
+      LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching deposit history' });
+  }
+});
+
+router.post('/floating-cash/approve/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    // 1. Get the deposit request
+    const depositRes = await pool.query('SELECT * FROM floating_cash_deposits WHERE id = $1 AND status = $2', [id, 'pending']);
+    if (depositRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Pending deposit request not found' });
+    }
+    const deposit = depositRes.rows[0];
+
+    // 2. Mark as approved
+    await pool.query('UPDATE floating_cash_deposits SET status = $1, updated_at = NOW() WHERE id = $2', ['approved', id]);
+
+    // 3. Deduct floating cash by marking assignments as deposited
+    // We update older assignments first up to the amount. For simplicity since amount matches exact floating cash, we update all.
+    await pool.query(`
+      UPDATE delivery_assignments da
+      SET cash_deposited = true
+      FROM orders o
+      WHERE da.order_id = o.id
+        AND da.delivery_partner_id = $1
+        AND da.status = 'completed'
+        AND da.cash_collected = true
+        AND da.cash_deposited = false
+        AND o.payment_method = 'cod'
+    `, [deposit.delivery_partner_id]);
+
+    res.json({ message: 'Deposit approved successfully' });
+  } catch (err) {
+    logger.error('Approve error', err);
+    res.status(500).json({ message: 'Error approving deposit' });
+  }
+});
+
+router.post('/floating-cash/reject/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { adminNotes } = req.body;
+    await pool.query(
+      'UPDATE floating_cash_deposits SET status = $1, admin_notes = $2, updated_at = NOW() WHERE id = $3', 
+      ['rejected', adminNotes || '', id]
+    );
+    res.json({ message: 'Deposit rejected' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error rejecting deposit' });
+  }
+});
+
+
 // 6. Broadcast Notifications
 import { notificationService } from '../services/notification';
 
