@@ -15,7 +15,7 @@ export const useFCM = () => {
           const permStatus = await PushNotifications.requestPermissions();
           if (permStatus.receive === 'granted') {
             await PushNotifications.createChannel({
-              id: 'swaddo_alerts_v5',
+              id: 'swaddo_alerts_v11',
               name: 'Ringing Alerts',
               description: 'High priority alerts for incoming orders',
               importance: 5,

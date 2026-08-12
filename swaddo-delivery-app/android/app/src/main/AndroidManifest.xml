@@ -38,7 +38,7 @@
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="swaddo_alerts_v5"
+            android:value="swaddo_alerts_v11"
         />
     </application>
 

@@ -246,8 +246,8 @@ function HomeContent() {
 
   const toggleOnlineStatus = async (newStatus: boolean) => {
     if (newStatus) {
-      if (stats.floatingCash >= 2000) {
-        alert("Your floating cash limit (₹2000) has been reached. Please deposit cash to go online and receive new orders.");
+      if (stats.floatingCash >= 800) {
+        alert("Your floating cash limit (₹800) has been reached. Please deposit cash to go online and receive new orders.");
         return;
       }
       try {
@@ -742,8 +742,8 @@ function HomeContent() {
           {/* Large Premium Toggle */}
           <button 
             onClick={() => {
-              if (!isOnline && stats.floatingCash >= 2000) {
-                alert("Your floating cash limit (₹2000) has been reached. Please deposit cash to go online and receive new orders.");
+              if (!isOnline && stats.floatingCash >= 800) {
+                alert("Your floating cash limit (₹800) has been reached. Please deposit cash to go online and receive new orders.");
                 return;
               }
               toggleOnlineStatus(!isOnline);
