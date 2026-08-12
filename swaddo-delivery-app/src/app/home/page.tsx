@@ -523,29 +523,31 @@ function HomeContent() {
 
   const acceptJob = useCallback(async (jobIdToAccept?: string | any) => {
     const targetJobId = (typeof jobIdToAccept === 'string') ? jobIdToAccept : newJob?.id;
-    console.log(`[MULTI] accept clicked ${targetJobId}`);
-    
     if (!targetJobId) return;
+    
+    const riderId = riderIdRef.current || localStorage.getItem('riderId');
+    console.log(`[ACCEPT_UI] CLICK ${targetJobId}`);
+    console.log(`[ACCEPT_UI] riderId=${riderId}`);
+    console.log(`[ACCEPT_UI] PATCH_START /delivery/assignments/${targetJobId}/accept`);
     
     setAcceptingJobId(targetJobId);
     stopRingtone();
     try {
-      const riderId = riderIdRef.current || localStorage.getItem('riderId');
       
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Request timed out. Please try again.")), 15000)
       );
 
-      console.log(`[MULTI] API started ${targetJobId}`);
       const apiPromise = api.patch(`/delivery/assignments/${targetJobId}/accept`, {
         riderId: riderId,
         lat: currentLocation?.lat,
         lng: currentLocation?.lng
       });
 
-      const res = await Promise.race([apiPromise, timeoutPromise]);
+      const res: any = await Promise.race([apiPromise, timeoutPromise]);
       
-      console.log(`[MULTI] API success ${targetJobId}`);
+      console.log(`[ACCEPT_UI] PATCH_RESPONSE status=${res?.status || 200}`);
+      console.log(`[ACCEPT_UI] SUCCESS ${targetJobId}`);
       
       // Store active delivery to prevent navigating away
       localStorage.setItem('activeDelivery', targetJobId);

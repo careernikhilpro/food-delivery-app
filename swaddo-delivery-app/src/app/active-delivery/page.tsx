@@ -168,10 +168,14 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
     const targetJobId = jobIdToAccept || newJob?.id;
     if (!targetJobId) return;
     
+    const riderId = riderIdRef.current || localStorage.getItem('riderId');
+    console.log(`[ACCEPT_UI] CLICK ${targetJobId}`);
+    console.log(`[ACCEPT_UI] riderId=${riderId}`);
+    console.log(`[ACCEPT_UI] PATCH_START /delivery/assignments/${targetJobId}/accept`);
+    
     setAcceptingJobId(targetJobId);
     stopRingtone();
     try {
-      const riderId = riderIdRef.current || localStorage.getItem('riderId');
       const apiPromise = api.patch(`/delivery/assignments/${targetJobId}/accept`, {
         riderId: riderId,
         lat: riderLocRef.current?.lat,
@@ -181,7 +185,9 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
         setTimeout(() => reject(new Error("Request timed out. Please try again.")), 15000)
       );
       
-      await Promise.race([apiPromise, timeoutPromise]);
+      const res: any = await Promise.race([apiPromise, timeoutPromise]);
+      console.log(`[ACCEPT_UI] PATCH_RESPONSE status=${res?.status || 200}`);
+      console.log(`[ACCEPT_UI] SUCCESS ${targetJobId}`);
       
       setNewJob(null);
       // Reload active-delivery to show both orders in bottom sheet or navigate home
