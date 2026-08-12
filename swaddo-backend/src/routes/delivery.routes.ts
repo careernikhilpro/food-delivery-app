@@ -606,6 +606,13 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
     let weekEarnings = 0;
     let monthEarnings = 0;
 
+    const calcRes = await pool.query(`
+      SELECT SUM(earnings_amount) as total 
+      FROM delivery_assignments 
+      WHERE delivery_partner_id = $1 AND status = 'completed' AND cashed_out = false
+    `, [partnerId]);
+    const availableCashout = parseFloat(calcRes.rows[0].total || '0');
+
     // Daily breakdown for the past 7 days (including today)
     const dailyBreakdown = Array(7).fill(0).map((_, i) => {
       const d = new Date(nowIST);
@@ -691,10 +698,82 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
       todayEarnings,
       weekEarnings,
       monthEarnings,
+      availableCashout,
       dailyBreakdown: dailyBreakdown,
       deliveryHistory: deliveryHistory.slice(0, 20) // Pagination could be added here
     });
 
+  } catch (err) {
+    next(err);
+  }
+});
+// POST Request Cashout
+router.post('/cashout/request', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { pool } = require('../db');
+    
+    const partnerRes = await pool.query(`SELECT id FROM delivery_partners WHERE user_id = $1`, [req.user!.id]);
+    if (partnerRes.rows.length === 0) return res.status(404).json({ message: 'Delivery partner profile not found' });
+    const partnerId = partnerRes.rows[0].id;
+
+    // Check if they already made a request today
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+    const recentRes = await pool.query(`
+      SELECT id FROM cashout_requests 
+      WHERE delivery_partner_id = $1 
+      AND created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata' >= $2::date
+    `, [partnerId, todayStr]);
+
+    if (recentRes.rows.length > 0) {
+      return res.status(400).json({ message: 'You can only request a cashout once per day.' });
+    }
+
+    // Calculate available balance: SUM(earnings_amount) from delivery_assignments where cashed_out = false and status = 'completed'
+    // Exclude COD orders where they haven't deposited the cash? 
+    // Actually, simple way: sum all completed deliveries where cashed_out = false.
+    const calcRes = await pool.query(`
+      SELECT SUM(earnings_amount) as total 
+      FROM delivery_assignments 
+      WHERE delivery_partner_id = $1 AND status = 'completed' AND cashed_out = false
+    `, [partnerId]);
+    
+    const availableAmount = parseFloat(calcRes.rows[0].total || '0');
+    
+    if (availableAmount <= 0) {
+      return res.status(400).json({ message: 'No available earnings to cashout.' });
+    }
+
+    // Create the request
+    await pool.query(`
+      INSERT INTO cashout_requests (delivery_partner_id, amount, status)
+      VALUES ($1, $2, 'pending')
+    `, [partnerId, availableAmount]);
+
+    res.json({ message: 'Cashout requested successfully. Processing takes 6-10 hours.', amount: availableAmount });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET Cashout History
+router.get('/cashout/history', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { pool } = require('../db');
+    
+    const partnerRes = await pool.query(`SELECT id FROM delivery_partners WHERE user_id = $1`, [req.user!.id]);
+    if (partnerRes.rows.length === 0) return res.status(404).json({ message: 'Delivery partner profile not found' });
+    const partnerId = partnerRes.rows[0].id;
+
+    // Get last 7 days of cashout history
+    const historyRes = await pool.query(`
+      SELECT id, amount, status, created_at, updated_at, admin_notes
+      FROM cashout_requests
+      WHERE delivery_partner_id = $1
+      ORDER BY created_at DESC
+      LIMIT 10
+    `, [partnerId]);
+
+    res.json(historyRes.rows);
   } catch (err) {
     next(err);
   }

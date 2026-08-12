@@ -851,4 +851,89 @@ router.post('/customers/:id/reset-pin', async (req: Request, res: Response) => {
   }
 });
 
+// --- Rider Cashouts ---
+router.get('/cashouts/pending', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.*, u.name as rider_name, u.phone as rider_phone 
+      FROM cashout_requests c
+      JOIN users u ON c.rider_id = u.id
+      WHERE c.status = 'pending'
+      ORDER BY c.created_at ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    logger.error('Error fetching pending cashouts', err);
+    res.status(500).json({ message: 'Error fetching pending cashouts' });
+  }
+});
+
+router.get('/cashouts/history', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.*, u.name as rider_name, u.phone as rider_phone 
+      FROM cashout_requests c
+      JOIN users u ON c.rider_id = u.id
+      WHERE c.status IN ('approved', 'rejected')
+      ORDER BY c.updated_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    logger.error('Error fetching cashout history', err);
+    res.status(500).json({ message: 'Error fetching cashout history' });
+  }
+});
+
+router.post('/cashouts/approve/:id', async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    
+    await client.query('BEGIN');
+    
+    const cashoutRes = await client.query("SELECT * FROM cashout_requests WHERE id = $1 AND status = 'pending'", [id]);
+    if (cashoutRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Pending cashout request not found' });
+    }
+    const cashout = cashoutRes.rows[0];
+
+    await client.query("UPDATE cashout_requests SET status = 'approved', updated_at = NOW() WHERE id = $1", [id]);
+
+    await client.query(`
+      UPDATE delivery_assignments da
+      SET cashed_out = true
+      FROM orders o
+      WHERE da.order_id = o.id
+        AND da.delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $1 LIMIT 1)
+        AND da.status = 'completed'
+        AND da.cashed_out = false
+        AND (o.payment_method != 'cod' OR da.cash_deposited = true)
+    `, [cashout.rider_id]);
+
+    await client.query('COMMIT');
+    res.json({ message: 'Cashout approved successfully' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('Approve cashout error', err);
+    res.status(500).json({ message: 'Error approving cashout' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/cashouts/reject/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query(
+      "UPDATE cashout_requests SET status = 'rejected', updated_at = NOW() WHERE id = $1", 
+      [id]
+    );
+    res.json({ message: 'Cashout rejected' });
+  } catch (err) {
+    logger.error('Reject cashout error', err);
+    res.status(500).json({ message: 'Error rejecting cashout' });
+  }
+});
+
 export default router;
