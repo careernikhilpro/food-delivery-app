@@ -389,10 +389,15 @@ eligible=${eligible}`);
            }
         }
 
-        const totalOrders = activeCount + (ringingJobId ? 1 : 0);
+        if (ringingJobId) {
+           console.log(`[ASSIGN_CHECK] riderId=${rId} jobId=${jobPayload.id} ringingJobId=${ringingJobId} eligible=false reason=Already ringing for another job`);
+           continue;
+        }
+
+        const totalOrders = activeCount;
         
         if (totalOrders >= 2) {
-           console.log(`[ASSIGN_CHECK] riderId=${rId} jobId=${jobPayload.id} ringingJobId=${ringingJobId || 'none'} eligible=false reason=Already has ${totalOrders} orders (active+ringing)`);
+           console.log(`[ASSIGN_CHECK] riderId=${rId} jobId=${jobPayload.id} eligible=false reason=Already has ${totalOrders} active orders`);
            continue;
         }
         if (totalOrders === 1) {
@@ -585,6 +590,7 @@ eligible=true`);
           `Distance: ${actualPickupDistance.toFixed(1)} km | Payout: ₹${totalPayout}`,
           { 
             orderId: jobPayload.id.toString(), 
+            id: jobPayload.id.toString(),
             type: 'new_job',
             customerName: jobPayload.customerName,
             customerAddress: jobPayload.customerAddress,
