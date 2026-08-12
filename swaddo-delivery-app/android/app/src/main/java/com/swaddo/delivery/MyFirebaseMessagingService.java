@@ -113,7 +113,7 @@ public class MyFirebaseMessagingService extends MessagingService {
                 // Use the same intent for fullScreenIntent to wake up the screen and show heads-up UI
                 PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(this, notificationId + 1, mainIntent, pendingFlags);
 
-                String channelId = "swaddo_alerts_v6"; // New channel ID to ensure new settings apply
+                String channelId = "swaddo_alerts_v5"; // New channel ID to ensure new settings apply
                 android.net.Uri soundUri = android.net.Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.orderring);
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(R.mipmap.ic_launcher)

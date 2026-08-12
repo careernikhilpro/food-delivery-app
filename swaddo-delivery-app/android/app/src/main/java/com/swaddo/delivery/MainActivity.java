@@ -44,7 +44,7 @@ public class MainActivity extends BridgeActivity {
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("swaddo_alerts_v8",
+            NotificationChannel channel = new NotificationChannel("swaddo_alerts_v5",
                     "Ringing Alerts",
                     NotificationManager.IMPORTANCE_HIGH);
             
