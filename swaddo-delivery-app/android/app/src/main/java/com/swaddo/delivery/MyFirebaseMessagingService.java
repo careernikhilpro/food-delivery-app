@@ -78,49 +78,7 @@ public class MyFirebaseMessagingService extends MessagingService {
             android.util.Log.d(TAG, "DIAGNOSTIC: notificationId=" + notificationId);
 
             try {
-                android.util.Log.d(TAG, "DIAGNOSTIC: creating fullScreenIntent");
-                Intent fullScreenIntent = new Intent(this, RingingActivity.class);
-                fullScreenIntent.putExtra("title", title);
-                fullScreenIntent.putExtra("body", body);
-                if (orderId != null) {
-                    fullScreenIntent.putExtra("orderId", orderId);
-                }
-                if (remoteMessage.getData().containsKey("customerName")) {
-                    fullScreenIntent.putExtra("customerName", remoteMessage.getData().get("customerName"));
-                }
-                if (remoteMessage.getData().containsKey("customerAddress")) {
-                    fullScreenIntent.putExtra("customerAddress", remoteMessage.getData().get("customerAddress"));
-                }
-                if (remoteMessage.getData().containsKey("itemCount")) {
-                    fullScreenIntent.putExtra("itemCount", remoteMessage.getData().get("itemCount"));
-                }
-                if (remoteMessage.getData().containsKey("itemsSummary")) {
-                    fullScreenIntent.putExtra("itemsSummary", remoteMessage.getData().get("itemsSummary"));
-                }
-                if (remoteMessage.getData().containsKey("stallName")) {
-                    fullScreenIntent.putExtra("stallName", remoteMessage.getData().get("stallName"));
-                }
-                if (remoteMessage.getData().containsKey("pickupDistance")) {
-                    fullScreenIntent.putExtra("pickupDistance", remoteMessage.getData().get("pickupDistance"));
-                }
-                if (remoteMessage.getData().containsKey("dropoffDistance")) {
-                    fullScreenIntent.putExtra("dropoffDistance", remoteMessage.getData().get("dropoffDistance"));
-                }
-                if (remoteMessage.getData().containsKey("deliveryPay")) {
-                    fullScreenIntent.putExtra("deliveryPay", remoteMessage.getData().get("deliveryPay"));
-                }
-                if (remoteMessage.getData().containsKey("totalPayout")) {
-                    fullScreenIntent.putExtra("totalPayout", remoteMessage.getData().get("totalPayout"));
-                }
-                if (remoteMessage.getData().containsKey("pickupPayout")) {
-                    fullScreenIntent.putExtra("pickupPayout", remoteMessage.getData().get("pickupPayout"));
-                }
-                if (remoteMessage.getData().containsKey("returnPayout")) {
-                    fullScreenIntent.putExtra("returnPayout", remoteMessage.getData().get("returnPayout"));
-                }
-                fullScreenIntent.putExtra("notificationId", notificationId);
-                fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-
+                // Determine if screen is off to acquire wakelock
                 boolean isScreenOn = false;
                 if (pm != null) {
                     isScreenOn = pm.isInteractive();
@@ -140,32 +98,22 @@ public class MyFirebaseMessagingService extends MessagingService {
                 }
                 android.util.Log.d(TAG, "DIAGNOSTIC: screenInteractive=" + isScreenOn);
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    boolean canDraw = android.provider.Settings.canDrawOverlays(this);
-                    android.util.Log.d(TAG, "DIAGNOSTIC: overlay permission=" + canDraw);
-                    if (canDraw) {
-                        android.util.Log.d(TAG, "DIAGNOSTIC: launching RingingActivity");
-                        try {
-                            startActivity(fullScreenIntent);
-                            android.util.Log.d(TAG, "DIAGNOSTIC: startActivity(fullScreenIntent) succeeded.");
-                        } catch (Exception e) {
-                            android.util.Log.e(TAG, "DIAGNOSTIC: startActivity(fullScreenIntent) FAILED: " + e.getMessage());
-                        }
-                    } else {
-                        android.util.Log.w(TAG, "DIAGNOSTIC: canDrawOverlays is FALSE. Explicit activity start skipped. Waiting on Notification FullScreenIntent.");
-                    }
-                }
-                
-                android.util.Log.d(TAG, "DIAGNOSTIC: fullScreenIntent created for RingingActivity.");
-                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(this, notificationId,
-                        fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        
+                // Create intent to open MainActivity (React App)
                 Intent mainIntent = new Intent(this, MainActivity.class);
                 mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                PendingIntent contentIntent = PendingIntent.getActivity(this, notificationId + 1,
-                        mainIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                
+                // Pass order details to React app via Intent extras
+                if (orderId != null) {
+                    mainIntent.putExtra("orderId", orderId);
+                    mainIntent.putExtra("action", "accept");
+                }
+                
+                int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
+                PendingIntent contentIntent = PendingIntent.getActivity(this, notificationId, mainIntent, pendingFlags);
+                // Use the same intent for fullScreenIntent to wake up the screen and show heads-up UI
+                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(this, notificationId + 1, mainIntent, pendingFlags);
 
-                String channelId = "swaddo_alerts_v5";
+                String channelId = "swaddo_alerts_v6"; // New channel ID to ensure new settings apply
                 android.net.Uri soundUri = android.net.Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.orderring);
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(R.mipmap.ic_launcher)
@@ -182,7 +130,7 @@ public class MyFirebaseMessagingService extends MessagingService {
                 NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    android.util.Log.d(TAG, "DIAGNOSTIC: Configuring NotificationChannel 'swaddo_alerts_v5' with IMPORTANCE_HIGH...");
+                    android.util.Log.d(TAG, "DIAGNOSTIC: Configuring NotificationChannel '" + channelId + "' with IMPORTANCE_HIGH...");
                     NotificationChannel channel = new NotificationChannel(channelId,
                             "Ringing Alerts",
                             NotificationManager.IMPORTANCE_HIGH);

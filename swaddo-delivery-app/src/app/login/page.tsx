@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Preferences } from '@capacitor/preferences';
 import { api } from "@/lib/api";
+import axios from 'axios';
 import { requestNotificationPermission } from "@/lib/firebase";
 import { Phone, Lock, ArrowRight, Loader2, KeyRound, ShieldCheck, UserPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -103,6 +104,21 @@ export default function Login() {
     if (user && user.id) {
         localStorage.setItem("riderId", user.id.toString());
         Preferences.set({ key: 'riderId', value: user.id.toString() });
+        
+        // Upload cached FCM token if available
+        const cachedFcmToken = localStorage.getItem("fcm_token_cache");
+        if (cachedFcmToken) {
+          try {
+            await axios.post(
+              `${process.env.NEXT_PUBLIC_API_URL || 'https://food-delivery-app-wfv0.onrender.com/api'}/auth/fcm-token`,
+              { token: cachedFcmToken },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            localStorage.removeItem("fcm_token_cache");
+          } catch (e) {
+            console.error("Failed to upload cached FCM token", e);
+          }
+        }
     }
     
     document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;

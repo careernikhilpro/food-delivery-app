@@ -14,9 +14,20 @@ export const useFCM = () => {
         if (Capacitor.isNativePlatform()) {
           const permStatus = await PushNotifications.requestPermissions();
           if (permStatus.receive === 'granted') {
+            await PushNotifications.createChannel({
+              id: 'swaddo_alerts_v8',
+              name: 'Ringing Alerts',
+              description: 'High priority alerts for incoming orders',
+              importance: 5,
+              sound: 'orderring.mp3', 
+              visibility: 1,
+              vibration: true
+            }).catch(console.error);
+            
             await PushNotifications.register();
             PushNotifications.addListener('registration', async (fcmToken) => {
               console.log('Native FCM Token:', fcmToken.value);
+              if (typeof window !== 'undefined') localStorage.setItem('fcm_token_cache', fcmToken.value);
               const authToken = typeof window !== 'undefined' ? localStorage.getItem('swaddo_delivery_token') : null;
               if (authToken) {
                 await api.post('/auth/fcm-token', { token: fcmToken.value }).catch(() => {});
@@ -36,6 +47,7 @@ export const useFCM = () => {
 
         if (token) {
           console.log('Web FCM Token:', token);
+          if (typeof window !== 'undefined') localStorage.setItem('fcm_token_cache', token);
           const authToken = typeof window !== 'undefined' ? localStorage.getItem('swaddo_delivery_token') : null;
           if (authToken) {
             await api.post('/auth/fcm-token', { token }).catch(() => {});

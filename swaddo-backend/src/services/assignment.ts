@@ -395,9 +395,6 @@ eligible=${eligible}`);
            console.log(`[ASSIGN_CHECK] riderId=${rId} jobId=${jobPayload.id} ringingJobId=${ringingJobId || 'none'} eligible=false reason=Already has ${totalOrders} orders (active+ringing)`);
            continue;
         }
-
-        let isStacked = false;
-
         if (totalOrders === 1) {
           // Check stacking constraints
           let pLat: number, pLng: number, dLat: number, dLng: number;
