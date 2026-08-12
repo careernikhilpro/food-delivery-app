@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Store, ShoppingBag, ShieldAlert, Bike, LogOut, Bell, MessageSquare, ChevronRight, Users } from "lucide-react";
+import { LayoutDashboard, Store, ShoppingBag, ShieldAlert, Bike, LogOut, Bell, MessageSquare, ChevronRight, Users, Banknote } from "lucide-react";
 import Cookies from "js-cookie";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export default function Sidebar() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Riders", href: "/riders", icon: Bike },
     { name: "Customers", href: "/customers", icon: Users },
+    { name: "Floating Cash", href: "/floating-cash", icon: Banknote },
     { name: "Disputes", href: "/disputes", icon: ShieldAlert },
     { name: "Notifications", href: "/notifications", icon: Bell },
     { name: "Support", href: "/dashboard/support", icon: MessageSquare },
