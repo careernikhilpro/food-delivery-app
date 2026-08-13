@@ -136,10 +136,12 @@ function StallDetailContent() {
   const [itemFavorites, setItemFavorites] = useState<string[]>([]);
   const [isVegMode, setIsVegMode] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDeepScrolled, setIsDeepScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 150);
+      setIsScrolled(window.scrollY > 50);
+      setIsDeepScrolled(window.scrollY > 200);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -325,28 +327,59 @@ function StallDetailContent() {
   return (
     <div className="min-h-screen bg-white pb-32 font-body relative">
       {/* Sticky Header */}
-      <div className={`fixed top-0 left-0 w-full bg-white z-50 px-4 py-3 flex items-center justify-between shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-all duration-300 ${isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-gray-700">
+      <div className={`fixed top-0 left-0 w-full bg-white z-50 shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-all duration-300 ${isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <button onClick={() => router.back()} className="text-gray-700 shrink-0">
             <ArrowLeft size={24} />
           </button>
-          <div className="font-bold text-gray-900 text-[16px] tracking-tight">
-            {stallData.name} <span className="text-gray-400 font-medium px-1">•</span> <span className="text-gray-600 font-medium text-[14px]">{stallData.prep_time || '35-45'} mins</span>
+          
+          {isDeepScrolled ? (
+            <div className="flex-1 relative w-full h-[40px] bg-gray-100/80 rounded-full flex items-center px-4">
+              <input type="text" placeholder={`Search in ${stallData.name}`} className="bg-transparent border-none outline-none text-[14px] font-medium text-gray-800 w-full placeholder:text-gray-500" />
+              <Search size={18} className="text-gray-500 ml-2 shrink-0" />
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 font-bold text-gray-900 text-[16px] tracking-tight truncate max-w-[200px] sm:max-w-xs text-center sm:text-left">
+                {stallData.name} <span className="text-gray-400 font-medium px-1">•</span> <span className="text-gray-600 font-medium text-[14px]">{stallData.prep_time ? `${Number(stallData.prep_time)}-${Number(stallData.prep_time) + 10}` : '35-45'} mins</span>
+              </div>
+              <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-700 border border-gray-100 shadow-sm shrink-0">
+                <Search size={18} strokeWidth={2.5} />
+              </button>
+            </>
+          )}
+        </div>
+        
+        {/* Sticky Filter Chips */}
+        <div className="flex overflow-x-auto gap-3 scrollbar-hide px-4 pb-3">
+          <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
+            <VegIcon />
+            <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => setIsVegMode(!isVegMode)}>
+              <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 opacity-50 bg-white">
+            <NonVegIcon />
+            <div className="w-8 h-5 rounded-full p-0.5 bg-gray-200">
+              <div className="w-4 h-4 bg-white rounded-full shadow-sm translate-x-0"></div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
+            <PromoIcon className="w-5 h-5 object-contain" />
+            <span className="text-[13px] font-bold text-gray-800">10%-20% lower prices</span>
+          </div>
+          <div className="flex items-center border border-gray-200 rounded-full px-4 py-1.5 shrink-0 bg-white">
+            <span className="text-[13px] font-bold text-gray-800">Rating</span>
           </div>
         </div>
-        <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-700 border border-gray-100 shadow-sm">
-          <Search size={18} strokeWidth={2.5} />
-        </button>
       </div>
 
       {/* Hero Section */}
-      <div className="relative w-full h-[160px] md:h-[180px] xl:h-[220px]">
-        {/* Hero Image with Placeholder */}
-        <div className="absolute inset-0 bg-[#FDEADD] z-0">
-          <div className="w-full h-full bg-[url('/placeholder.png')] bg-repeat opacity-60 bg-[length:150px]"></div>
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={stallData.image || '/placeholder.png'} alt={stallData.name} className="relative z-10 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+      <div className="relative w-full h-[160px] md:h-[180px] xl:h-[220px] bg-gray-100">
+        {(stallData.image || stallData.cover_image) && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={stallData.image || stallData.cover_image} alt={stallData.name} className="relative z-10 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        )}
         
         {/* Floating Actions */}
         <div className="absolute top-4 xl:top-6 left-4 xl:left-8 right-4 xl:right-8 flex justify-between items-center z-20">
@@ -403,7 +436,7 @@ function StallDetailContent() {
             <PromoIcon className="w-8 h-8 shrink-0 object-contain mt-0.5" />
             <div>
               <p className="font-extrabold text-[#C2185B] text-[15px] leading-tight">20% LOWER PRICES vs OTHER APPS</p>
-              <p className="text-gray-500 text-[12px] mt-0.5">Prices seen only on Toing</p>
+              <p className="text-gray-500 text-[12px] mt-0.5">Prices seen only on Swaddo</p>
             </div>
           </div>
 
