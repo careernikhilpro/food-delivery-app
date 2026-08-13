@@ -994,7 +994,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
           const menuItems = menuData.map((item: any) => ({
             id: item.id?.toString() || Math.random().toString(),
             name: item.name,
-            image: item.image_url || "/categories/burger.png",
+            image: (item.image_url && !item.image_url.includes('unsplash.com') && !item.image_url.includes('picsum.photos')) ? item.image_url : "/categories/burger.png",
             newPrice: "₹" + Math.round(item.price),
             originalPrice: "₹" + Math.round(item.price * 1.2),
             isPopular: true,

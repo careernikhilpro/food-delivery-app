@@ -129,12 +129,13 @@ function StallDetailContent() {
       isVeg: item.is_veg ?? true,
       isSoldOut: item.is_available === false,
       category: (item.category && item.category.trim().toLowerCase() !== "all") ? item.category : "Others",
-      image: item.image_url || ""
+      image: (item.image_url && !item.image_url.includes('unsplash.com') && !item.image_url.includes('picsum.photos')) ? item.image_url : ""
     }));
   }, [rawMenuData]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [itemFavorites, setItemFavorites] = useState<string[]>([]);
   const [isVegMode, setIsVegMode] = useState(false);
+  const [isNonVegMode, setIsNonVegMode] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDeepScrolled, setIsDeepScrolled] = useState(false);
 
@@ -165,10 +166,10 @@ function StallDetailContent() {
         const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
         setIsDeepScrolled(!entry.isIntersecting && scrollTop > 150);
       },
-      { threshold: 0, rootMargin: "-100px 0px 0px 0px" } 
+      { threshold: 0, rootMargin: "-48px 0px 0px 0px" } 
     );
     
-    const targetElement = document.getElementById('filter-chips');
+    const targetElement = document.getElementById('main-search-bar');
     if (targetElement) {
       observer.observe(targetElement);
     }
@@ -467,14 +468,14 @@ function StallDetailContent() {
           <div className="flex overflow-x-auto gap-3 scrollbar-hide px-4 pb-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
               <VegIcon />
-              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => setIsVegMode(!isVegMode)}>
+              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => { setIsVegMode(!isVegMode); if (!isVegMode) setIsNonVegMode(false); }}>
                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
               </div>
             </div>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 opacity-50 bg-white">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
               <NonVegIcon />
-              <div className="w-8 h-5 rounded-full p-0.5 bg-gray-200">
-                <div className="w-4 h-4 bg-white rounded-full shadow-sm translate-x-0"></div>
+              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isNonVegMode ? 'bg-[#8B3A1A]' : 'bg-gray-200'}`} onClick={() => { setIsNonVegMode(!isNonVegMode); if (!isNonVegMode) setIsVegMode(false); }}>
+                <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isNonVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
               </div>
             </div>
             <div className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
@@ -490,10 +491,14 @@ function StallDetailContent() {
 
       {/* Hero Section */}
       <div className="relative w-full h-[160px] md:h-[180px] xl:h-[220px] bg-gray-100">
-        {(stallData.image || stallData.cover_image) && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={stallData.image || stallData.cover_image} alt={stallData.name} className="relative z-10 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-        )}
+        {(() => {
+          const imgUrl = stallData.image || stallData.cover_image;
+          const isValid = imgUrl && !imgUrl.includes('unsplash.com') && !imgUrl.includes('picsum.photos');
+          return isValid ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={imgUrl} alt={stallData.name} className="relative z-10 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          ) : null;
+        })()}
         
         {/* Floating Actions */}
         <div className="absolute top-4 xl:top-6 left-4 xl:left-8 right-4 xl:right-8 flex justify-between items-center z-20">
@@ -564,14 +569,14 @@ function StallDetailContent() {
           <div id="filter-chips" className="flex overflow-x-auto gap-3 scrollbar-hide pb-2">
             <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
               <VegIcon />
-              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => setIsVegMode(!isVegMode)}>
+              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => { setIsVegMode(!isVegMode); if (!isVegMode) setIsNonVegMode(false); }}>
                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
               </div>
             </div>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 opacity-50 bg-white">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
               <NonVegIcon />
-              <div className="w-8 h-5 rounded-full p-0.5 bg-gray-200">
-                <div className="w-4 h-4 bg-white rounded-full shadow-sm translate-x-0"></div>
+              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isNonVegMode ? 'bg-[#8B3A1A]' : 'bg-gray-200'}`} onClick={() => { setIsNonVegMode(!isNonVegMode); if (!isNonVegMode) setIsVegMode(false); }}>
+                <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isNonVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
               </div>
             </div>
             <div className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
@@ -593,7 +598,11 @@ function StallDetailContent() {
           )}
           
           {categoriesToRender.map(cat => {
-            const currentItems = items.filter(item => item.category === cat && (!isVegMode || item.isVeg));
+            const currentItems = items.filter(item => 
+              item.category === cat && 
+              (!isVegMode || item.isVeg) && 
+              (!isNonVegMode || !item.isVeg)
+            );
             if (currentItems.length === 0) return null;
 
             return (
