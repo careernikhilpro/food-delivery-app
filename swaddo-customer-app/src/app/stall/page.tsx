@@ -129,7 +129,7 @@ function StallDetailContent() {
       isVeg: item.is_veg ?? true,
       isSoldOut: item.is_available === false,
       category: (item.category && item.category.trim().toLowerCase() !== "all") ? item.category : "Others",
-      image: item.image_url || `https://source.unsplash.com/400x300/?food,${item.name.split(' ')[0]}`
+      image: item.image_url || ""
     }));
   }, [rawMenuData]);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -139,13 +139,44 @@ function StallDetailContent() {
   const [isDeepScrolled, setIsDeepScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-      setIsDeepScrolled(window.scrollY > 200);
+    const scrollContainer = document.querySelector('.app-scroll-container');
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      setIsScrolled(target.scrollTop > 50);
+      setIsDeepScrolled(target.scrollTop > 260); // Approx height where search bar disappears
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    const scrollContainer = document.querySelector('.app-scroll-container');
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+        setIsDeepScrolled(!entry.isIntersecting && scrollTop > 150);
+      },
+      { threshold: 0, rootMargin: "-100px 0px 0px 0px" } 
+    );
+    
+    const targetElement = document.getElementById('filter-chips');
+    if (targetElement) {
+      observer.observe(targetElement);
+    }
+    
+    return () => {
+      if (targetElement) observer.unobserve(targetElement);
+    };
+  }, [isLoading]);
 
   useEffect(() => {
     if (stallId && typeof window !== "undefined") {
@@ -307,6 +338,87 @@ function StallDetailContent() {
     ? dynamicCategories.filter(c => c !== "All")
     : [activeCategory];
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const renderMenuItem = (item: any) => {
+    const qty = cart.stallId === stallId ? (cart.items.find(i => i.id === item.id.toString())?.quantity || 0) : 0;
+    const basePrice = Number(item.price) + itemMarkup;
+    const originalPrice = Math.floor(basePrice * 1.3); // Fake original price
+    const otherAppPrice = `${Math.floor(basePrice * 1.4)}-${Math.floor(basePrice * 1.5)}`;
+    
+    return (
+      <motion.div 
+        layout
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        key={item.id} 
+        className={`flex flex-col bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 overflow-visible ${item.isSoldOut ? "opacity-60 grayscale-[0.2]" : ""}`}
+      >
+        {/* Top Image */}
+        <div className="relative w-full aspect-[4/3] bg-[#FDEADD] group overflow-hidden rounded-t-2xl shrink-0">
+          <div className="absolute inset-0 z-0">
+            <div className="w-full h-full bg-[url('/placeholder.png')] bg-repeat opacity-60 bg-[length:120px]"></div>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.image || '/placeholder.png'} alt={item.name} className="relative z-10 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <div className="absolute top-2 left-2 bg-white text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm z-20">
+            Popular
+          </div>
+        </div>
+        
+        {/* Info */}
+        <div className="p-2.5 pt-4 flex flex-col flex-1 relative rounded-b-2xl bg-white">
+          {/* Add Button overlapping the image and info section */}
+          <div className="absolute -top-5 right-2 z-30">
+            {item.isSoldOut || stallData?.isOpen === false || stallData?.is_open === false ? (
+              <div className="py-1 px-3 bg-gray-100 text-gray-500 shadow-md border border-gray-200 text-[10px] font-black text-center rounded-xl uppercase">
+                {stallData?.isOpen === false || stallData?.is_open === false ? "Closed" : "Sold Out"}
+              </div>
+            ) : qty === 0 ? (
+              <button 
+                onClick={() => handleUpdateCartLocal(item, 1)}
+                className="w-10 h-10 bg-white shadow-md border-[2px] border-[#F48FB1] rounded-full flex items-center justify-center hover:bg-pink-50 transition-colors"
+              >
+                <Plus size={20} className="text-[#D81B60]" strokeWidth={3.5} />
+              </button>
+            ) : (
+              <div className="flex items-center justify-between w-20 h-10 bg-white text-[#D81B60] font-black text-sm rounded-full shadow-md border-[2px] border-[#F48FB1] overflow-hidden px-1">
+                <button onClick={() => handleUpdateCartLocal(item, -1)} className="w-6 h-full flex justify-center items-center hover:bg-pink-50 transition-colors"><Minus size={14} strokeWidth={3.5} /></button>
+                <span className="text-[14px] text-gray-900">{qty}</span>
+                <button onClick={() => handleUpdateCartLocal(item, 1)} className="w-6 h-full flex justify-center items-center hover:bg-pink-50 transition-colors"><Plus size={14} strokeWidth={3.5} /></button>
+              </div>
+            )}
+          </div>
+
+          <div className="inline-flex items-center gap-0.5 bg-green-50 border border-green-100 text-green-700 px-1 py-0.5 rounded text-[10px] font-black self-start -mt-3 mb-1.5 relative z-10 shadow-sm">
+              <Star size={10} className="fill-green-700" />
+              3.6
+          </div>
+
+          <div className="flex items-start gap-1 mb-1.5">
+            <h3 className="font-body font-bold text-gray-900 text-[13px] leading-[1.3] line-clamp-3">
+              <span className="inline-block mr-1 align-text-bottom pb-[2px]">{item.isVeg ? <VegIcon /> : <NonVegIcon />}</span>
+              {item.name}
+            </h3>
+          </div>
+          
+          <div className="flex items-center gap-1.5 mb-1 mt-auto pt-1">
+            <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">₹{originalPrice}</span>
+            <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">₹{basePrice}</span>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
+            <span className="text-gray-500 text-[11px] font-medium">Other apps: ₹{otherAppPrice}</span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
   if (isLoading || !stallData) {
     return (
       <div className="min-h-screen bg-gray-50 pb-32">
@@ -334,8 +446,8 @@ function StallDetailContent() {
           </button>
           
           {isDeepScrolled ? (
-            <div className="flex-1 relative w-full h-[40px] bg-gray-100/80 rounded-full flex items-center px-4">
-              <input type="text" placeholder={`Search in ${stallData.name}`} className="bg-transparent border-none outline-none text-[14px] font-medium text-gray-800 w-full placeholder:text-gray-500" />
+            <div className="flex-1 relative w-full h-[40px] bg-gray-100/80 rounded-full flex items-center px-4" onClick={() => setIsSearchOpen(true)}>
+              <div className="bg-transparent border-none outline-none text-[14px] font-medium text-gray-500 w-full text-left">Search in {stallData.name}</div>
               <Search size={18} className="text-gray-500 ml-2 shrink-0" />
             </div>
           ) : (
@@ -343,7 +455,7 @@ function StallDetailContent() {
               <div className="flex-1 font-bold text-gray-900 text-[16px] tracking-tight truncate max-w-[200px] sm:max-w-xs text-center sm:text-left">
                 {stallData.name} <span className="text-gray-400 font-medium px-1">•</span> <span className="text-gray-600 font-medium text-[14px]">{stallData.prep_time ? `${Number(stallData.prep_time)}-${Number(stallData.prep_time) + 10}` : '35-45'} mins</span>
               </div>
-              <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-700 border border-gray-100 shadow-sm shrink-0">
+              <button onClick={() => setIsSearchOpen(true)} className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-700 border border-gray-100 shadow-sm shrink-0">
                 <Search size={18} strokeWidth={2.5} />
               </button>
             </>
@@ -351,27 +463,29 @@ function StallDetailContent() {
         </div>
         
         {/* Sticky Filter Chips */}
-        <div className="flex overflow-x-auto gap-3 scrollbar-hide px-4 pb-3">
-          <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
-            <VegIcon />
-            <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => setIsVegMode(!isVegMode)}>
-              <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
+        {isDeepScrolled && (
+          <div className="flex overflow-x-auto gap-3 scrollbar-hide px-4 pb-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
+              <VegIcon />
+              <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => setIsVegMode(!isVegMode)}>
+                <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isVegMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 opacity-50 bg-white">
+              <NonVegIcon />
+              <div className="w-8 h-5 rounded-full p-0.5 bg-gray-200">
+                <div className="w-4 h-4 bg-white rounded-full shadow-sm translate-x-0"></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
+              <PromoIcon className="w-5 h-5 object-contain" />
+              <span className="text-[13px] font-bold text-gray-800">10%-20% lower prices</span>
+            </div>
+            <div className="flex items-center border border-gray-200 rounded-full px-4 py-1.5 shrink-0 bg-white">
+              <span className="text-[13px] font-bold text-gray-800">Rating</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 opacity-50 bg-white">
-            <NonVegIcon />
-            <div className="w-8 h-5 rounded-full p-0.5 bg-gray-200">
-              <div className="w-4 h-4 bg-white rounded-full shadow-sm translate-x-0"></div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
-            <PromoIcon className="w-5 h-5 object-contain" />
-            <span className="text-[13px] font-bold text-gray-800">10%-20% lower prices</span>
-          </div>
-          <div className="flex items-center border border-gray-200 rounded-full px-4 py-1.5 shrink-0 bg-white">
-            <span className="text-[13px] font-bold text-gray-800">Rating</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Hero Section */}
@@ -441,13 +555,13 @@ function StallDetailContent() {
           </div>
 
           {/* Search Bar */}
-          <div className="relative w-full h-[46px] bg-gray-100/80 rounded-full flex items-center px-4 mb-4">
+          <div id="main-search-bar" onClick={() => setIsSearchOpen(true)} className="relative w-full h-[46px] bg-gray-100/80 rounded-full flex items-center px-4 mb-4 cursor-text">
             <Search size={20} className="text-gray-500 mr-2" />
-            <input type="text" placeholder="Search for dishes" className="bg-transparent border-none outline-none text-[15px] font-medium text-gray-800 w-full placeholder:text-gray-500" />
+            <div className="bg-transparent border-none outline-none text-[15px] font-medium text-gray-500 w-full text-left">Search for dishes</div>
           </div>
 
           {/* Filter Chips */}
-          <div className="flex overflow-x-auto gap-3 scrollbar-hide pb-2">
+          <div id="filter-chips" className="flex overflow-x-auto gap-3 scrollbar-hide pb-2">
             <div className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 shrink-0 bg-white">
               <VegIcon />
               <div className={`w-8 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isVegMode ? 'bg-green-600' : 'bg-gray-200'}`} onClick={() => setIsVegMode(!isVegMode)}>
@@ -494,83 +608,7 @@ function StallDetailContent() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <AnimatePresence>
-                    {currentItems.map(item => {
-                      const qty = cart.stallId === stallId ? (cart.items.find(i => i.id === item.id.toString())?.quantity || 0) : 0;
-                      const basePrice = Number(item.price) + itemMarkup;
-                      const originalPrice = Math.floor(basePrice * 1.3); // Fake original price
-                      const otherAppPrice = `${Math.floor(basePrice * 1.4)}-${Math.floor(basePrice * 1.5)}`;
-                      
-                      return (
-                        <motion.div 
-                          layout
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                          key={item.id} 
-                          className={`flex flex-col bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 overflow-visible ${item.isSoldOut ? "opacity-60 grayscale-[0.2]" : ""}`}
-                        >
-                          {/* Top Image */}
-                          <div className="relative w-full aspect-[4/3] bg-[#FDEADD] group overflow-hidden rounded-t-2xl shrink-0">
-                            <div className="absolute inset-0 z-0">
-                              <div className="w-full h-full bg-[url('/placeholder.png')] bg-repeat opacity-60 bg-[length:120px]"></div>
-                            </div>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={item.image || '/placeholder.png'} alt={item.name} className="relative z-10 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <div className="absolute top-2 left-2 bg-white text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm z-20">
-                              Popular
-                            </div>
-                          </div>
-                          
-                          {/* Info */}
-                          <div className="p-2.5 pt-4 flex flex-col flex-1 relative rounded-b-2xl bg-white">
-                            {/* Add Button overlapping the image and info section */}
-                            <div className="absolute -top-5 right-2 z-30">
-                              {item.isSoldOut || stallData?.isOpen === false || stallData?.is_open === false ? (
-                                <div className="py-1 px-3 bg-gray-100 text-gray-500 shadow-md border border-gray-200 text-[10px] font-black text-center rounded-xl uppercase">
-                                  {stallData?.isOpen === false || stallData?.is_open === false ? "Closed" : "Sold Out"}
-                                </div>
-                              ) : qty === 0 ? (
-                                <button 
-                                  onClick={() => handleUpdateCartLocal(item, 1)}
-                                  className="w-10 h-10 bg-white shadow-md border-[2px] border-[#F48FB1] rounded-full flex items-center justify-center hover:bg-pink-50 transition-colors"
-                                >
-                                  <Plus size={20} className="text-[#D81B60]" strokeWidth={3.5} />
-                                </button>
-                              ) : (
-                                <div className="flex items-center justify-between w-20 h-10 bg-white text-[#D81B60] font-black text-sm rounded-full shadow-md border-[2px] border-[#F48FB1] overflow-hidden px-1">
-                                  <button onClick={() => handleUpdateCartLocal(item, -1)} className="w-6 h-full flex justify-center items-center hover:bg-pink-50 transition-colors"><Minus size={14} strokeWidth={3.5} /></button>
-                                  <span className="text-[14px] text-gray-900">{qty}</span>
-                                  <button onClick={() => handleUpdateCartLocal(item, 1)} className="w-6 h-full flex justify-center items-center hover:bg-pink-50 transition-colors"><Plus size={14} strokeWidth={3.5} /></button>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="inline-flex items-center gap-0.5 bg-green-50 border border-green-100 text-green-700 px-1 py-0.5 rounded text-[10px] font-black self-start -mt-3 mb-1.5 relative z-10 shadow-sm">
-                               <Star size={10} className="fill-green-700" />
-                               3.6
-                            </div>
-
-                            <div className="flex items-start gap-1 mb-1.5">
-                              <h3 className="font-body font-bold text-gray-900 text-[13px] leading-[1.3] line-clamp-3">
-                                <span className="inline-block mr-1 align-text-bottom pb-[2px]">{item.isVeg ? <VegIcon /> : <NonVegIcon />}</span>
-                                {item.name}
-                              </h3>
-                            </div>
-                            
-                            <div className="flex items-center gap-1.5 mb-1 mt-auto pt-1">
-                              <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">₹{originalPrice}</span>
-                              <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">₹{basePrice}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-1">
-                              <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
-                              <span className="text-gray-500 text-[11px] font-medium">Other apps: ₹{otherAppPrice}</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                    {currentItems.map(item => renderMenuItem(item))}     })}
                   </AnimatePresence>
                 </div>
               </div>
@@ -578,6 +616,72 @@ function StallDetailContent() {
           })}
         </div>
       </div>
+
+      {/* Search Overlay */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-white z-[100] flex flex-col"
+          >
+            {/* Search Header */}
+            <div className="px-4 py-3 flex items-center gap-3 border-b border-gray-100 shadow-sm bg-white">
+              <button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} className="text-gray-700 shrink-0">
+                <ArrowLeft size={24} />
+              </button>
+              <div className="flex-1 relative w-full h-[40px] bg-gray-100/80 rounded-full flex items-center px-4">
+                <input 
+                  type="text" 
+                  autoFocus
+                  placeholder={`Search in ${stallData.name}`} 
+                  className="bg-transparent border-none outline-none text-[15px] font-medium text-gray-800 w-full placeholder:text-gray-500" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery ? (
+                  <button onClick={() => setSearchQuery("")} className="ml-2 shrink-0 p-1">
+                    <div className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center text-white text-[12px] font-bold pb-0.5">x</div>
+                  </button>
+                ) : (
+                  <Search size={18} className="text-gray-500 ml-2 shrink-0" />
+                )}
+              </div>
+            </div>
+
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50/30">
+              {searchQuery.trim() === "" ? (
+                <div className="text-center text-gray-400 mt-10 text-[15px] font-medium">Type a dish name to search...</div>
+              ) : (
+                (() => {
+                  const query = searchQuery.toLowerCase().trim();
+                  const results = items.filter(item => 
+                    item.name.toLowerCase().includes(query) || 
+                    item.description.toLowerCase().includes(query)
+                  );
+
+                  if (results.length === 0) {
+                    return (
+                      <div className="text-gray-800 text-[15px] font-bold mt-4">
+                        No results found for "{searchQuery}"
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4 pb-24">
+                      {results.map(item => renderMenuItem(item))}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating MENU Button */}
       <div className="fixed bottom-24 right-5 z-40">

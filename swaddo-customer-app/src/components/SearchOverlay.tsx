@@ -220,7 +220,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
                   <div className="flex items-center gap-4 bg-[#F8F8FC] rounded-[24px] p-3 mb-6 shadow-sm border border-transparent">
                     <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 bg-white shadow-sm border border-gray-100 p-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={results.dishes[0]?.image_url || `https://source.unsplash.com/400x300/?food,${query}`} alt={query} className="w-full h-full object-cover rounded-full" />
+                      <img src={results.dishes[0]?.image_url || '/placeholder.png'} alt={query} className="w-full h-full object-cover rounded-full" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-bold text-gray-900 text-[18px] capitalize leading-tight">{query}</h3>
@@ -247,7 +247,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
                         <Link key={stall.id} href={`/stall?id=${stall.id}`} className="flex items-center gap-4 group active:scale-[0.98] transition-transform">
                           <div className="w-[72px] h-[72px] rounded-[18px] overflow-hidden shrink-0 bg-gray-50 shadow-sm border border-gray-100/50">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={stall.cover_image || `https://picsum.photos/seed/${stall.id}/200`} alt={stall.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={stall.cover_image || '/placeholder.png'} alt={stall.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           </div>
                           <div className="flex-1">
                             <h3 className="font-heading font-bold text-gray-900 text-[17px]">{stall.name}</h3>
@@ -287,7 +287,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
                           <Link key={dish.id} href={`/stall?id=${dish.stall_id}`} className="flex items-center gap-4 group active:scale-[0.98] transition-transform">
                             <div className="w-[72px] h-[72px] rounded-full overflow-hidden shrink-0 bg-white shadow-sm border border-gray-100 p-0.5">
                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                               <img src={dish.image_url || `https://source.unsplash.com/400x300/?food,${dish.name.split(' ')[0]}`} alt={dish.name} className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform duration-500" />
+                               <img src={dish.image_url || '/placeholder.png'} alt={dish.name} className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform duration-500" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             </div>
                             <div className="flex-1">
                                <h3 className="font-heading font-bold text-gray-800 text-[16px] leading-tight">{dish.name}</h3>
