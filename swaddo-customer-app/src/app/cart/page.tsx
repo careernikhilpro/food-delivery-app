@@ -447,6 +447,11 @@ export default function Cart() {
   };
 
   const handleSaveAddress = async () => {
+    if (!customerName.trim() || !customerPhone.trim() || !houseNumber.trim()) {
+      alert("Please fill all the details: Name, Phone Number, and House No.");
+      return;
+    }
+    
     const finalAddress = mapSearchQuery || "Location Selected on Map";
     try {
       if (editAddressId) {
@@ -465,8 +470,9 @@ export default function Cart() {
 
       await fetchAddresses();
       if (!editAddressId) setSelectedAddressId(res.data.id.toString());
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save address", err);
+      alert("Failed to save address. Please try again. " + (err.response?.data?.message || ""));
     }
 
     setIsMapOpen(false);
@@ -893,11 +899,11 @@ export default function Cart() {
                   className="flex flex-col shrink-0 w-[105px] snap-start"
                 >
                   <div className="w-[105px] h-[105px] bg-white rounded-[12px] mb-2 relative overflow-visible border border-gray-200 shadow-sm flex items-center justify-center p-2">
-                    <Image
-                      src={sitem.img || sitem.image}
+                    <img
+                      src={sitem.image_url || sitem.image || sitem.img || '/placeholder.png'}
                       alt={sitem.name}
-                      fill
-                      className="object-cover p-2 rounded-[12px]"
+                      className="w-full h-full object-cover p-2 rounded-[12px]"
+                      onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
                     />
                     <button
                       onClick={() =>
@@ -1270,6 +1276,26 @@ export default function Cart() {
                     <span className="text-gray-600 font-medium">
                       ₹{deliveryFee}
                     </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[14px]">
+                    <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none">
+                      Platform Fee
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 line-through font-medium">₹5</span>
+                      <span className="text-[#00A14F] font-bold">Free</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[14px]">
+                    <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none">
+                      Packaging Fee
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 line-through font-medium">₹10</span>
+                      <span className="text-[#00A14F] font-bold">Free</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between text-[14px]">

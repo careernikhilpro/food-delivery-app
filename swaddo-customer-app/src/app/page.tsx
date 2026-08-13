@@ -120,10 +120,45 @@ export default function Home() {
     // Fetch Meals Under 99
     api.get("/stalls/meals-under-99").then((res) => {
       if (res.data && Array.isArray(res.data.data)) {
-        setMealsUnder99(res.data.data);
+        const parsePrice = (price: any) => typeof price === 'number' ? price : parseFloat((price || "0").toString().replace(/[^0-9.]/g, ''));
+        const sortedMeals = res.data.data.sort((a: any, b: any) => parsePrice(a.price) - parsePrice(b.price));
+        setMealsUnder99(sortedMeals);
       }
     }).catch(err => console.error("Error fetching meals under 99:", err));
   }, []);
+
+  const [categoryItems, setCategoryItems] = useState<any[]>([]);
+  const categoryCache = useRef<Record<string, any[]>>({});
+
+  useEffect(() => {
+    if (activeCategory === "All") {
+      setCategoryItems([]);
+      return;
+    }
+    
+    // Use cached items if available for instant UI update
+    if (categoryCache.current[activeCategory]) {
+      setCategoryItems(categoryCache.current[activeCategory]);
+      return;
+    }
+    
+    // Clear current items to avoid showing old items (e.g. Pizza images under Burger title)
+    setCategoryItems([]);
+    
+    let searchTerm = activeCategory;
+    if (searchTerm.endsWith('s')) {
+      searchTerm = searchTerm.slice(0, -1);
+    }
+    
+    api.get(`/stalls/search/all?q=${searchTerm}`).then((res) => {
+      if (res.data && Array.isArray(res.data.dishes)) {
+        const parsePrice = (price: any) => typeof price === 'number' ? price : parseFloat((price || "0").toString().replace(/[^0-9.]/g, ''));
+        const sortedDishes = res.data.dishes.sort((a: any, b: any) => parsePrice(a.price) - parsePrice(b.price));
+        setCategoryItems(sortedDishes);
+        categoryCache.current[activeCategory] = sortedDishes;
+      }
+    }).catch(err => console.error("Error fetching category items:", err));
+  }, [activeCategory]);
 
   useEffect(() => {
     const scrollContainer = document.querySelector('.app-scroll-container');
@@ -293,6 +328,8 @@ export default function Home() {
                      alt="Prices That Slay Everyday" 
                      fill 
                      className="object-contain object-left"
+                     priority
+                     unoptimized
                    />
                  </div>
                  <Link href="/lowest-prices">
@@ -316,7 +353,7 @@ export default function Home() {
                          transition={{ repeat: Infinity, duration: 3, ease: "easeInOut", times: [0, 0.2, 1] }}
                          className="absolute inset-0"
                        >
-                         <Image src="/categories/frontpicture.png" alt="Promo" fill className="object-cover" />
+                         <Image src="/categories/frontpicture.png" alt="Promo" fill className="object-cover" priority unoptimized />
                        </motion.div>
                      </motion.div>
                    </AnimatePresence>
@@ -384,7 +421,132 @@ export default function Home() {
         </div>
       </div>
       </div>
-        
+      {/* Category Items Preview */}
+      {activeCategory !== "All" && categoryItems.length > 0 && (
+        <div className="w-full mt-4 mb-2">
+          <div className="flex justify-between items-center mb-3 px-4">
+            <h2 className="text-[18px] font-black text-gray-800 tracking-tight">
+              {activeCategory.endsWith('s') ? activeCategory.slice(0, -1) : activeCategory} from ₹{categoryItems[0]?.price ? parseInt(categoryItems[0].price.toString()) : '49'}
+            </h2>
+            <Link href={`/category/${activeCategory}`}>
+              <button className="text-[13px] font-bold text-gray-600 flex items-center hover:text-gray-900 transition-colors">See All <ChevronRight size={16} className="ml-0.5" /></button>
+            </Link>
+          </div>
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 px-4 pb-4 snap-x">
+            {categoryItems.slice(0, 12).map((item) => {
+              const parsedPrice = Math.round(parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, '')) || 0);
+              let quantity = 0;
+              if (cart.stallId === item.stall_id) {
+                if (item.has_variants) {
+                  const prefix = String(item.id) + '_';
+                  quantity = cart.items.filter(i => String(i.id).startsWith(prefix)).reduce((sum, i) => sum + i.quantity, 0);
+                } else {
+                  const isAdded = cart.items.find(i => String(i.id) === String(item.id));
+                  quantity = isAdded ? isAdded.quantity : 0;
+                }
+              }
+
+              const fallbackImg = categories.find(c => c.name === activeCategory)?.image || "/categories/burger.png";
+
+              return (
+                <div key={item.id} className="flex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2">
+                 
+                  {/* Image Area */}
+                  <div className="relative w-full h-[110px] bg-blue-50/50 rounded-t-2xl overflow-visible">
+                    <div className="absolute inset-0 rounded-t-2xl overflow-hidden">
+                       <Image src={item.image_url || fallbackImg} alt={item.name} fill className={`object-cover ${!item.image_url && fallbackImg.includes('gulab') ? 'scale-125' : ''}`} />
+                    </div>
+                    
+                    {/* Popular Tag */}
+                    <div className="absolute top-2 left-2 bg-white text-[#00A14F] font-black text-[10px] px-2 py-0.5 rounded-full shadow-sm z-10">
+                      Popular
+                    </div>
+                    
+                    {/* Plus Button */}
+                    {quantity > 0 ? (
+                      <div className="absolute -bottom-4 right-3 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
+                        <button 
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            if (item.has_variants) {
+                              const variantsInCart = cart.items.filter((i: any) => String(i.id).startsWith(String(item.id) + '_'));
+                              if (variantsInCart.length === 1) {
+                                updateQuantity(item.stall_id?.toString(), item.stall_name, variantsInCart[0], -1);
+                              } else {
+                                alert("Multiple variants added. Please go to cart to remove.");
+                              }
+                            } else {
+                              updateQuantity(item.stall_id?.toString(), item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url, isVeg: item.is_veg }, -1); 
+                            }
+                          }}
+                          className="w-5 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
+                        ><Minus size={12} /></button>
+                        <span className="text-[12px] font-bold text-gray-800 flex-1 text-center min-w-[16px]">{quantity}</span>
+                        <button 
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            if (item.has_variants) {
+                              setVariantModal({ isOpen: true, stallId: item.stall_id?.toString(), stallName: item.stall_name, item });
+                            } else {
+                              updateQuantity(item.stall_id?.toString(), item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url, isVeg: item.is_veg }, 1); 
+                            }
+                          }}
+                          className="w-5 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
+                        ><Plus size={12} strokeWidth={3} /></button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (item.has_variants) {
+                            setVariantModal({ isOpen: true, stallId: item.stall_id?.toString(), stallName: item.stall_name, item });
+                          } else {
+                            updateQuantity(
+                              item.stall_id?.toString(), 
+                              item.stall_name, 
+                              { id: String(item.id), name: item.name, price: parsedPrice, image: item.image_url, isVeg: item.is_veg }, 
+                              1
+                            );
+                          }
+                        }}
+                        className="absolute -bottom-4 right-3 w-8 h-8 bg-white border border-[#FF007F] rounded-full flex items-center justify-center z-20 shadow-[0_2px_8px_rgba(255,0,127,0.25)] hover:bg-gray-50 transition-colors"
+                      >
+                        <Plus size={16} className="text-[#FF007F]" strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="p-2.5 pt-3 pb-3">
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className={`w-2.5 h-2.5 rounded-sm border flex items-center justify-center ${item.is_veg !== false ? 'border-green-600' : 'border-red-600'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${item.is_veg !== false ? 'bg-green-600' : 'bg-red-600'}`} />
+                      </div>
+                      <div className="text-[9px] font-bold text-gray-400 bg-gray-50 px-1 rounded line-clamp-1 truncate">{item.stall_name}</div>
+                    </div>
+                    
+                    <h3 className="font-bold text-[12.5px] text-gray-800 leading-[1.1] mb-1.5 line-clamp-2 h-[28px]">{item.name}</h3>
+                    
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-gray-400 line-through leading-none mb-0.5">₹{Math.round(parsedPrice * 1.3)}</span>
+                        <span className="font-black text-[13px] text-gray-900 leading-none">₹{parsedPrice}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+
+      {activeCategory === "All" && (
+        <>
       {/* Meals under ₹99 Header */}
       <div className="w-full mt-2">
         <div className="flex justify-between items-center mb-3 px-4">
@@ -397,7 +559,7 @@ export default function Home() {
         {/* Horizontal Stalls Slider */}
         <div className="flex overflow-x-auto hide-scrollbar gap-3 px-4 pb-4 snap-x">
           {mealsUnder99.map((item, idx) => {
-             const parsedPrice = Number((item.price || "0").toString().replace(/[^0-9]/g, ''));
+             const parsedPrice = Math.round(parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, '')) || 0);
              let quantity = 0;
              if (cart.stallId === item.stall_id) {
                if (item.has_variants) {
@@ -512,6 +674,8 @@ export default function Home() {
           )})}
         </div>
       </div>
+        </>
+      )}
 
       {/* Store Highlight Banner (Subway) */}
       <div className="w-full px-4 mt-2">
@@ -714,6 +878,7 @@ export default function Home() {
           ))}
         </div>
       </div>
+
 
       {/* Veg Modal Overlay */}
       <AnimatePresence>

@@ -310,7 +310,7 @@ router.get('/search/all', async (req: Request, res: Response, next: NextFunction
     );
 
     const dishesRes = await pool.query(
-      "SELECT m.id, m.name, m.price, m.is_veg, m.description, m.has_variants, m.variants, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 LIMIT 30",
+      "SELECT m.id, m.name, m.price, m.image_url, m.is_veg, m.description, m.has_variants, m.variants, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 LIMIT 30",
       [`%${q}%`]
     );
 
@@ -322,7 +322,30 @@ router.get('/search/all', async (req: Request, res: Response, next: NextFunction
     next(err);
   }
 });
-
+// Category specific items
+router.get('/category/:name', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const categoryName = req.params.name.toLowerCase();
+    // Strip trailing 's' to handle plural vs singular (e.g. Burgers -> burger)
+    let searchTerm = categoryName;
+    if (searchTerm.endsWith('s')) {
+      searchTerm = searchTerm.slice(0, -1);
+    }
+    
+    const dishesRes = await pool.query(
+      `SELECT m.id, m.name, m.price, m.image_url, m.is_veg, m.description, m.has_variants, m.variants, 
+              m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open 
+       FROM menu_items m 
+       JOIN stalls s ON m.stall_id = s.id 
+       WHERE LOWER(m.name) LIKE $1 OR LOWER(m.category) LIKE $1`,
+      [`%${searchTerm}%`]
+    );
+    
+    res.json({ data: dishesRes.rows });
+  } catch (err) {
+    next(err);
+  }
+});
 // Meals Under 99
 router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunction) => {
   try {
