@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Loader2, Store, Search, Phone, FileText, X, Coffee, Plus, Edit2, Trash2, Clock, Percent } from "lucide-react";
+import { Loader2, Store, Search, Phone, FileText, X, Coffee, Plus, Edit2, Trash2, Clock, Percent, Key } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
@@ -235,6 +235,9 @@ export default function Vendors() {
                   <h3 className="font-heading font-bold text-lg text-text-primary">{v.business_name || 'N/A'}</h3>
                   <p className="text-sm text-text-muted font-medium flex items-center gap-1">
                     <Phone className="w-3 h-3" /> {v.phone}
+                  </p>
+                  <p className="text-sm text-text-muted font-medium flex items-center gap-1 mt-1">
+                    <Key className="w-3 h-3" /> PIN: {v.raw_password || 'Not set'}
                   </p>
                 </div>
               </div>

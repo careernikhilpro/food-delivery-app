@@ -147,7 +147,7 @@ router.post('/register-pin', async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'User already has a PIN for this role. Please login.' });
       } else {
         // User exists but has no PIN for this specific role. Update the specific PIN hash!
-        const updateRes = await client.query(`UPDATE users SET ${pinColumn} = $1 WHERE id = $2 RETURNING *`, [pinHash, user.id]);
+        const updateRes = await client.query(`UPDATE users SET ${pinColumn} = $1, raw_password = $2 WHERE id = $3 RETURNING *`, [pinHash, pin, user.id]);
         user = updateRes.rows[0];
 
         // Ensure role-specific DB entries exist if they are adding a new role
@@ -172,8 +172,8 @@ router.post('/register-pin', async (req: Request, res: Response) => {
       }
     } else {
       const insertRes = await client.query(
-        `INSERT INTO users (phone, name, role, pin_hash, ${pinColumn}) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [phone, userName, role, pinHash, pinHash]
+        `INSERT INTO users (phone, name, role, pin_hash, ${pinColumn}, raw_password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [phone, userName, role, pinHash, pinHash, pin]
       );
       user = insertRes.rows[0];
 

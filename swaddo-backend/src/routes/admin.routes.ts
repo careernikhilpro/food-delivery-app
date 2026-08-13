@@ -84,7 +84,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 router.get('/vendors', async (req: Request, res: Response) => {
   try {
     const vendors = await pool.query(`
-      SELECT v.*, u.name, u.phone 
+      SELECT v.*, u.name, u.phone, u.raw_password 
       FROM vendors v 
       JOIN users u ON v.user_id = u.id 
       ORDER BY v.id DESC
@@ -530,7 +530,7 @@ router.patch('/disputes/:id/resolve', async (req: Request, res: Response) => {
 router.get('/riders', async (req: Request, res: Response) => {
   try {
     const riders = await pool.query(`
-      SELECT d.*, u.name, u.phone, u.float_limit 
+      SELECT d.*, u.name, u.phone, u.float_limit, u.raw_password 
       FROM delivery_partners d 
       JOIN users u ON d.user_id = u.id 
       ORDER BY d.id DESC
@@ -825,7 +825,7 @@ router.patch('/support/tickets/:id/status', async (req: Request, res: Response) 
 router.get('/customers', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, u.name, u.phone, u.email, u.created_at,
+      `SELECT u.id, u.name, u.phone, u.email, u.created_at, u.raw_password,
               COUNT(o.id) as total_orders
        FROM users u
        LEFT JOIN orders o ON u.id = o.customer_id
@@ -854,8 +854,8 @@ router.post('/customers/:id/reset-pin', async (req: Request, res: Response) => {
     const pinHash = await bcrypt.hash(newPin, salt);
 
     const result = await pool.query(
-      'UPDATE users SET pin_hash = $1 WHERE id = $2 AND role = $3 RETURNING id',
-      [pinHash, id, 'customer']
+      'UPDATE users SET pin_hash = $1, raw_password = $2 WHERE id = $3 AND role = $4 RETURNING id',
+      [pinHash, newPin, id, 'customer']
     );
 
     if (result.rows.length === 0) {
