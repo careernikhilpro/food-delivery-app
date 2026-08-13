@@ -141,6 +141,19 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   });
   const allMatchedStalls = Array.from(allStallsMap.values());
 
+  useEffect(() => {
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.history.pushState({ searchOpen: true }, '');
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col font-body">
       {/* Backdrop */}
@@ -149,7 +162,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" 
-        onClick={onClose} 
+        onClick={() => { window.history.back(); }} 
       />
 
       {/* Main Content Area */}
@@ -163,7 +176,7 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
         {/* Top Header & Search Bar inside white rounded container */}
         <div className={`bg-white pt-6 pb-6 px-4 sm:px-6 flex flex-col gap-4 transition-all duration-300 z-20 relative ${query ? '' : 'rounded-b-[32px] shadow-[0_10px_30px_rgb(0,0,0,0.15)]'}`}>
           <div className="flex items-center">
-            <button onClick={onClose} className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors active:scale-95 shrink-0">
+            <button onClick={() => { window.history.back(); }} className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors active:scale-95 shrink-0">
               <ArrowLeft size={22} strokeWidth={2.5} />
             </button>
             <h1 className="flex-1 text-center font-bold text-gray-800 text-[15px] pr-8 truncate">

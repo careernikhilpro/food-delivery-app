@@ -126,7 +126,7 @@ function StallDetailContent() {
       name: item.name,
       description: item.description || "",
       price: Number(item.price), 
-      isVeg: item.is_veg ?? true,
+      isVeg: item.is_veg === true || item.is_veg === 'true' || item.is_veg === 1 || item.is_veg === '1',
       isSoldOut: item.is_available === false,
       category: (item.category && item.category.trim().toLowerCase() !== "all") ? item.category : "Others",
       image: (item.image_url && !item.image_url.includes('unsplash.com') && !item.image_url.includes('picsum.photos')) ? item.image_url : ""
@@ -134,7 +134,7 @@ function StallDetailContent() {
   }, [rawMenuData]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [itemFavorites, setItemFavorites] = useState<string[]>([]);
-  const [isVegMode, setIsVegMode] = useState(false);
+  const [isVegMode, setIsVegMode] = useState(searchParams.get('veg') === 'true');
   const [isNonVegMode, setIsNonVegMode] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDeepScrolled, setIsDeepScrolled] = useState(false);
@@ -187,8 +187,14 @@ function StallDetailContent() {
       const itemFavs = JSON.parse(localStorage.getItem("swaddo_item_favorites") || "[]");
       setItemFavorites(itemFavs);
 
+      const urlVegMode = searchParams.get('veg') === 'true';
       const savedVegMode = localStorage.getItem("swaddo_veg_mode") === "true";
-      setIsVegMode(savedVegMode);
+      if (urlVegMode) {
+        setIsVegMode(true);
+        localStorage.setItem("swaddo_veg_mode", "true");
+      } else {
+        setIsVegMode(savedVegMode);
+      }
     }
   }, [stallId]);
 
@@ -420,6 +426,25 @@ function StallDetailContent() {
     );
   };
 
+  // Handle Android Back Button for Search Overlay
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+      }
+    };
+
+    if (isSearchOpen) {
+      window.history.pushState({ searchOpen: true }, '');
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isSearchOpen]);
+
   if (isLoading || !stallData) {
     return (
       <div className="min-h-screen bg-gray-50 pb-32">
@@ -617,7 +642,7 @@ function StallDetailContent() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <AnimatePresence>
-                    {currentItems.map(item => renderMenuItem(item))}     })}
+                    {currentItems.map(item => renderMenuItem(item))}
                   </AnimatePresence>
                 </div>
               </div>
@@ -638,7 +663,7 @@ function StallDetailContent() {
           >
             {/* Search Header */}
             <div className="px-4 py-3 flex items-center gap-3 border-b border-gray-100 shadow-sm bg-white">
-              <button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} className="text-gray-700 shrink-0">
+              <button onClick={() => { window.history.back(); }} className="text-gray-700 shrink-0">
                 <ArrowLeft size={24} />
               </button>
               <div className="flex-1 relative w-full h-[40px] bg-gray-100/80 rounded-full flex items-center px-4">
