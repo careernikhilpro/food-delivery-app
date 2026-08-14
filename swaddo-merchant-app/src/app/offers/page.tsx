@@ -32,10 +32,10 @@ export default function OffersPage() {
     try {
       await api.put('/stalls/merchant/offer', {
         title: stall.active_offer_title,
-        discount_percentage: stall.active_offer_discount,
-        min_order_value: stall.active_offer_min,
-        max_discount: stall.active_offer_max,
-        is_active: turnOn
+        discountPercentage: stall.active_offer_discount,
+        minOrderValue: stall.active_offer_min,
+        maxDiscount: stall.active_offer_max,
+        isActive: turnOn
       });
       mutate();
     } catch (err) {
@@ -49,10 +49,10 @@ export default function OffersPage() {
     try {
       await api.put('/stalls/merchant/offer', {
         title,
-        discount_percentage: parseFloat(discount),
-        min_order_value: parseFloat(minOrder),
-        max_discount: parseFloat(maxDiscount),
-        is_active: true
+        discountPercentage: parseFloat(discount),
+        minOrderValue: parseFloat(minOrder),
+        maxDiscount: parseFloat(maxDiscount),
+        isActive: true
       });
       await mutate();
       setIsModalOpen(false);
