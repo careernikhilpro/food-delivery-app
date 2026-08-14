@@ -35,8 +35,8 @@ export default function Promotions() {
 
   const updateCampaignStatus = async (id: number, status: string) => {
     try {
-      await api.patch(/admin/campaigns/ + id + /status, { status });
-      toast.success(Campaign  + status);
+      await api.patch(`/admin/campaigns/${id}/status`, { status });
+      toast.success(`Campaign ${status}`);
       loadData();
     } catch (error) {
       toast.error("Failed to update status");
@@ -62,7 +62,7 @@ export default function Promotions() {
       <div className="flex gap-2 p-1 bg-white border border-slate-200 rounded-xl w-fit">
         <button
           onClick={() => setActiveTab("requests")}
-          className={px-6 py-2.5 rounded-lg font-medium text-sm transition-all  + (
+          className={"px-6 py-2.5 rounded-lg font-medium text-sm transition-all " + (
             activeTab === "requests" ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-600 hover:bg-slate-50"
           )}
         >
@@ -70,7 +70,7 @@ export default function Promotions() {
         </button>
         <button
           onClick={() => setActiveTab("offers")}
-          className={px-6 py-2.5 rounded-lg font-medium text-sm transition-all  + (
+          className={"px-6 py-2.5 rounded-lg font-medium text-sm transition-all " + (
             activeTab === "offers" ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-600 hover:bg-slate-50"
           )}
         >
@@ -103,7 +103,7 @@ export default function Promotions() {
                     <span className="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-1 rounded">
                       {camp.business_name} - {camp.stall_name}
                     </span>
-                    <span className={	ext-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full  + (
+                    <span className={"text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full " + (
                       camp.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                       camp.status === 'approved' ? 'bg-green-100 text-green-700' :
                       'bg-red-100 text-red-700'
