@@ -3,7 +3,7 @@ import { pool } from '../db';
 import { logger } from '../utils/logger';
 
 export const startPayoutJob = () => {
-  // Runs at 11:59 PM every day
+  // Runs at 11:59 PM every day IST
   cron.schedule('59 23 * * *', async () => {
     logger.info('Running daily merchant payout calculation job');
     const client = await pool.connect();
@@ -24,7 +24,7 @@ export const startPayoutJob = () => {
             COALESCE(SUM(oi.price_at_time * oi.quantity), 0) as amount
           FROM orders o
           LEFT JOIN order_items oi ON o.id = oi.order_id
-          WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')
+          WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
         `, [stallId]);
         
         const ordersCount = parseInt(todayRes.rows[0].orders);
@@ -37,7 +37,7 @@ export const startPayoutJob = () => {
           await client.query(`
             INSERT INTO vendor_payouts 
             (stall_id, date, gross_amount, commission_rate, commission_amount, net_amount, orders_count, status)
-            VALUES ($1, DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata'), $2, $3, $4, $5, $6, 'pending')
+            VALUES ($1, DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'), $2, $3, $4, $5, $6, 'pending')
           `, [stallId, grossAmount, commissionRate, commissionAmount, netAmount, ordersCount]);
         }
       }
@@ -50,5 +50,8 @@ export const startPayoutJob = () => {
     } finally {
       client.release();
     }
+  }, {
+    scheduled: true,
+    timezone: "Asia/Kolkata"
   });
 };
