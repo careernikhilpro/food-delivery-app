@@ -232,7 +232,7 @@ export default function Vendors() {
                   <Store size={20} />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-lg text-text-primary">{v.business_name || 'N/A'}</h3>
+                  <h3 className="font-heading font-bold text-lg text-text-primary">{v.stall_name || v.business_name || 'N/A'}</h3>
                   <p className="text-sm text-text-muted font-medium flex items-center gap-1">
                     <Phone className="w-3 h-3" /> {v.phone}
                   </p>
@@ -241,9 +241,7 @@ export default function Vendors() {
                   </p>
                 </div>
               </div>
-              <span className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase ${v.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                {v.status}
-              </span>
+              <button onClick={() => handleStatusToggle(v.id, v.status)} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${v.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>{v.status === 'active' ? 'Login Allowed' : 'Login Blocked'}</button>
             </div>
 
             <div className="space-y-4">
@@ -829,3 +827,4 @@ export default function Vendors() {
     </div>
   );
 }
+

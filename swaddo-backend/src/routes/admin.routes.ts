@@ -115,7 +115,8 @@ router.put('/vendor-payouts/:id/approve', async (req: Request, res: Response) =>
 router.get('/vendors', async (req: Request, res: Response) => {
   try {
     const vendors = await pool.query(`
-      SELECT v.*, u.name, u.phone, u.raw_password 
+      SELECT v.*, u.name, u.phone, u.raw_password,
+      (SELECT name FROM stalls WHERE vendor_id = v.id LIMIT 1) as stall_name
       FROM vendors v 
       JOIN users u ON v.user_id = u.id 
       ORDER BY v.id DESC
@@ -561,7 +562,7 @@ router.patch('/disputes/:id/resolve', async (req: Request, res: Response) => {
 router.get('/riders', async (req: Request, res: Response) => {
   try {
     const riders = await pool.query(`
-      SELECT d.*, u.name, u.phone, u.float_limit, u.raw_password, u.bank_name, u.account_name, u.account_number, u.ifsc_code, u.aadhar_number, u.dl_number, u.rc_number, u.profile_picture 
+      SELECT d.*, u.name, u.phone, u.float_limit, u.raw_password 
       FROM delivery_partners d 
       JOIN users u ON d.user_id = u.id 
       ORDER BY d.id DESC

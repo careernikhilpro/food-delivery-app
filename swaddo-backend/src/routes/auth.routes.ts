@@ -86,6 +86,13 @@ router.post('/login-pin', async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid PIN' });
     }
 
+    if (role === 'vendor') {
+      const vendorCheck = await client.query('SELECT status FROM vendors WHERE user_id = $1', [user.id]);
+      if (vendorCheck.rows.length === 0 || vendorCheck.rows[0].status !== 'active') {
+        return res.status(403).json({ message: 'Your vendor account is not active. Please contact admin.' });
+      }
+    }
+
     // Role-specific DB entries
     if (role === 'vendor') {
       let vendorRes = await client.query('SELECT * FROM vendors WHERE user_id = $1', [user.id]);
