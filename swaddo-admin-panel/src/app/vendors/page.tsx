@@ -55,6 +55,17 @@ export default function Vendors() {
     }
   };
 
+  const handleVisibilityToggle = async (vendorId: number, currentActive: boolean) => {
+    try {
+      const newActive = !currentActive;
+      await api.patch(`/admin/vendors/${vendorId}/toggle-visibility`, { is_active: newActive });
+      fetchVendors();
+      toast.success(`Store visibility ${newActive ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      toast.error('Failed to update store visibility');
+    }
+  };
+
   const handleDeleteVendor = async (vendorId: number) => {
     if (!window.confirm("Are you sure you want to delete this vendor and all their stalls, menu items, and past orders? This action cannot be undone.")) {
       return;
@@ -241,7 +252,12 @@ export default function Vendors() {
                   </p>
                 </div>
               </div>
-              <button onClick={() => handleStatusToggle(v.id, v.status)} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${v.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>{v.status === 'active' ? 'Login Allowed' : 'Login Blocked'}</button>
+              <div className="flex flex-col gap-2">
+                  <button onClick={() => handleStatusToggle(v.id, v.status)} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${v.status === 'active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>{v.status === 'active' ? 'Login Allowed' : 'Login Blocked'}</button>
+                  {v.stall_id && (
+                    <button onClick={() => handleVisibilityToggle(v.id, v.is_active)} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase cursor-pointer hover:opacity-80 transition-opacity ${v.is_active ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>{v.is_active ? 'App: Visible' : 'App: Hidden'}</button>
+                  )}
+                </div>
             </div>
 
             <div className="space-y-4">

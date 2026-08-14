@@ -116,7 +116,8 @@ router.get('/vendors', async (req: Request, res: Response) => {
   try {
     const vendors = await pool.query(`
       SELECT v.*, u.name, u.phone, u.raw_password,
-      (SELECT name FROM stalls WHERE vendor_id = v.id LIMIT 1) as stall_name
+      (SELECT name FROM stalls WHERE vendor_id = v.id LIMIT 1) as stall_name,
+      (SELECT is_active FROM stalls WHERE vendor_id = v.id LIMIT 1) as is_active
       FROM vendors v 
       JOIN users u ON v.user_id = u.id 
       ORDER BY v.id DESC
@@ -134,6 +135,22 @@ router.patch('/vendors/:id/status', async (req: Request, res: Response) => {
     res.json(vendor.rows[0]);
   } catch (error) {
     res.status(500).json({ message: 'Error updating vendor' });
+  }
+});
+
+router.patch('/vendors/:id/toggle-visibility', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    const checkStall = await pool.query('SELECT id FROM stalls WHERE vendor_id = $1 LIMIT 1', [id]);
+    if (checkStall.rows.length > 0) {
+      await pool.query('UPDATE stalls SET is_active = $1 WHERE vendor_id = $2', [is_active, id]);
+      res.json({ message: 'Store visibility updated' });
+    } else {
+      res.status(404).json({ message: 'Store not found for this vendor' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating visibility' });
   }
 });
 

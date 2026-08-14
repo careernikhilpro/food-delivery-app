@@ -379,12 +379,12 @@ router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunc
       SELECT 
         m.id, m.stall_id, m.name, m.description, m.price, m.image_url, 
         m.category, m.is_veg, m.is_available, m.has_variants, m.variants,
-        s.name as stall_name, s.rating as stall_rating, s.location as stall_address, s.is_pure_veg as stall_is_pure_veg
+        s.name as stall_name, s.rating as stall_rating, s.location as stall_address, s.is_pure_veg as stall_is_pure_veg, s.is_open
       FROM menu_items m
       JOIN stalls s ON m.stall_id = s.id
       WHERE CAST(m.price as numeric) <= 99 
           AND m.is_available = true
-          AND s.is_open = true
+          AND s.is_active = true
       ORDER BY RANDOM()
     `);
     res.json({ data: itemsRes.rows });
@@ -401,7 +401,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const offset = (page - 1) * limit;
     const { lat, lng, vegOnly } = req.query;
 
-    let whereClause = vegOnly === 'true' ? 'WHERE is_pure_veg = true AND is_open = true' : 'WHERE is_open = true';
+    let whereClause = vegOnly === 'true' ? 'WHERE is_pure_veg = true AND is_active = true' : 'WHERE is_active = true';
 
     let query = `
       SELECT *,
@@ -635,4 +635,6 @@ router.delete('/:id/menu/:itemId', authenticate, requireVendor, async (req: Auth
 });
 
 export default router;
+
+
 
