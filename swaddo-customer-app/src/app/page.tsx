@@ -572,12 +572,7 @@ export default function Home() {
              }
 
              return (
-             <div key={item.id} className={lex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2 }>
-        {item.is_open === false && (
-           <div className="absolute inset-0 bg-black/5 z-[60] flex items-center justify-center rounded-2xl">
-             <span className="bg-black/80 text-white font-black text-[11px] px-2 py-1 border border-white rounded -rotate-12">CLOSED</span>
-           </div>
-        )}
+             <div key={item.id} className="flex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2">
                  
                 {/* Image Area */}
                 <div className="relative w-full h-[110px] bg-blue-50/50 rounded-t-2xl overflow-visible">
@@ -591,7 +586,7 @@ export default function Home() {
                   </div>
                   
                   {/* Plus Button */}
-                  {item.is_open !== false && (quantity > 0 ? (
+                  {quantity > 0 ? (
                     <div className="absolute -bottom-4 right-3 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                       <button 
                         onClick={(e) => { 
@@ -1017,12 +1012,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
 
   return (
     <div className="px-4">
-      <div className={w-full bg-white border border-gray-200 rounded-[20px] p-4 shadow-sm relative overflow-hidden }>
-        {data.isOpen === false && (
-           <div className="absolute inset-0 bg-black/5 z-[60] flex items-center justify-center">
-             <span className="bg-black/80 text-white font-black text-xl tracking-wider px-4 py-2 border-2 border-white rounded-lg -rotate-12 shadow-lg">STORE CLOSED</span>
-           </div>
-        )}
+      <div className="w-full bg-white border border-gray-200 rounded-[20px] p-4 shadow-sm relative overflow-hidden">
          
          
          
@@ -1074,7 +1064,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                        <span className="text-[#00A14F] font-bold text-[10px]">Popular</span>
                      </div>
                    )}
-                   {data.isOpen !== false && (quantity > 0 ? (
+                   {quantity > 0 ? (
                       <div className="absolute bottom-2 right-2 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
                           onClick={(e) => { 
