@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Loader2, Store, Search, Phone, FileText, X, Coffee, Plus, Edit2, Trash2, Clock, Percent, Key } from "lucide-react";
+import { Loader2, Store, Search, Phone, FileText, X, Coffee, Plus, Edit2, Trash2, Clock, Percent, Key, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
