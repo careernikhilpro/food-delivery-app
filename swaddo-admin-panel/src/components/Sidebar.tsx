@@ -20,6 +20,7 @@ export default function Sidebar() {
     { name: "Riders", href: "/riders", icon: Bike },
     { name: "Customers", href: "/customers", icon: Users },
     { name: "Floating Cash", href: "/floating-cash", icon: Banknote },
+    { name: "Vendor Payouts", href: "/vendor-payouts", icon: CreditCard },
     { name: "Rider Cashouts", href: "/rider-cashouts", icon: CreditCard },
     { name: "Disputes", href: "/disputes", icon: ShieldAlert },
     { name: "Notifications", href: "/notifications", icon: Bell },

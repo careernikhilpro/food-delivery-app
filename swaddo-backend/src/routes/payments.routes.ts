@@ -202,8 +202,8 @@ router.post('/verify', authenticate, async (req: AuthRequest, res: Response, nex
       address: order.delivery_address || "Customer Location",
       items: itemsDescription,
       total: order.total_amount,
-      time: new Date(order.created_at).toLocaleTimeString(),
-      date: new Date(order.created_at).toLocaleDateString(),
+      time: new Date(order.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
+      date: new Date(order.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' }),
       created_at: order.created_at
     };
     emitOrderStatusUpdate(req.app, order.id, order.stall_id, 'pending', merchantPayload);

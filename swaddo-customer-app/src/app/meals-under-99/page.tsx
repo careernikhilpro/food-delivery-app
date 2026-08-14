@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Search, Star, Plus, Minus, ChevronDown, X, Check, ArrowUp } from "lucide-react";
+import { ArrowLeft, Search, Star, Plus, Minus, ChevronDown, X, Check, TrendingDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
@@ -282,11 +282,11 @@ export default function MealsUnder99Page() {
                        <button onClick={() => setSearchTab("dishes")} className={`pb-3 text-[15px] font-bold transition-colors ${searchTab === "dishes" ? 'border-b-2 border-black text-black' : 'text-gray-500 border-b-2 border-transparent'}`}>Dishes</button>
                      </div>
                      <div className="flex gap-2 py-3 overflow-x-auto hide-scrollbar -mx-4 px-4">
-                       <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-blue-700 whitespace-nowrap shrink-0">
-                         Sort by <ChevronDown size={14} strokeWidth={2.5} className="text-blue-700" />
+                       <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-black whitespace-nowrap shrink-0">
+                         Sort by <ChevronDown size={14} strokeWidth={2.5} className="text-black" />
                        </button>
                        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-gray-700 whitespace-nowrap shrink-0">
-                         <ArrowUp size={14} className="text-[#D92686]" strokeWidth={3} />
+                         <TrendingDown size={14} className="text-[#D92686]" strokeWidth={3} />
                          Price Crash
                        </button>
                        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-gray-700 whitespace-nowrap shrink-0">
@@ -378,9 +378,71 @@ export default function MealsUnder99Page() {
                                     <div className="w-full h-[140px] rounded-[16px] overflow-hidden bg-gray-100 shadow-sm relative mb-2">
                                       <Image src={item.image_url || "/categories/burger.png"} fill className="object-cover" alt={item.name} />
                                       <div className="absolute top-2 left-2 bg-white/90 px-1.5 py-0.5 rounded text-[10px] font-black text-green-700 shadow-sm">Popular</div>
-                                      <button className="absolute bottom-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-100 active:scale-95 transition-transform">
-                                        <Plus size={20} className="text-[#FF007F]" />
-                                      </button>
+                                      {/* Add Button */}
+                                      {(() => {
+                                        const parsedPrice = typeof item.price === 'number' ? item.price : parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, ''));
+                                        
+                                        let qty = 0;
+                                        if (cart.stallId === group.stallId.toString()) {
+                                          if (item.has_variants) {
+                                            const prefix = String(item.id) + '_';
+                                            qty = cart.items.filter((i: any) => String(i.id).startsWith(prefix)).reduce((sum: number, i: any) => sum + i.quantity, 0);
+                                          } else {
+                                            const isAdded = cart.items.find(i => i.id === String(item.id));
+                                            qty = isAdded ? isAdded.quantity : 0;
+                                          }
+                                        }
+
+                                        return qty > 0 ? (
+                                          <div className="absolute bottom-2 right-2 flex items-center justify-between w-[70px] h-8 bg-white text-[#FF007F] font-black text-sm rounded-full shadow-md border border-gray-100 overflow-hidden px-1 z-10" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                            <button 
+                                              onClick={() => {
+                                                if (item.has_variants) {
+                                                  const variantsInCart = cart.items.filter((i: any) => String(i.id).startsWith(String(item.id) + '_'));
+                                                  if (variantsInCart.length === 1) {
+                                                    updateQuantity(group.stallId.toString(), group.stallName, variantsInCart[0], -1);
+                                                  } else {
+                                                    alert("Multiple variants added. Please go to cart to remove.");
+                                                  }
+                                                } else {
+                                                  updateQuantity(group.stallId.toString(), group.stallName, { id: String(item.id), name: item.name, price: parsedPrice }, -1);
+                                                }
+                                              }} 
+                                              className="w-6 h-full flex justify-center items-center hover:bg-gray-50 text-gray-600"
+                                            >
+                                              <Minus size={14} />
+                                            </button>
+                                            <span className="text-[13px] text-gray-900 w-4 text-center">{qty}</span>
+                                            <button 
+                                              onClick={() => {
+                                                if (item.has_variants) {
+                                                  setVariantModal({ isOpen: true, stallId: group.stallId.toString(), stallName: group.stallName, item });
+                                                } else {
+                                                  updateQuantity(group.stallId.toString(), group.stallName, { id: String(item.id), name: item.name, price: parsedPrice }, 1);
+                                                }
+                                              }} 
+                                              className="w-6 h-full flex justify-center items-center hover:bg-gray-50"
+                                            >
+                                              <Plus size={14} />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button 
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              if (item.has_variants) {
+                                                setVariantModal({ isOpen: true, stallId: group.stallId.toString(), stallName: group.stallName, item });
+                                              } else {
+                                                updateQuantity(group.stallId.toString(), group.stallName, { id: String(item.id), name: item.name, price: parsedPrice }, 1);
+                                              }
+                                            }}
+                                            className="absolute bottom-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-100 active:scale-95 transition-transform z-10"
+                                          >
+                                            <Plus size={20} className="text-[#FF007F]" />
+                                          </button>
+                                        );
+                                      })()}
                                     </div>
                                     <div className="flex items-start gap-1 px-1">
                                       <div className={`mt-1 w-2.5 h-2.5 border flex items-center justify-center shrink-0 ${item.is_veg ? 'border-green-600' : 'border-red-600'}`}>
@@ -390,7 +452,7 @@ export default function MealsUnder99Page() {
                                     </div>
                                     <div className="flex items-center gap-1.5 mt-1 px-1">
                                       <span className="text-[11px] text-gray-400 line-through">₹{Math.round(parseFloat(item.price.toString().replace(/[^0-9.]/g, '')) * 1.2)}</span>
-                                      <span className="text-[13px] font-black text-[#FF007F]">₹{item.price}</span>
+                                      <span className="text-[13px] font-black text-[#FF007F]">₹{Number(item.price)}</span>
                                     </div>
                                  </div>
                                ))}
@@ -527,11 +589,11 @@ export default function MealsUnder99Page() {
 
           <div className="sticky top-[59px] z-40 w-full overflow-x-auto hide-scrollbar pt-4 pb-3 px-4 border-b border-gray-100 bg-white">
             <div className="flex gap-2 min-w-max">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-blue-700 whitespace-nowrap shrink-0">
-                Sort by <ChevronDown size={14} strokeWidth={2.5} className="text-blue-700" />
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-black whitespace-nowrap shrink-0">
+                Sort by <ChevronDown size={14} strokeWidth={2.5} className="text-black" />
               </button>
               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-gray-700 whitespace-nowrap shrink-0">
-                <ArrowUp size={14} className="text-[#D92686]" strokeWidth={3} />
+                <TrendingDown size={14} className="text-[#D92686]" strokeWidth={3} />
                 Price Crash
               </button>
               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-gray-700 whitespace-nowrap shrink-0">
@@ -629,12 +691,12 @@ export default function MealsUnder99Page() {
                             if (item.has_variants) {
                               const variantsInCart = cart.items.filter((i: any) => String(i.id).startsWith(String(item.id) + '_'));
                               if (variantsInCart.length === 1) {
-                                updateQuantity(item.stall_id?.toString(), item.stall_name, variantsInCart[0], -1);
+                                updateQuantity(item.stall_id?.toString() || "", item.stall_name || "Restaurant", variantsInCart[0], -1);
                               } else {
                                 alert("Multiple variants added. Please go to cart to remove.");
                               }
                             } else {
-                              updateQuantity(item.stall_id?.toString(), item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice }, -1); 
+                              updateQuantity(item.stall_id?.toString() || "", item.stall_name || "Restaurant", { id: String(item.id), name: item.name, price: parsedPrice }, -1); 
                             }
                           }}
                           className="w-6 h-full flex justify-center items-center text-gray-600 active:bg-gray-100"
@@ -645,9 +707,9 @@ export default function MealsUnder99Page() {
                             e.preventDefault(); 
                             e.stopPropagation(); 
                             if (item.has_variants) {
-                              setVariantModal({ isOpen: true, stallId: item.stall_id?.toString(), stallName: item.stall_name, item });
+                              setVariantModal({ isOpen: true, stallId: item.stall_id?.toString() || "", stallName: item.stall_name || "Restaurant", item });
                             } else {
-                              updateQuantity(item.stall_id?.toString(), item.stall_name, { id: String(item.id), name: item.name, price: parsedPrice }, 1); 
+                              updateQuantity(item.stall_id?.toString() || "", item.stall_name || "Restaurant", { id: String(item.id), name: item.name, price: parsedPrice }, 1); 
                             }
                           }}
                           className="w-6 h-full flex justify-center items-center text-[#FF007F] active:bg-gray-100"
@@ -659,11 +721,11 @@ export default function MealsUnder99Page() {
                           e.preventDefault();
                           e.stopPropagation();
                           if (item.has_variants) {
-                            setVariantModal({ isOpen: true, stallId: item.stall_id?.toString(), stallName: item.stall_name, item });
+                            setVariantModal({ isOpen: true, stallId: item.stall_id?.toString() || "", stallName: item.stall_name || "Restaurant", item });
                           } else {
                             updateQuantity(
-                              item.stall_id?.toString(), 
-                              item.stall_name, 
+                              item.stall_id?.toString() || "", 
+                              item.stall_name || "Restaurant", 
                               { id: String(item.id), name: item.name, price: parsedPrice }, 
                               1
                             );

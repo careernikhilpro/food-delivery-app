@@ -3,7 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { Loader2, IndianRupee, Clock, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Loader2, IndianRupee, Clock, CheckCircle2, ChevronLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function EarningsPage() {
@@ -14,6 +14,7 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [message, setMessage] = useState("");
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchEarnings = async () => {
@@ -42,6 +43,8 @@ export default function EarningsPage() {
       setRequesting(false);
     }
   }
+
+  const periodTotal = data?.history?.reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-bg-main pb-24">
@@ -88,24 +91,10 @@ export default function EarningsPage() {
           
           {/* Balance Card */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-border-subtle text-center">
-             <p className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2">Available Balance</p>
-             <h2 className="text-4xl font-heading font-bold text-green-600 mb-6">₹{data?.availableBalance?.toFixed(2) || '0.00'}</h2>
+             <p className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2">Total Earnings</p>
+             <h2 className="text-4xl font-heading font-bold text-green-600 mb-6">₹{periodTotal.toFixed(2)}</h2>
              
-             {message && (
-               <div className="mb-4 bg-green-50 text-green-700 text-sm font-bold p-3 rounded-xl border border-green-200 flex items-center justify-center gap-2">
-                 <CheckCircle2 size={16} /> {message}
-               </div>
-             )}
-
-             <button 
-                onClick={handlePayout}
-                disabled={requesting || !data?.availableBalance || data.availableBalance <= 0}
-                className="w-full bg-text-primary text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-             >
-                {requesting ? <Loader2 className="animate-spin" size={20} /> : <IndianRupee size={20} />}
-                Withdraw to Bank
-             </button>
-             <p className="text-xs text-text-muted mt-3">Transfers usually take 1-2 business days.</p>
+             <p className="text-xs text-text-muted mt-3">Transfers usually take 3-5 days, adjust at the end of the day.</p>
           </div>
 
           {/* History Section */}
@@ -126,22 +115,51 @@ export default function EarningsPage() {
             <div className="space-y-3">
               {data?.history && data.history.length > 0 ? (
                 data.history.map((day: any, i: number) => (
-                  <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-border-subtle flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
-                        <CheckCircle2 size={20} />
+                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+                    <div 
+                      className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setExpandedDay(expandedDay === i ? null : i)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${day.status === 'settled' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-500'}`}>
+                          {day.status === 'settled' ? <CheckCircle2 size={20} /> : <Clock size={20} />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-text-primary text-sm">
+                            {new Date(day.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                          <p className="text-xs text-text-muted mt-0.5">{day.orders} orders completed</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-text-primary text-sm">
-                          {new Date(day.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </p>
-                        <p className="text-xs text-text-muted mt-0.5">{day.orders} orders completed</p>
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <p className="font-bold text-text-primary">₹{Number((day.net_amount ?? day.amount) || 0).toFixed(2)}</p>
+                          <span className={`inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${day.status === 'settled' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-500'}`}>
+                            {day.status || 'pending'}
+                          </span>
+                        </div>
+                        <div className="text-gray-400">
+                          {expandedDay === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-text-primary">₹{Number(day.amount || 0).toFixed(2)}</p>
-                      <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded uppercase tracking-wider">Settled</span>
-                    </div>
+                    
+                    {expandedDay === i && (
+                      <div className="px-4 py-3 bg-gray-50 border-t border-border-subtle text-sm">
+                        <div className="flex justify-between py-1">
+                          <span className="text-text-muted font-medium">Gross Earnings</span>
+                          <span className="font-bold text-text-primary">₹{Number(day.gross_amount ?? (day.amount / 0.78)).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between py-1">
+                          <span className="text-text-muted font-medium">Platform Fee ({day.commission_rate ?? 22}%)</span>
+                          <span className="font-bold text-red-500">- ₹{Number(day.commission_amount ?? (day.amount / 0.78 * 0.22)).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between py-2 mt-2 border-t border-border-subtle font-bold">
+                          <span className="text-text-primary">Net Earnings</span>
+                          <span className="text-green-600">₹{Number((day.net_amount ?? day.amount) || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (

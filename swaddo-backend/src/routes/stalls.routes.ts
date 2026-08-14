@@ -242,46 +242,72 @@ router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthReq
     if (vendorRes.rows.length === 0) return res.status(404).json({ message: 'Vendor not found' });
     const vendorId = vendorRes.rows[0].id;
 
-    const stallRes = await pool.query('SELECT id FROM stalls WHERE vendor_id = $1 LIMIT 1', [vendorId]);
+    const stallRes = await pool.query('SELECT id, commission_rate FROM stalls WHERE vendor_id = $1 LIMIT 1', [vendorId]);
     if (stallRes.rows.length === 0) return res.status(404).json({ message: 'Stall not found' });
     const stallId = stallRes.rows[0].id;
-    
-    const period = req.query.period as string || 'this_week';
-    let dateFilter = "date_trunc('week', CURRENT_DATE)"; // default
-    if (period === 'this_month') {
-      dateFilter = "date_trunc('month', CURRENT_DATE)";
-    } else if (period === 'today') {
-      dateFilter = "CURRENT_DATE";
+    const commissionRate = parseFloat(stallRes.rows[0].commission_rate || 22.00);
+
+    // Fetch payouts from vendor_payouts
+    const payoutsRes = await pool.query('SELECT * FROM vendor_payouts WHERE stall_id = $1 ORDER BY date DESC', [stallId]);
+    const payouts = payoutsRes.rows;
+
+    let availableBalance = 0;
+    const history: any[] = [];
+
+    for (const p of payouts) {
+      if (p.status === 'pending') {
+        availableBalance += parseFloat(p.net_amount);
+      }
+      history.push({
+        date: p.date,
+        amount: parseFloat(p.net_amount),
+        gross_amount: parseFloat(p.gross_amount),
+        commission_rate: parseFloat(p.commission_rate),
+        commission_amount: parseFloat(p.commission_amount),
+        net_amount: parseFloat(p.net_amount),
+        orders: parseInt(p.orders_count),
+        status: p.status
+      });
     }
 
-    // Get order history grouped by date for the period
-    const historyRes = await pool.query(`
-      SELECT DATE(o.created_at) as date, COALESCE(SUM(oi.price_at_time * oi.quantity), 0) as amount, COUNT(DISTINCT o.id) as orders
+    // Now compute current day
+    const todayRes = await pool.query(`
+      SELECT 
+        COUNT(DISTINCT o.id) as orders,
+        COALESCE(SUM(oi.price_at_time * oi.quantity), 0) as amount
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND o.status = 'delivered' AND o.created_at >= ${dateFilter}
-      GROUP BY DATE(o.created_at)
-      ORDER BY date DESC
+      WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')
     `, [stallId]);
-    
-    // Total available balance (sum of all un-paid-out orders)
-    // Using mock logic: just sum all delivered
-    const balRes = await pool.query(`
-      SELECT SUM(oi.price_at_time * oi.quantity) as total 
-      FROM orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id=$1 AND o.status='delivered'
-    `, [stallId]);
-    const balance = parseFloat(balRes.rows[0]?.total || 0) * 0.78; // 78% payout (22% platform fee)
+
+    const todayOrders = parseInt(todayRes.rows[0].orders);
+    const todayAmount = parseFloat(todayRes.rows[0].amount);
+
+    if (todayOrders > 0) {
+      const net = todayAmount * (1 - commissionRate / 100);
+      const commissionAmount = todayAmount * (commissionRate / 100);
+      
+      const todayString = new Date().toISOString().split('T')[0];
+      const hasToday = history.some(h => new Date(h.date).toISOString().split('T')[0] === todayString);
+      
+      if (!hasToday) {
+        availableBalance += net;
+        history.unshift({
+          date: new Date().toISOString(),
+          amount: net,
+          gross_amount: todayAmount,
+          commission_rate: commissionRate,
+          commission_amount: commissionAmount,
+          net_amount: net,
+          orders: todayOrders,
+          status: 'live today'
+        });
+      }
+    }
 
     res.json({
-      availableBalance: balance,
-      history: historyRes.rows.map(r => ({
-        date: r.date,
-        amount: parseFloat(r.amount) * 0.78, // 78% payout
-        orders: parseInt(r.orders),
-        status: 'completed'
-      }))
+      availableBalance,
+      history
     });
   } catch(err) {
     next(err);
@@ -353,7 +379,7 @@ router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunc
       SELECT 
         m.id, m.stall_id, m.name, m.description, m.price, m.image_url, 
         m.category, m.is_veg, m.is_available, m.has_variants, m.variants,
-        s.name as stall_name, s.rating as stall_rating
+        s.name as stall_name, s.rating as stall_rating, s.location as stall_address, s.is_pure_veg as stall_is_pure_veg
       FROM menu_items m
       JOIN stalls s ON m.stall_id = s.id
       WHERE CAST(m.price as numeric) <= 99 

@@ -248,6 +248,8 @@ export default function Cart() {
     fetchToken();
   }, []);
 
+  const [stallMenu, setStallMenu] = useState<any[]>([]);
+
   // Fetch Cart Stall Info & Suggested Items
   useEffect(() => {
     if (cart.stallId) {
@@ -270,15 +272,22 @@ export default function Cart() {
       api
         .get(`/stalls/${cart.stallId}/menu`)
         .then((res) => {
-          const allItems = res.data || [];
-          const filtered = allItems.filter(
-            (i: any) => !cart.items.find((ci) => ci.id === i.id.toString()),
-          );
-          setSuggestedItems(filtered);
+          setStallMenu(res.data || []);
         })
         .catch(console.error);
     }
-  }, [cart.stallId, cart.items]);
+  }, [cart.stallId]);
+
+  useEffect(() => {
+    if (stallMenu.length > 0) {
+      const filtered = stallMenu.filter(
+        (i: any) => !cart.items.find((ci) => ci.id.toString() === i.id.toString()) && i.is_available !== false,
+      );
+      setSuggestedItems(filtered);
+    } else {
+      setSuggestedItems([]);
+    }
+  }, [stallMenu, cart.items]);
 
   const [isCookingRequestActive, setIsCookingRequestActive] = useState(false);
   const [cookingRequest, setCookingRequest] = useState("");
@@ -780,10 +789,10 @@ export default function Cart() {
                     </div>
                     <div className="flex flex-col items-end w-[40px]">
                       <span className="text-[12px] text-gray-400 line-through font-medium mb-0.5">
-                        ₹{Math.round(item.price * 1.20)}
+                        ₹{Math.round(item.price * 1.20) * item.quantity}
                       </span>
-                      <span className="text-[14px] font-bold text-gray-800">
-                        ₹{item.price}
+                      <span className="font-bold text-[14px] text-gray-800">
+                        ₹{Number(item.price) * item.quantity}
                       </span>
                     </div>
                   </div>
@@ -911,7 +920,7 @@ export default function Cart() {
                           cart.stallId || "1",
                           cart.stallName || "Restaurant",
                           {
-                            id: sitem.id,
+                            id: String(sitem.id),
                             name: sitem.name,
                             price: sitem.price,
                             isVeg: sitem.is_veg ?? true,
@@ -937,7 +946,7 @@ export default function Cart() {
                     </h4>
                   </div>
                   <span className="font-bold text-[13px] text-gray-800 mt-1 pl-[15px]">
-                    ₹{sitem.price}
+                    ₹{Number(sitem.price)}
                   </span>
                 </div>
               ))}

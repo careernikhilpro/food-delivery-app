@@ -178,8 +178,8 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
         restaurantInstructions: restaurantInstructions || null,
         items: itemsDescription,
         total: totalAmount,
-        time: new Date(order.created_at).toLocaleTimeString(),
-        date: new Date(order.created_at).toLocaleDateString(),
+        time: new Date(order.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
+        date: new Date(order.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' }),
         created_at: order.created_at
       };
 
@@ -321,7 +321,7 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
           u.name as customer_name,
           (SELECT COUNT(*) FROM order_items WHERE order_id = $1) as item_count,
           (
-            SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+            SELECT string_agg(oi.quantity || 'x ' || mi.name || '|' || oi.price_at_time, ', ')
             FROM order_items oi
             LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
             WHERE oi.order_id = $1
@@ -513,7 +513,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response, next: N
              s.name as stall_name, s.latitude as stall_lat, s.longitude as stall_lng, u_vendor.phone as stall_phone, s.location as stall_address,
              u.name as customer_name, u.phone as customer_phone,
              (
-               SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+               SELECT string_agg(oi.quantity || 'x ' || mi.name || '|' || oi.price_at_time, ', ')
                FROM order_items oi
                LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
                WHERE oi.order_id = o.id
@@ -601,7 +601,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
       query = `
         SELECT o.*, s.name as stall_name, s.location as stall_location,
         (
-          SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+          SELECT string_agg(oi.quantity || 'x ' || mi.name || '|' || oi.price_at_time, ', ')
           FROM order_items oi
           LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
           WHERE oi.order_id = o.id
@@ -616,7 +616,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
       query = `
         SELECT o.*, u.name as customer_name, u.phone as customer_phone, s.name as stall_name,
         (
-          SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+          SELECT string_agg(oi.quantity || 'x ' || mi.name || '|' || oi.price_at_time, ', ')
           FROM order_items oi
           LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
           WHERE oi.order_id = o.id
@@ -636,7 +636,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
       query = `
         SELECT o.*, u.name as customer_name, u.phone as customer_phone, s.name as stall_name, s.location as stall_address,
         (
-          SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+          SELECT string_agg(oi.quantity || 'x ' || mi.name || '|' || oi.price_at_time, ', ')
           FROM order_items oi
           LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
           WHERE oi.order_id = o.id
@@ -657,7 +657,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
       query = `
         SELECT o.*, u.name as customer_name, u.phone as customer_phone, s.name as stall_name,
         (
-          SELECT string_agg(oi.quantity || 'x ' || mi.name, ', ')
+          SELECT string_agg(oi.quantity || 'x ' || mi.name || '|' || oi.price_at_time, ', ')
           FROM order_items oi
           LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
           WHERE oi.order_id = o.id
@@ -682,11 +682,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
       customer: (r.customer_name || 'Customer').split(' ')[0],
       phone: r.customer_phone || 'N/A',
       stall: r.stall_name || 'Stall',
+      stall_name: r.stall_name || 'Stall',
+      stall_location: r.stall_location,
       items: r.items_summary || '1x Custom Item',
       status: r.status === 'placed' ? 'pending' : r.status,
       total: r.total_amount,
-      time: new Date(r.created_at).toLocaleTimeString(),
-      date: new Date(r.created_at).toLocaleDateString(),
+      time: new Date(r.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
+      date: new Date(r.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' }),
       created_at: r.created_at,
       address: r.delivery_address || 'Customer Location',
       deliveryInstructions: r.delivery_instructions,

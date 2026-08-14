@@ -18,7 +18,7 @@ export default function Vendors() {
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [showStallEditModal, setShowStallEditModal] = useState(false);
   const [editingStall, setEditingStall] = useState<any | null>(null);
-  const [stallFormData, setStallFormData] = useState({ rating: "", prep_time: "" });
+  const [stallFormData, setStallFormData] = useState({ rating: "", prep_time: "", commission_rate: "" });
   const [activeStallId, setActiveStallId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   
@@ -317,6 +317,41 @@ export default function Vendors() {
                   <div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>
                 ) : (
                   <div className="space-y-8 relative">
+                    
+                    {/* Merchant KYC and Bank Info */}
+                    {vendorDetails && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        <div className="bg-bg-main border border-border-subtle rounded-xl p-4">
+                          <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
+                            <Store className="w-4 h-4 text-indigo-500" /> Business Details
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-text-muted">FSSAI:</span> <span className="font-medium text-text-primary">{vendorDetails.fssai_license || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">GSTIN:</span> <span className="font-medium text-text-primary">{vendorDetails.gst_number || '-'}</span></div>
+                          </div>
+                        </div>
+                        <div className="bg-bg-main border border-border-subtle rounded-xl p-4">
+                          <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
+                            <User className="w-4 h-4 text-amber-500" /> KYC Documents
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-text-muted">PAN:</span> <span className="font-medium text-text-primary">{vendorDetails.pan_number || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">Aadhaar:</span> <span className="font-medium text-text-primary">{vendorDetails.aadhaar_number || '-'}</span></div>
+                          </div>
+                        </div>
+                        <div className="bg-bg-main border border-border-subtle rounded-xl p-4 md:col-span-2">
+                          <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
+                            <span className="text-emerald-500 font-bold">₹</span> Bank Details
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-text-muted">Name:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_account_name || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">Account No:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_account_number || '-'}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">IFSC:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_ifsc || '-'}</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {!vendorDetails?.stalls?.length ? (
                       <p className="text-center text-text-muted p-8 bg-bg-main rounded-2xl border border-border-subtle">This vendor hasn't created any stalls yet.</p>
                     ) : (
@@ -329,7 +364,8 @@ export default function Vendors() {
                                 setEditingStall(stall);
                                 setStallFormData({
                                   rating: stall.rating || "",
-                                  prep_time: stall.prep_time || ""
+                                  prep_time: stall.prep_time || "",
+                                  commission_rate: stall.commission_rate || "22"
                                 });
                                 setShowStallEditModal(true);
                               }}

@@ -81,6 +81,37 @@ router.get('/stats', async (req: Request, res: Response) => {
 });
 
 // 2. Vendors
+router.get('/vendor-payouts', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT vp.*, s.name as stall_name, v.business_name 
+      FROM vendor_payouts vp
+      JOIN stalls s ON vp.stall_id = s.id
+      JOIN vendors v ON s.vendor_id = v.id
+      ORDER BY vp.date DESC, vp.id DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    logger.error('Error fetching vendor payouts:', error);
+    res.status(500).json({ message: 'Error fetching payouts' });
+  }
+});
+
+router.put('/vendor-payouts/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateRes = await pool.query(
+      "UPDATE vendor_payouts SET status = 'settled' WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (updateRes.rows.length === 0) return res.status(404).json({ message: 'Payout not found' });
+    res.json(updateRes.rows[0]);
+  } catch (error) {
+    logger.error('Error approving payout:', error);
+    res.status(500).json({ message: 'Error approving payout' });
+  }
+});
+
 router.get('/vendors', async (req: Request, res: Response) => {
   try {
     const vendors = await pool.query(`
@@ -210,11 +241,11 @@ router.get('/vendors/:id/details', async (req: Request, res: Response) => {
 router.put('/stalls/:id', async (req: Request, res: Response) => {
   try {
     const stallId = req.params.id;
-    const { rating, prep_time } = req.body;
+    const { rating, prep_time, commission_rate } = req.body;
     
     const updateRes = await pool.query(
-      'UPDATE stalls SET rating = $1, prep_time = $2 WHERE id = $3 RETURNING *',
-      [rating, prep_time, stallId]
+      'UPDATE stalls SET rating = COALESCE($1, rating), prep_time = COALESCE($2, prep_time), commission_rate = COALESCE($4, commission_rate) WHERE id = $3 RETURNING *',
+      [rating, prep_time, stallId, commission_rate]
     );
 
     if (updateRes.rows.length === 0) {

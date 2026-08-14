@@ -57,20 +57,44 @@ export default function ProfilePage() {
   const orders = useMemo(() => {
     if (!Array.isArray(rawOrders)) return [];
     return rawOrders.map((o) => {
-      const itemsArray = (o.items || "1x Order Item").split(',').map((i: any) => {
-        const parts = i.trim().split('x ');
-        return { qty: parseInt(parts[0]) || 1, name: parts[1] || parts[0] };
+      const itemsArray = (o.items || "1x Order Item|0").split(',').map((i: any) => {
+        const [qtyAndName, price] = i.trim().split('|');
+        const parts = qtyAndName.split('x ');
+        return { 
+          qty: parseInt(parts[0]) || 1, 
+          name: parts.slice(1).join('x ') || parts[0], 
+          price: price ? parseFloat(price) : null 
+        };
       });
+
+      let formattedDate = `${o.date}, ${o.time}`;
+      if (o.created_at) {
+        try {
+          const dateObj = new Date(o.created_at);
+          formattedDate = new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: true
+          }).format(dateObj).toUpperCase();
+        } catch (e) {
+          // fallback
+        }
+      }
 
       return {
         id: o.id,
-        stall: o.stall_name || o.stall || "Stall",
-        date: `${o.date}, ${o.time}`,
+        stall: o.stall_name || o.stall || "Restaurant",
+        date: formattedDate,
         items: itemsArray,
         summary: o.items_summary || o.items || "Order Items",
         total: o.total,
         status: o.status,
-        location: o.stall_location || "Gondia City, Maharashtra",
+        location: o.stall_location || "Restaurant Location",
         ratingData: {
           app: { score: 0, timestamp: null },
           restaurant: { score: 0, timestamp: null },
@@ -362,7 +386,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex justify-between items-start gap-2">
-                            <div className="flex flex-col">
+                            <div className="flex flex-col min-w-0">
                               <h3 className="font-heading font-black text-gray-900 text-[16px] leading-tight truncate tracking-tight">{order.stall}</h3>
                               <p className="text-[12px] text-gray-400 font-medium mt-1 truncate">{order.location}</p>
                             </div>
@@ -374,9 +398,14 @@ export default function ProfilePage() {
                       <div className="px-5 pl-6 py-3.5 bg-gradient-to-r from-green-50/30 to-transparent text-[13px] border-y border-dashed border-gray-100">
                          <div className="space-y-2">
                             {order.items.map((item: any, idx: number) => (
-                               <div key={idx} className="flex items-center gap-2.5">
-                                  <span className="bg-white border border-gray-200 text-gray-500 shadow-sm font-bold shrink-0 px-2 py-0.5 rounded-md text-[11px]">{item.qty}</span>
-                                  <span className="text-gray-700 font-semibold">{item.name}</span>
+                               <div key={idx} className="flex items-center gap-2.5 justify-between">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="bg-white border border-gray-200 text-gray-500 shadow-sm font-bold shrink-0 px-2 py-0.5 rounded-md text-[11px]">{item.qty}</span>
+                                    <span className="text-gray-700 font-semibold">{item.name}</span>
+                                  </div>
+                                  {item.price !== null && (
+                                    <span className="text-gray-900 font-bold text-[12px]">₹{item.price * item.qty}</span>
+                                  )}
                                </div>
                             ))}
                          </div>
@@ -413,7 +442,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex justify-between items-start gap-2">
-                            <div className="flex flex-col">
+                            <div className="flex flex-col min-w-0">
                               <h3 className="font-heading font-black text-gray-900 text-[16px] leading-tight truncate tracking-tight">{order.stall}</h3>
                               <p className="text-[12px] text-gray-400 font-medium mt-1 truncate">{order.location}</p>
                             </div>
@@ -425,9 +454,14 @@ export default function ProfilePage() {
                       <div className="px-5 py-3.5 bg-gradient-to-r from-gray-50/80 to-transparent text-[13px] border-y border-dashed border-gray-100">
                          <div className="space-y-2">
                             {order.items.map((item: any, idx: number) => (
-                               <div key={idx} className="flex items-center gap-2.5">
-                                  <span className="bg-white border border-gray-200 text-gray-500 shadow-sm font-bold shrink-0 px-2 py-0.5 rounded-md text-[11px]">{item.qty}</span>
-                                  <span className="text-gray-700 font-semibold">{item.name}</span>
+                               <div key={idx} className="flex items-center gap-2.5 justify-between">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="bg-white border border-gray-200 text-gray-500 shadow-sm font-bold shrink-0 px-2 py-0.5 rounded-md text-[11px]">{item.qty}</span>
+                                    <span className="text-gray-700 font-semibold">{item.name}</span>
+                                  </div>
+                                  {item.price !== null && (
+                                    <span className="text-gray-900 font-bold text-[12px]">₹{item.price * item.qty}</span>
+                                  )}
                                </div>
                             ))}
                          </div>

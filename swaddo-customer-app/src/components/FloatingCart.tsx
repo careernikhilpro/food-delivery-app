@@ -5,10 +5,34 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Trash2 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
 
 export default function FloatingCart() {
   const { cartItemCount, cartTotal, cart, clearCart } = useCart();
   const pathname = usePathname();
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const scrollContainer = document.querySelector('.app-scroll-container');
+    if (!scrollContainer) return;
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const currentScrollY = target.scrollTop;
+      
+      if (currentScrollY > lastScrollY.current + 10) {
+        setIsVisible(false);
+        lastScrollY.current = currentScrollY;
+      } else if (currentScrollY < lastScrollY.current - 10) {
+        setIsVisible(true);
+        lastScrollY.current = currentScrollY;
+      }
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Don't show the floating cart on the actual cart page or checkout page
   if (cartItemCount === 0 || pathname === '/cart' || pathname === '/checkout') {
@@ -25,7 +49,7 @@ export default function FloatingCart() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-50 p-3 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between animate-in slide-in-from-bottom-5">
+    <div className={`fixed bottom-0 left-0 w-full z-50 p-3 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
       {/* Left side: Restaurant Info */}
       <div className="flex items-center gap-3 w-1/3">
         <div className="relative w-11 h-11 rounded-lg overflow-hidden shrink-0 border border-gray-100">

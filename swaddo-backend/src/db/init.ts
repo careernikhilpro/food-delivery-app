@@ -100,6 +100,7 @@ const runSchema = async () => {
         active_offer_min DECIMAL(10,2),
         active_offer_max DECIMAL(10,2),
         active_offer_is_active BOOLEAN DEFAULT false,
+        commission_rate DECIMAL(5,2) DEFAULT 22.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -129,6 +130,9 @@ const runSchema = async () => {
       EXCEPTION WHEN duplicate_column THEN null; END $$;
       DO $$ BEGIN
         ALTER TABLE stalls ADD COLUMN is_cutlery_enabled BOOLEAN DEFAULT false;
+      EXCEPTION WHEN duplicate_column THEN null; END $$;
+      DO $$ BEGIN
+        ALTER TABLE stalls ADD COLUMN commission_rate DECIMAL(5,2) DEFAULT 22.00;
       EXCEPTION WHEN duplicate_column THEN null; END $$;
     `);
     
@@ -407,6 +411,22 @@ const runSchema = async () => {
         customer_id INTEGER REFERENCES users(id),
         rating INTEGER CHECK (rating >= 1 AND rating <= 5),
         review_text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Vendor Payouts
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS vendor_payouts (
+        id SERIAL PRIMARY KEY,
+        stall_id INTEGER REFERENCES stalls(id),
+        date DATE NOT NULL,
+        gross_amount DECIMAL(10,2) NOT NULL,
+        commission_rate DECIMAL(5,2) NOT NULL,
+        commission_amount DECIMAL(10,2) NOT NULL,
+        net_amount DECIMAL(10,2) NOT NULL,
+        orders_count INTEGER NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);

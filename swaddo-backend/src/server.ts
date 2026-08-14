@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import { app } from './app';
 import { logger } from './utils/logger';
 import { setupWorkers } from './services/queue';
+import { startPayoutJob } from './jobs/payout.job';
 import dotenv from 'dotenv';
 import { pool } from './db';
 
@@ -75,6 +76,7 @@ io.on('connection', (socket) => {
 
 // Setup mock background workers
 setupWorkers();
+startPayoutJob();
 
 // Auto-mark riders offline if they haven't pinged in 10 minutes (App killed/device off)
 setInterval(async () => {

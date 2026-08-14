@@ -88,6 +88,7 @@ export default function ProfilePage() {
   });
 
   // Advanced Merchant Settings State
+  const [initialMerchantSettings, setInitialMerchantSettings] = useState<any>({});
   const [merchantSettings, setMerchantSettings] = useState({
     merchant_id: "",
     business_name: "",
@@ -330,6 +331,17 @@ export default function ProfilePage() {
         };
         setStall(stallData);
         setEditForm({ ...stallData });
+        setInitialMerchantSettings({
+          merchant_id: myStall.merchant_id || "",
+          business_name: myStall.business_name || "",
+          fssai_license: myStall.fssai_license || "",
+          gst_number: myStall.gst_number || "",
+          bank_account_name: myStall.bank_account_name || "",
+          bank_account_number: myStall.bank_account_number || "",
+          bank_ifsc: myStall.bank_ifsc || "",
+          pan_number: myStall.pan_number || "",
+          aadhaar_number: myStall.aadhaar_number || ""
+        });
         setMerchantSettings({
           merchant_id: myStall.merchant_id || "",
           business_name: myStall.business_name || "",
@@ -727,7 +739,7 @@ export default function ProfilePage() {
                       value={merchantSettings.fssai_license}
                       onChange={e => setMerchantSettings({...merchantSettings, fssai_license: e.target.value})}
                       placeholder="14-digit FSSAI Number"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.fssai_license ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.fssai_license ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.fssai_license} disabled={!!initialMerchantSettings.fssai_license}
                     />
                   </div>
                   
@@ -738,7 +750,7 @@ export default function ProfilePage() {
                       value={merchantSettings.gst_number}
                       onChange={e => setMerchantSettings({...merchantSettings, gst_number: e.target.value})}
                       placeholder="15-digit GSTIN"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.gst_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.gst_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.gst_number} disabled={!!initialMerchantSettings.gst_number}
                     />
                   </div>
                 </>
@@ -753,7 +765,7 @@ export default function ProfilePage() {
                       value={merchantSettings.bank_account_name}
                       onChange={e => setMerchantSettings({...merchantSettings, bank_account_name: e.target.value})}
                       placeholder="Name as per bank records"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.bank_account_name ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.bank_account_name ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.bank_account_name} disabled={!!initialMerchantSettings.bank_account_name}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -763,7 +775,7 @@ export default function ProfilePage() {
                       value={merchantSettings.bank_account_number}
                       onChange={e => setMerchantSettings({...merchantSettings, bank_account_number: e.target.value})}
                       placeholder="Account Number"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.bank_account_number} disabled={!!initialMerchantSettings.bank_account_number}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -773,7 +785,7 @@ export default function ProfilePage() {
                       value={merchantSettings.bank_ifsc}
                       onChange={e => setMerchantSettings({...merchantSettings, bank_ifsc: e.target.value})}
                       placeholder="e.g. SBIN0001234"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase {initialMerchantSettings.bank_ifsc ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.bank_ifsc ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.bank_ifsc} disabled={!!initialMerchantSettings.bank_ifsc}
                     />
                   </div>
                 </>
@@ -788,7 +800,7 @@ export default function ProfilePage() {
                       value={merchantSettings.pan_number}
                       onChange={e => setMerchantSettings({...merchantSettings, pan_number: e.target.value})}
                       placeholder="10-digit PAN"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase {initialMerchantSettings.pan_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.pan_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.pan_number} disabled={!!initialMerchantSettings.pan_number}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -798,7 +810,7 @@ export default function ProfilePage() {
                       value={merchantSettings.aadhaar_number}
                       onChange={e => setMerchantSettings({...merchantSettings, aadhaar_number: e.target.value})}
                       placeholder="12-digit Aadhaar"
-                      className="w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none"
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.aadhaar_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.aadhaar_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.aadhaar_number} disabled={!!initialMerchantSettings.aadhaar_number}
                     />
                   </div>
                 </>
@@ -941,3 +953,4 @@ export default function ProfilePage() {
     </>
   );
 }
+
