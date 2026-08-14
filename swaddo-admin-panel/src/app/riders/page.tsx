@@ -8,6 +8,9 @@ export default function Riders() {
   const [riders, setRiders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRider, setSelectedRider] = useState<any | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', vehicle_details: '', photo_url: '' });
+  const [updatingProfile, setUpdatingProfile] = useState(false);
 
   useEffect(() => {
     fetchRiders();
@@ -45,6 +48,30 @@ export default function Riders() {
     } catch (err) {
       console.error("Failed to delete rider", err);
       alert("Failed to delete rider");
+    }
+  };
+
+  const handleEditProfileClick = (rider: any) => {
+    setProfileForm({
+      name: rider.name || '',
+      vehicle_details: rider.vehicle_details || '',
+      photo_url: rider.photo_url || ''
+    });
+    setIsEditingProfile(true);
+  };
+
+  const handleUpdateProfile = async (id: number) => {
+    setUpdatingProfile(true);
+    try {
+      await api.patch(`/admin/riders/${id}/profile`, profileForm);
+      setRiders(riders.map(r => r.id === id ? { ...r, ...profileForm } : r));
+      setSelectedRider({ ...selectedRider, ...profileForm });
+      setIsEditingProfile(false);
+    } catch (err) {
+      console.error("Failed to update profile", err);
+      alert("Failed to update profile");
+    } finally {
+      setUpdatingProfile(false);
     }
   };
 
@@ -175,10 +202,19 @@ export default function Riders() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end z-50 transition-opacity">
           <div className="bg-bg-alt w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-in-right overflow-y-auto">
             <div className="p-6 border-b border-border-subtle flex justify-between items-center bg-white sticky top-0 z-10">
-              <div>
-                <h2 className="text-2xl font-heading font-black text-text-primary">Rider Details</h2>
-                <p className="text-sm text-text-muted font-medium mt-1">{selectedRider.name}</p>
-              </div>
+                <div className="flex items-center gap-4">
+                  {selectedRider.photo_url ? (
+                    <img src={selectedRider.photo_url} alt="Profile" className="w-12 h-12 rounded-full object-cover border border-border-subtle" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-bg-main flex items-center justify-center text-text-muted">
+                      <User size={24} />
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-2xl font-heading font-black text-text-primary">Rider Details</h2>
+                    <p className="text-sm text-text-muted font-medium mt-1">{selectedRider.name}</p>
+                  </div>
+                </div>
               <button onClick={() => setSelectedRider(null)} className="p-2 text-text-muted hover:bg-bg-main rounded-full transition-colors">
                 <X size={24} />
               </button>
@@ -187,19 +223,54 @@ export default function Riders() {
             <div className="p-6 space-y-8">
               
               <div>
-                <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <User size={16} /> Personal Info
-                </h3>
-                <div className="bg-white rounded-2xl border border-border-subtle p-5 space-y-4">
-                  <div>
-                    <p className="text-xs text-text-muted uppercase font-bold">Phone Number</p>
-                    <p className="text-sm font-medium text-text-primary mt-1">{selectedRider.phone}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-muted uppercase font-bold">Password (Raw)</p>
-                    <p className="text-sm font-medium text-text-primary mt-1">{selectedRider.raw_password || 'Not stored'}</p>
-                  </div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                    <User size={16} /> Personal Info
+                  </h3>
+                  {!isEditingProfile && (
+                    <button onClick={() => handleEditProfileClick(selectedRider)} className="text-xs font-bold text-primary hover:underline">
+                      Edit Profile
+                    </button>
+                  )}
                 </div>
+                
+                {isEditingProfile ? (
+                  <div className="bg-white rounded-2xl border border-border-subtle p-5 space-y-4">
+                    <div>
+                      <label className="text-xs text-text-muted uppercase font-bold block mb-1">Name</label>
+                      <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} className="w-full border border-border-subtle rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-muted uppercase font-bold block mb-1">Vehicle Details</label>
+                      <input type="text" value={profileForm.vehicle_details} onChange={(e) => setProfileForm({...profileForm, vehicle_details: e.target.value})} className="w-full border border-border-subtle rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-muted uppercase font-bold block mb-1">Photo URL (Optional)</label>
+                      <input type="text" value={profileForm.photo_url} onChange={(e) => setProfileForm({...profileForm, photo_url: e.target.value})} className="w-full border border-border-subtle rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                    </div>
+                    <div className="flex gap-2 justify-end pt-2">
+                      <button onClick={() => setIsEditingProfile(false)} className="px-3 py-1.5 text-sm font-bold text-text-muted hover:text-text-primary">Cancel</button>
+                      <button onClick={() => handleUpdateProfile(selectedRider.id)} disabled={updatingProfile} className="px-3 py-1.5 text-sm font-bold bg-primary text-white rounded-lg flex items-center gap-2">
+                        {updatingProfile && <Loader2 size={14} className="animate-spin" />} Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-border-subtle p-5 space-y-4">
+                    <div>
+                      <p className="text-xs text-text-muted uppercase font-bold">Phone Number</p>
+                      <p className="text-sm font-medium text-text-primary mt-1">{selectedRider.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-muted uppercase font-bold">Vehicle</p>
+                      <p className="text-sm font-medium text-text-primary mt-1">{selectedRider.vehicle_details || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-muted uppercase font-bold">Password (Raw)</p>
+                      <p className="text-sm font-medium text-text-primary mt-1">{selectedRider.raw_password || 'Not stored'}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

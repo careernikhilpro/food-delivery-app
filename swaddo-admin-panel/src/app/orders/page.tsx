@@ -337,11 +337,20 @@ export default function Orders() {
                     <div className="bg-bg-main p-4 rounded-2xl border border-border-subtle space-y-3 mb-4">
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Assigned Rider</span>
-                        <span className="font-semibold text-text-primary">{selectedOrder.rider.name}</span>
+                        <div className="flex items-center gap-2">
+                          {selectedOrder.rider.photo_url && (
+                            <img src={selectedOrder.rider.photo_url} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                          )}
+                          <span className="font-semibold text-text-primary">{selectedOrder.rider.name}</span>
+                        </div>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Rider Phone</span>
                         <span className="font-medium text-text-primary">{selectedOrder.rider.phone}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-text-muted">Vehicle Details</span>
+                        <span className="font-medium text-text-primary">{selectedOrder.rider.vehicle_details || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Assignment Status</span>

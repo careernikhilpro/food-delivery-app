@@ -375,7 +375,9 @@ router.get('/orders', async (req: Request, res: Response) => {
             'id', da.delivery_partner_id,
             'name', ru.name,
             'phone', ru.phone,
-            'status', da.status
+            'status', da.status,
+            'photo_url', dp.photo_url,
+            'vehicle_details', dp.vehicle_details
           )
           FROM delivery_assignments da
           JOIN delivery_partners dp ON da.delivery_partner_id = dp.id
@@ -601,6 +603,48 @@ router.get('/riders', async (req: Request, res: Response) => {
     res.json(mapped);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching riders' });
+  }
+});
+
+router.patch('/riders/:id/profile', async (req: Request, res: Response) => {
+  try {
+    const { name, vehicle_details, photo_url } = req.body;
+    const { id } = req.params;
+
+    const partnerRes = await pool.query(`SELECT user_id FROM delivery_partners WHERE id = $1`, [id]);
+    if (partnerRes.rows.length === 0) return res.status(404).json({ message: 'Rider not found' });
+    const userId = partnerRes.rows[0].user_id;
+
+    if (name !== undefined) {
+      await pool.query(`UPDATE users SET name = $1 WHERE id = $2`, [name, userId]);
+    }
+
+    if (vehicle_details !== undefined || photo_url !== undefined) {
+      const updateFields = [];
+      const updateValues = [];
+      let idx = 1;
+      
+      if (vehicle_details !== undefined) {
+        updateFields.push(`vehicle_details = $${idx++}`);
+        updateValues.push(vehicle_details);
+      }
+      if (photo_url !== undefined) {
+        updateFields.push(`photo_url = $${idx++}`);
+        updateValues.push(photo_url);
+      }
+      
+      if (updateFields.length > 0) {
+        updateValues.push(id);
+        await pool.query(
+          `UPDATE delivery_partners SET ${updateFields.join(', ')} WHERE id = $${idx}`,
+          updateValues
+        );
+      }
+    }
+
+    res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating profile' });
   }
 });
 
