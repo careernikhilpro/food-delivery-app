@@ -55,7 +55,6 @@ export const startRiderPayoutJob = () => {
       client.release();
     }
   }, {
-    scheduled: true,
     timezone: 'Asia/Kolkata'
   });
 };
