@@ -259,6 +259,10 @@ export default function Cart() {
           if (res.data) {
             setIsCutleryEnabled(res.data.is_cutlery_enabled === true);
             setStallOfferTitle(res.data.active_offer_title || null);
+            setStallOfferIsActive(res.data.active_offer_is_active === true);
+            setStallOfferDiscount(res.data.active_offer_discount ? parseFloat(res.data.active_offer_discount) : 0);
+            setStallOfferMin(res.data.active_offer_min ? parseFloat(res.data.active_offer_min) : 0);
+            setStallOfferMax(res.data.active_offer_max ? parseFloat(res.data.active_offer_max) : 0);
             if (res.data.latitude && res.data.longitude) {
               setStallCoords({
                 lat: parseFloat(res.data.latitude),
@@ -294,6 +298,10 @@ export default function Cart() {
   const [cutleryNeeded, setCutleryNeeded] = useState(false);
   const [isCutleryEnabled, setIsCutleryEnabled] = useState(false);
   const [stallOfferTitle, setStallOfferTitle] = useState<string | null>(null);
+  const [stallOfferIsActive, setStallOfferIsActive] = useState(false);
+  const [stallOfferDiscount, setStallOfferDiscount] = useState(0);
+  const [stallOfferMin, setStallOfferMin] = useState(0);
+  const [stallOfferMax, setStallOfferMax] = useState(0);
 
   // Delivery Fee Calculation
   useEffect(() => {
@@ -495,11 +503,21 @@ export default function Cart() {
     fetchAddresses();
   }, []);
 
-  const itemTotal = cartTotal + foodMarkup * cartItemCount;
+  const baseItemTotal = cartTotal + foodMarkup * cartItemCount;
+  
+  let discountAmount = 0;
+  if (stallOfferIsActive && stallOfferDiscount > 0 && baseItemTotal >= stallOfferMin) {
+    discountAmount = Math.round(baseItemTotal * (stallOfferDiscount / 100));
+    if (stallOfferMax > 0 && discountAmount > stallOfferMax) {
+      discountAmount = stallOfferMax;
+    }
+  }
+
+  const itemTotal = baseItemTotal - discountAmount;
   const GST = Math.round(itemTotal * 0.05);
   const finalTotal = itemTotal + GST + deliveryFee;
   
-  const totalSaved = cart.items.reduce((sum, item) => sum + (Math.round(item.price * 1.20) - item.price) * item.quantity, 0);
+  const totalSaved = cart.items.reduce((sum, item) => sum + (Math.round(item.price * 1.20) - item.price) * item.quantity, 0) + discountAmount;
 
   const handlePlaceOrder = async () => {
     if (!cart.stallId || cart.items.length === 0) return;
@@ -1268,13 +1286,27 @@ export default function Cart() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500 line-through font-medium">
-                        ₹{itemTotal + totalSaved}
+                        ₹{baseItemTotal + totalSaved - discountAmount}
                       </span>
                       <span className="text-[#00A14F] font-bold">
-                        ₹{itemTotal}
+                        ₹{baseItemTotal}
                       </span>
                     </div>
                   </div>
+
+                  {discountAmount > 0 && (
+                    <>
+                      <div className="w-full border-t border-dashed border-gray-200"></div>
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-[#00A14F] font-bold">
+                          Store Discount ({stallOfferDiscount}%)
+                        </span>
+                        <span className="text-[#00A14F] font-bold">
+                          -₹{discountAmount}
+                        </span>
+                      </div>
+                    </>
+                  )}
 
                   <div className="w-full border-t border-dashed border-gray-200"></div>
 
