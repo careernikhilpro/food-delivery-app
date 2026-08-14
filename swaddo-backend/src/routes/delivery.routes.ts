@@ -612,12 +612,21 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
     let weekEarnings = 0;
     let monthEarnings = 0;
 
-    const calcRes = await pool.query(`
-      SELECT SUM(earnings_amount) as total 
-      FROM delivery_assignments 
-      WHERE delivery_partner_id = $1 AND status = 'completed' AND cashed_out = false
-    `, [partnerId]);
-    const availableCashout = parseFloat(calcRes.rows[0].total || '0');
+      const calcRes = await pool.query(`
+        SELECT SUM(earnings_amount) as total 
+        FROM delivery_assignments 
+        WHERE delivery_partner_id = $1 AND status = 'completed' AND cashed_out = false
+      `, [partnerId]);
+      
+      const pendingRes = await pool.query(`
+        SELECT SUM(amount) as pending_total
+        FROM cashout_requests
+        WHERE delivery_partner_id = $1 AND status = 'pending'
+      `, [partnerId]);
+
+      const rawAvailable = parseFloat(calcRes.rows[0].total || '0');
+      const pendingAmount = parseFloat(pendingRes.rows[0].pending_total || '0');
+      const availableCashout = Math.max(0, rawAvailable - pendingAmount);
 
     // Daily breakdown for the past 7 days (including today)
     const dailyBreakdown = Array(7).fill(0).map((_, i) => {
@@ -737,13 +746,21 @@ router.post('/cashout/request', authenticate, requireDelivery, async (req: AuthR
     // Calculate available balance: SUM(earnings_amount) from delivery_assignments where cashed_out = false and status = 'completed'
     // Exclude COD orders where they haven't deposited the cash? 
     // Actually, simple way: sum all completed deliveries where cashed_out = false.
-    const calcRes = await pool.query(`
-      SELECT SUM(earnings_amount) as total 
-      FROM delivery_assignments 
-      WHERE delivery_partner_id = $1 AND status = 'completed' AND cashed_out = false
-    `, [partnerId]);
-    
-    const availableAmount = parseFloat(calcRes.rows[0].total || '0');
+      const calcRes = await pool.query(`
+        SELECT SUM(earnings_amount) as total 
+        FROM delivery_assignments 
+        WHERE delivery_partner_id = $1 AND status = 'completed' AND cashed_out = false
+      `, [partnerId]);
+      
+      const pendingRes = await pool.query(`
+        SELECT SUM(amount) as pending_total
+        FROM cashout_requests
+        WHERE delivery_partner_id = $1 AND status = 'pending'
+      `, [partnerId]);
+
+      const rawAvailable = parseFloat(calcRes.rows[0].total || '0');
+      const pendingAmount = parseFloat(pendingRes.rows[0].pending_total || '0');
+      const availableAmount = Math.max(0, rawAvailable - pendingAmount);
     
     if (availableAmount <= 0) {
       return res.status(400).json({ message: 'No available earnings to cashout.' });
