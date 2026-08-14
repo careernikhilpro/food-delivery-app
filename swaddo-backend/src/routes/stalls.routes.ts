@@ -210,7 +210,12 @@ router.put('/merchant/profile', authenticate, requireVendor, async (req: AuthReq
 router.put('/merchant/offer', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
-    const { title, discountPercentage, minOrderValue, maxDiscount, isActive } = req.body;
+    let { title, discountPercentage, minOrderValue, maxDiscount, isActive, discount_percentage, min_order_value, max_discount, is_active } = req.body;
+    
+    discountPercentage = discountPercentage ?? discount_percentage;
+    minOrderValue = minOrderValue ?? min_order_value;
+    maxDiscount = maxDiscount ?? max_discount;
+    isActive = isActive ?? is_active;
 
     const vendorRes = await pool.query('SELECT id FROM vendors WHERE user_id = $1 LIMIT 1', [userId]);
     if (vendorRes.rows.length === 0) return res.status(404).json({ message: 'Vendor not found' });
