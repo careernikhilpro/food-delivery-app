@@ -117,7 +117,7 @@ router.get('/vendors', async (req: Request, res: Response) => {
     const vendors = await pool.query(`
       SELECT v.*, u.name, u.phone, u.raw_password,
       (SELECT name FROM stalls WHERE vendor_id = v.id LIMIT 1) as stall_name,
-      (SELECT is_active FROM stalls WHERE vendor_id = v.id LIMIT 1) as is_active
+      (SELECT is_active FROM stalls WHERE vendor_id = v.id LIMIT 1) as is_active, (SELECT id FROM stalls WHERE vendor_id = v.id LIMIT 1) as stall_id
       FROM vendors v 
       JOIN users u ON v.user_id = u.id 
       ORDER BY v.id DESC
@@ -1006,3 +1006,4 @@ router.post('/cashouts/reject/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
