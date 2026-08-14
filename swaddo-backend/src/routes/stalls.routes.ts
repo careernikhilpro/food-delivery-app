@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import { pool } from '../db';
 import { authenticate, requireVendor, AuthRequest } from '../middleware/auth';
 
@@ -277,7 +277,7 @@ router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthReq
         COALESCE(SUM(oi.price_at_time * oi.quantity), 0) as amount
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')
+      WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
     `, [stallId]);
 
     const todayOrders = parseInt(todayRes.rows[0].orders);
