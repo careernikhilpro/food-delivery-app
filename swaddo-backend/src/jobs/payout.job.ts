@@ -38,6 +38,11 @@ export const startPayoutJob = () => {
             INSERT INTO vendor_payouts 
             (stall_id, date, gross_amount, commission_rate, commission_amount, net_amount, orders_count, status)
             VALUES ($1, DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'), $2, $3, $4, $5, $6, 'pending')
+            ON CONFLICT (stall_id, date) DO UPDATE SET
+              gross_amount = EXCLUDED.gross_amount,
+              commission_amount = EXCLUDED.commission_amount,
+              net_amount = EXCLUDED.net_amount,
+              orders_count = EXCLUDED.orders_count
           `, [stallId, grossAmount, commissionRate, commissionAmount, netAmount, ordersCount]);
         }
       }
