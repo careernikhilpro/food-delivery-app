@@ -114,15 +114,15 @@ export default function FloatingCash() {
                   pending.map((req) => (
                     <tr key={req.id} className="border-b border-border-subtle last:border-0 hover:bg-bg-main/50 transition-colors">
                       <td className="py-4 px-4">
-                        <div className="font-bold text-text-primary">{req.riderName || req.rider?.name || 'Unknown'}</div>
-                        <div className="text-sm text-text-muted">{req.phone || req.rider?.phone || 'N/A'}</div>
+                        <div className="font-bold text-text-primary">{req.rider_name || req.riderName || req.rider?.name || 'Unknown'}</div>
+                        <div className="text-sm text-text-muted">{req.rider_phone || req.phone || req.rider?.phone || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-4 font-bold text-primary text-lg">₹{req.amount}</td>
                       <td className="py-4 px-4 font-medium text-text-muted">{req.transactionId || req.transaction_id}</td>
                       <td className="py-4 px-4">
-                        {req.screenshot || req.screenshotBase64 ? (
+                        {req.screenshot_url || req.screenshot || req.screenshotBase64 ? (
                           <img 
-                            src={req.screenshot?.startsWith('data:') ? req.screenshot : `data:image/jpeg;base64,${req.screenshot || req.screenshotBase64}`}
+                            src={req.screenshot_url || (req.screenshot?.startsWith('data:') ? req.screenshot : `data:image/jpeg;base64,${req.screenshot || req.screenshotBase64}`)}
                             alt="Screenshot" 
                             className="w-16 h-16 object-cover rounded-lg border border-border-subtle hover:scale-150 transition-transform cursor-pointer"
                           />
@@ -164,6 +164,7 @@ export default function FloatingCash() {
                   <th className="py-4 px-4 font-heading font-bold text-text-muted">Rider</th>
                   <th className="py-4 px-4 font-heading font-bold text-text-muted">Amount</th>
                   <th className="py-4 px-4 font-heading font-bold text-text-muted">Transaction ID</th>
+                  <th className="py-4 px-4 font-heading font-bold text-text-muted">Screenshot</th>
                   <th className="py-4 px-4 font-heading font-bold text-text-muted">Status</th>
                 </tr>
               </thead>
@@ -176,11 +177,22 @@ export default function FloatingCash() {
                   history.map((req) => (
                     <tr key={req.id} className="border-b border-border-subtle last:border-0 hover:bg-bg-main/50 transition-colors">
                       <td className="py-4 px-4">
-                        <div className="font-bold text-text-primary">{req.riderName || req.rider?.name || 'Unknown'}</div>
-                        <div className="text-sm text-text-muted">{req.phone || req.rider?.phone || 'N/A'}</div>
+                        <div className="font-bold text-text-primary">{req.rider_name || req.riderName || req.rider?.name || 'Unknown'}</div>
+                        <div className="text-sm text-text-muted">{req.rider_phone || req.phone || req.rider?.phone || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-4 font-bold text-text-primary text-lg">₹{req.amount}</td>
                       <td className="py-4 px-4 font-medium text-text-muted">{req.transactionId || req.transaction_id}</td>
+                      <td className="py-4 px-4">
+                        {req.screenshot_url || req.screenshot || req.screenshotBase64 ? (
+                          <img 
+                            src={req.screenshot_url || (req.screenshot?.startsWith('data:') ? req.screenshot : `data:image/jpeg;base64,${req.screenshot || req.screenshotBase64}`)}
+                            alt="Screenshot" 
+                            className="w-16 h-16 object-cover rounded-lg border border-border-subtle hover:scale-150 transition-transform cursor-pointer"
+                          />
+                        ) : (
+                          <span className="text-sm text-text-muted">No image</span>
+                        )}
+                      </td>
                       <td className="py-4 px-4">
                         <span className={cn(
                           "px-3 py-1 rounded-full text-xs font-bold uppercase",
