@@ -56,7 +56,6 @@ export const startPayoutJob = () => {
       client.release();
     }
   }, {
-    scheduled: true,
     timezone: "Asia/Kolkata"
   });
 };
