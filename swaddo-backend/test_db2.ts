@@ -6,7 +6,7 @@ const pool = new Pool({
 async function run() {
   const client = await pool.connect();
   try {
-    const res = await client.query('SELECT status, earnings_amount, cashed_out FROM delivery_assignments ORDER BY id DESC LIMIT 5');
+    const res = await client.query('SELECT * FROM cashout_requests ORDER BY id DESC LIMIT 5');
     console.log(res.rows);
   } finally {
     client.release();

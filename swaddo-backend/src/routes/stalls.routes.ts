@@ -383,7 +383,8 @@ router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunc
       FROM menu_items m
       JOIN stalls s ON m.stall_id = s.id
       WHERE CAST(m.price as numeric) <= 99 
-        AND m.is_available = true
+          AND m.is_available = true
+          AND s.is_open = true
       ORDER BY RANDOM()
     `);
     res.json({ data: itemsRes.rows });
@@ -400,7 +401,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const offset = (page - 1) * limit;
     const { lat, lng, vegOnly } = req.query;
 
-    let whereClause = vegOnly === 'true' ? 'WHERE is_pure_veg = true' : '';
+    let whereClause = vegOnly === 'true' ? 'WHERE is_pure_veg = true AND is_open = true' : 'WHERE is_open = true';
 
     let query = `
       SELECT *,
@@ -634,3 +635,4 @@ router.delete('/:id/menu/:itemId', authenticate, requireVendor, async (req: Auth
 });
 
 export default router;
+

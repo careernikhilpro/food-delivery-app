@@ -6,8 +6,8 @@ const pool = new Pool({
 async function run() {
   const client = await pool.connect();
   try {
-    const res = await client.query('SELECT status, earnings_amount, cashed_out FROM delivery_assignments ORDER BY id DESC LIMIT 5');
-    console.log(res.rows);
+    const res = await client.query("UPDATE cashout_requests SET status = 'rejected', admin_notes = 'System reset to fix balance calculation' WHERE status = 'pending' RETURNING *");
+    console.log("Rejected " + res.rowCount + " requests");
   } finally {
     client.release();
     pool.end();
