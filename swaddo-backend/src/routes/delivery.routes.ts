@@ -1,4 +1,4 @@
-﻿import { Router, Response, NextFunction } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { pool } from '../db';
 import { authenticate, requireDelivery, AuthRequest } from '../middleware/auth';
 import { rateLimit } from 'express-rate-limit';
@@ -106,13 +106,18 @@ router.get('/profile', authenticate, requireDelivery, async (req: AuthRequest, r
 router.patch('/profile', authenticate, requireDelivery, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
-    const { name, vehicle, bankDetails } = req.body;
+    const { name, vehicle, bankDetails, photo_url } = req.body;
     
     // Update name in users
     if (name) {
       await pool.query('UPDATE users SET name = $1 WHERE id = $2', [name, userId]);
     }
     
+    // Update photo_url in delivery_partners
+    if (photo_url) {
+      await pool.query('UPDATE delivery_partners SET photo_url = $1 WHERE user_id = $2', [photo_url, userId]);
+    }
+
     // Update vehicle in delivery_partners
     if (vehicle) {
       await pool.query('UPDATE delivery_partners SET vehicle_details = $1 WHERE user_id = $2', [vehicle, userId]);

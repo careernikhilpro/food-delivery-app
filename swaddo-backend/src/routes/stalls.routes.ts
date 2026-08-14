@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { pool } from '../db';
 import { authenticate, requireVendor, AuthRequest } from '../middleware/auth';
 
@@ -247,8 +247,18 @@ router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthReq
     const stallId = stallRes.rows[0].id;
     const commissionRate = parseFloat(stallRes.rows[0].commission_rate || 22.00);
 
+    const period = (req.query.period as string) || 'this_week';
+    let dateCondition = "";
+    if (period === 'today') {
+      dateCondition = "AND date >= DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')";
+    } else if (period === 'this_week') {
+      dateCondition = "AND date >= DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata') - interval '7 days'";
+    } else if (period === 'this_month') {
+      dateCondition = "AND date >= DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata') - interval '30 days'";
+    }
+
     // Fetch payouts from vendor_payouts
-    const payoutsRes = await pool.query('SELECT * FROM vendor_payouts WHERE stall_id = $1 ORDER BY date DESC', [stallId]);
+    const payoutsRes = await pool.query(`SELECT * FROM vendor_payouts WHERE stall_id = $1 ${dateCondition} ORDER BY date DESC`, [stallId]);
     const payouts = payoutsRes.rows;
 
     let availableBalance = 0;

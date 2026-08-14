@@ -4,7 +4,7 @@ import { User, LogOut, ChevronDown, CheckCircle2, Clock, Landmark, FileText, Ind
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AppLoader from "@/components/AppLoader";
 import { Preferences } from '@capacitor/preferences';
 
@@ -13,7 +13,30 @@ export default function Profile() {
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string | null>('documents');
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
+  // Photo Upload States
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        // Optimistically update UI
+        setProfile((prev: any) => ({ ...prev, photo_url: base64Image }));
+        
+        try {
+          await api.patch('/delivery/profile', { photo_url: base64Image });
+          await fetchProfile();
+        } catch (err) {
+          console.error("Failed to save profile photo", err);
+          alert("Failed to upload photo. Please try again.");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Edit Profile States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -160,9 +183,26 @@ export default function Profile() {
       <div className="bg-white border border-slate-100 rounded-[24px] p-6 mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative">
         {!isEditingProfile ? (
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981] shrink-0 border-[3px] border-[#10B981]/20">
-              <User size={28} strokeWidth={2.5} />
+            <div 
+              className="w-16 h-16 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981] shrink-0 border-[3px] border-[#10B981]/20 relative overflow-hidden cursor-pointer group"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {profile?.photo_url ? (
+                <img src={profile.photo_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={28} strokeWidth={2.5} />
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-white text-[10px] font-bold">EDIT</span>
+              </div>
             </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImageUpload} 
+              accept="image/*" 
+              className="hidden" 
+            />
             <div className="flex-1">
               <h2 className="text-xl font-black text-slate-800 tracking-tight">{profile?.name || "Delivery Partner"}</h2>
               <p className="text-[13px] font-bold text-slate-400 mt-0.5">{profile?.phone || "N/A"}</p>

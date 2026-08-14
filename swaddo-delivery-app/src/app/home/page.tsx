@@ -201,6 +201,14 @@ function HomeContent() {
     setCurrentTime(new Date());
     const timer = setInterval(() => {
       setCurrentTime(new Date());
+      
+      // Background Time Tracking Logic
+      const startTime = localStorage.getItem("sessionStartTime");
+      if (startTime) {
+        const initialHours = parseInt(localStorage.getItem("sessionInitialHours") || "0", 10);
+        const elapsedMinutes = Math.floor((Date.now() - parseInt(startTime, 10)) / 60000);
+        setStats(prev => ({ ...prev, hours: initialHours + elapsedMinutes }));
+      }
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -228,6 +236,8 @@ function HomeContent() {
                  } catch (e) {}
                  setIsOnline(false);
                  localStorage.setItem("isOnline", "false");
+                 localStorage.removeItem("sessionStartTime");
+                 localStorage.removeItem("sessionInitialHours");
                  window.location.reload(); // Force full reset to clear watchers cleanly
                }
              }
@@ -321,6 +331,11 @@ function HomeContent() {
         setIsOnline(true);
         localStorage.setItem("isOnline", "true");
         
+        // Background time tracking markers
+        localStorage.setItem("sessionStartTime", Date.now().toString());
+        // Use stats.hours or fallback to 0. 
+        localStorage.setItem("sessionInitialHours", String(stats?.hours || 0));
+        
       } catch (err: any) {
         console.error("Failed to go online", err);
         const errorMsg = err.response?.data?.message || err?.message || err?.toString() || "Unknown error";
@@ -341,6 +356,8 @@ function HomeContent() {
         await api.post("/delivery/status", { status: "offline" });
         setIsOnline(false);
         localStorage.setItem("isOnline", "false");
+        localStorage.removeItem("sessionStartTime");
+        localStorage.removeItem("sessionInitialHours");
         disconnectSocket();
       } catch (err) {
         console.error("Failed to go offline", err);
@@ -435,7 +452,6 @@ function HomeContent() {
       pingTimer = setInterval(() => {
         // Send heartbeat for online hours
         api.post('/delivery/ping-time').catch(console.error);
-        setStats(prev => ({ ...prev, hours: prev.hours + 1 }));
 
         api.get('/delivery/assignments/active').then(res => {
           if (res.data && res.data.data) {

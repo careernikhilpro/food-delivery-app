@@ -104,7 +104,7 @@ export default function Riders() {
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center text-primary border border-orange-200 overflow-hidden">
-                  {r.profile_picture ? <img src={r.profile_picture} alt={r.name} className="w-full h-full object-cover" /> : <Bike size={20} />}
+                  {r.photo_url ? <img src={r.photo_url} alt={r.name} className="w-full h-full object-cover" /> : <Bike size={20} />}
                 </div>
                 <div>
                   <h3 className="font-heading font-bold text-lg text-text-primary">{r.name}</h3>

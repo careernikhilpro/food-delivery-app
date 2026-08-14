@@ -18,7 +18,7 @@ export default function EarningsPage() {
 
   useEffect(() => {
     const fetchEarnings = async () => {
-      setLoading(true);
+      if (!data) setLoading(true);
       try {
         const res = await api.get(`/stalls/merchant/payouts?period=${period}`);
         setData(res.data);

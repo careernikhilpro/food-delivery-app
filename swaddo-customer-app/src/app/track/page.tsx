@@ -308,7 +308,7 @@ function OrderTrackingContent() {
             stallLocation,
             userLocation: customerLocation,
             riderLocation: rLoc, 
-            rider: order.rider ? { name: order.rider.name, phone: order.rider.phone, vehicle: order.rider.vehicle } : null,
+            rider: order.rider ? { name: order.rider.name, phone: order.rider.phone, vehicle: order.rider.vehicle, photo: order.rider.photo } : null,
             orderData: order,
             eta: newStage < 2 ? (order.stall?.estimated_prep_time ? order.stall.estimated_prep_time + " Mins" : "25 Mins") : prev.eta
           }));
@@ -602,8 +602,12 @@ function OrderTrackingContent() {
             <div className="bg-white rounded-[24px] p-4 flex items-center gap-4 border border-gray-100 mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               
-              <div className="w-[54px] h-[54px] bg-gradient-to-br from-primary to-orange-400 rounded-full border-[3px] border-orange-50 shadow-md flex items-center justify-center flex-shrink-0 relative z-10">
+              <div className="w-[54px] h-[54px] bg-gradient-to-br from-primary to-orange-400 rounded-full border-[3px] border-orange-50 shadow-md flex items-center justify-center flex-shrink-0 relative z-10 overflow-hidden">
+              {orderStatus.rider.photo ? (
+                <img src={orderStatus.rider.photo} alt={orderStatus.rider.name} className="w-full h-full object-cover" />
+              ) : (
                 <span className="text-white font-heading font-black text-[22px]">{orderStatus.rider.name?.charAt(0) || 'R'}</span>
+              )}
               </div>
               <div className="flex-1 relative z-10">
                 <h3 className="font-heading font-black text-gray-900 text-[17px] leading-tight mb-0.5">{orderStatus.rider.name || 'Ramu K.'}</h3>
