@@ -561,7 +561,7 @@ router.patch('/disputes/:id/resolve', async (req: Request, res: Response) => {
 router.get('/riders', async (req: Request, res: Response) => {
   try {
     const riders = await pool.query(`
-      SELECT d.*, u.name, u.phone, u.float_limit, u.raw_password 
+      SELECT d.*, u.name, u.phone, u.float_limit, u.raw_password, u.bank_name, u.account_name, u.account_number, u.ifsc_code, u.aadhar_number, u.dl_number, u.rc_number, u.profile_picture 
       FROM delivery_partners d 
       JOIN users u ON d.user_id = u.id 
       ORDER BY d.id DESC

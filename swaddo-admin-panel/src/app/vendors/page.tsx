@@ -797,6 +797,17 @@ export default function Vendors() {
                                 />
                                 <p className="text-xs text-text-muted mt-1">Customers will see a range like "15 - 25 mins".</p>
                               </div>
+                              <div className="mb-6">
+                                <label className="block text-xs font-bold text-text-muted uppercase mb-1">Commission Rate (%)</label>
+                                <input 
+                                  type="number" step="0.01" min="0" max="100"
+                                  value={stallFormData.commission_rate}
+                                  onChange={e => setStallFormData({...stallFormData, commission_rate: e.target.value})}
+                                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-main focus:outline-none focus:border-primary text-sm font-medium"
+                                  placeholder="e.g. 22"
+                                />
+                                <p className="text-xs text-text-muted mt-1">Deducted automatically from daily payout.</p>
+                              </div>
                               <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl transition-colors">
                                 Save Settings
                               </button>

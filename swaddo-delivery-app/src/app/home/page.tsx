@@ -129,8 +129,8 @@ function HomeContent() {
           }
 
           // Auto offline if limit exceeded while online
-          if (res.data.floatingCash >= 2000 && isOnline) {
-            alert("Floating cash limit reached. You have been taken offline. Please deposit cash to receive more orders.");
+          if (res.data.floatingCash >= (res.data.floatLimit || 2000) && isOnline) {
+            alert(`Floating cash limit (₹${res.data.floatLimit || 2000}) reached. You have been taken offline. Please deposit cash to receive more orders.`);
             toggleOnlineStatus(false);
           }
         }
