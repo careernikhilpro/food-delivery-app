@@ -19,8 +19,8 @@ function DashboardContent() {
   // SWR Data Fetching
   const fetcher = (url: string) => api.get(url).then(res => res.data);
   const { data: stallRes, mutate: mutateStall } = useSWR('/stalls/merchant/my-stall', fetcher);
-  const { data: statsRes, mutate: mutateStats } = useSWR('/stalls/merchant/stats', fetcher);
-  const { data: ordersRes, mutate: mutateOrders } = useSWR('/orders?limit=100', fetcher);
+  const { data: statsRes, mutate: mutateStats } = useSWR('/stalls/merchant/stats', fetcher, { refreshInterval: 60000 });
+  const { data: ordersRes, mutate: mutateOrders } = useSWR('/orders?limit=100', fetcher, { refreshInterval: 10000 });
 
   // Removed isAcceptingOrders local state to avoid toggle flicker
   const [soundEnabled, setSoundEnabled] = useState(() => {
