@@ -55,7 +55,7 @@ export default function Profile() {
   const fetchCashoutHistory = async () => {
     try {
       setCashoutLoading(true);
-      const res = await api.get('/cashout/history');
+      const res = await api.get('/delivery/cashout/history');
       setCashoutHistory(res.data);
     } catch (err) {
       console.error("Failed to fetch cashout history", err);
