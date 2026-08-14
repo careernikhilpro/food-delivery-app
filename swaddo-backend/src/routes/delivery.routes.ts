@@ -608,9 +608,21 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
 
     const nowStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"});
     const nowIST = new Date(nowStr);
-    let todayEarnings = 0;
-    let weekEarnings = 0;
-    let monthEarnings = 0;
+
+    const earningsStatsRes = await pool.query(`
+      SELECT 
+        SUM(CASE WHEN DATE(assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(now() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') THEN earnings_amount ELSE 0 END) as today_earnings,
+        SUM(CASE WHEN (assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') >= (now() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') - interval '7 days' THEN earnings_amount ELSE 0 END) as week_earnings,
+        SUM(CASE WHEN EXTRACT(MONTH FROM (assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')) = EXTRACT(MONTH FROM (now() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')) 
+                  AND EXTRACT(YEAR FROM (assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')) = EXTRACT(YEAR FROM (now() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')) 
+             THEN earnings_amount ELSE 0 END) as month_earnings
+      FROM delivery_assignments 
+      WHERE delivery_partner_id = $1 AND status = 'completed'
+    `, [partnerId]);
+    
+    let todayEarnings = parseFloat(earningsStatsRes.rows[0].today_earnings || '0');
+    let weekEarnings = parseFloat(earningsStatsRes.rows[0].week_earnings || '0');
+    let monthEarnings = parseFloat(earningsStatsRes.rows[0].month_earnings || '0');
 
       const calcRes = await pool.query(`
         SELECT SUM(earnings_amount) as total 
@@ -676,10 +688,6 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
           }
           dropFee = finalAmount - pickupFee - returnFee;
       }
-
-      if (diffDays === 0 && dDateIST.getDate() === nowIST.getDate()) todayEarnings += finalAmount;
-      if (diffDays < 7) weekEarnings += finalAmount;
-      if (dDateIST.getMonth() === nowIST.getMonth() && dDateIST.getFullYear() === nowIST.getFullYear()) monthEarnings += finalAmount;
 
       const yyyy = dDateIST.getFullYear();
       const mm = String(dDateIST.getMonth() + 1).padStart(2, '0');
