@@ -649,7 +649,7 @@ export default function Home() {
                         <Plus size={16} />
                       )}
                     </button>
-                  ) : null)}
+                  ))}
                   
                   {/* Rating Tag */}
                   <div className="absolute -bottom-2.5 left-2 bg-white text-[#00A14F] font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-sm border border-gray-100 flex items-center gap-0.5 z-20">
@@ -1132,7 +1132,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                           </div>
                         )}
                      </button>
-                   ) : null)}
+                   ))}
                  </div>
                  {item.has_variants && (
                     <div className="text-[9px] text-gray-400 mt-0.5 text-center leading-none font-medium">Customizable</div>
