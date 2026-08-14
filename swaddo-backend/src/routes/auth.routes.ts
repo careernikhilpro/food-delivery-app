@@ -86,13 +86,6 @@ router.post('/login-pin', async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid PIN' });
     }
 
-    if (role === 'vendor') {
-      const vendorCheck = await client.query('SELECT status FROM vendors WHERE user_id = $1', [user.id]);
-      if (vendorCheck.rows.length === 0 || vendorCheck.rows[0].status !== 'active') {
-        return res.status(403).json({ message: 'Your vendor account is not active. Please contact admin.' });
-      }
-    }
-
     // Role-specific DB entries
     if (role === 'vendor') {
       let vendorRes = await client.query('SELECT * FROM vendors WHERE user_id = $1', [user.id]);
@@ -101,10 +94,10 @@ router.post('/login-pin', async (req: Request, res: Response) => {
         const newVendorId = vendorRes.rows[0].id;
         await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
       }
+      
       const vendor = vendorRes.rows[0];
-      if (vendor.status === 'pending_approval') {
-        await client.query("UPDATE vendors SET status = 'active' WHERE id = $1", [vendor.id]);
-        vendor.status = 'active';
+      if (vendor.status !== 'active') {
+        return res.status(403).json({ message: 'Your vendor account is not active. Please contact admin.' });
       }
     } else if (role === 'delivery') {
       let riderRes = await client.query('SELECT * FROM delivery_partners WHERE user_id = $1', [user.id]);
