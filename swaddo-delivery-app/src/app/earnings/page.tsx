@@ -8,9 +8,32 @@ import AppLoader from "@/components/AppLoader";
 
 export default function Earnings() {
   useAuth();
-  const [data, setData] = useState<any>(null);
-  const [cashoutHistory, setCashoutHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("earningsData");
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return null;
+  });
+  
+  const [cashoutHistory, setCashoutHistory] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("cashoutHistory");
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
+  
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("earningsData");
+    }
+    return true;
+  });
   const [requesting, setRequesting] = useState(false);
 
   const fetchData = async (background = false) => {
@@ -28,6 +51,7 @@ export default function Earnings() {
       }
       if (resHistory.data) {
         setCashoutHistory(resHistory.data);
+        sessionStorage.setItem("cashoutHistory", JSON.stringify(resHistory.data));
       }
     } catch (err) {
       console.log("Failed to fetch earnings or history");
@@ -37,12 +61,8 @@ export default function Earnings() {
   };
 
   useEffect(() => {
-    const cachedData = sessionStorage.getItem("earningsData");
-    if (cachedData) {
-      try {
-        setData(JSON.parse(cachedData));
-      } catch (e) {}
-      fetchData(true); // Fetch in background
+    if (data) {
+      fetchData(true); // Fetch in background if we already have data
     } else {
       fetchData(false);
     }
