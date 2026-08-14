@@ -234,6 +234,48 @@ router.put('/merchant/offer', authenticate, requireVendor, async (req: AuthReque
   }
 });
 
+// Get Merchant Campaigns (Vendor Only)
+router.get('/merchant/campaigns', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const vendorRes = await pool.query('SELECT id FROM vendors WHERE user_id = $1 LIMIT 1', [userId]);
+    if (vendorRes.rows.length === 0) return res.status(404).json({ message: 'Vendor not found' });
+    
+    const campaignsRes = await pool.query(
+      'SELECT * FROM campaign_requests WHERE vendor_id = $1 ORDER BY created_at DESC', 
+      [vendorRes.rows[0].id]
+    );
+    res.json(campaignsRes.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Request New Campaign (Vendor Only)
+router.post('/merchant/campaign', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const { title, description } = req.body;
+    
+    const vendorRes = await pool.query('SELECT id FROM vendors WHERE user_id = $1 LIMIT 1', [userId]);
+    if (vendorRes.rows.length === 0) return res.status(404).json({ message: 'Vendor not found' });
+    const vendorId = vendorRes.rows[0].id;
+    
+    const stallRes = await pool.query('SELECT id FROM stalls WHERE vendor_id = $1 LIMIT 1', [vendorId]);
+    if (stallRes.rows.length === 0) return res.status(404).json({ message: 'Stall not found' });
+    const stallId = stallRes.rows[0].id;
+
+    const campaignRes = await pool.query(
+      `INSERT INTO campaign_requests (vendor_id, stall_id, title, description, status) 
+       VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
+      [vendorId, stallId, title, description]
+    );
+    
+    res.status(201).json(campaignRes.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Merchant Payouts (Vendor Only)
 router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -533,7 +533,7 @@ export default function MenuPage() {
                         <label className="text-sm font-bold text-text-primary">Does this item come in different sizes?</label>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={hasVariants} onChange={(e) => setHasVariants(e.target.checked)} className="sr-only peer" />
-                          <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent"></div>
+                          <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                       </div>
                       {hasVariants && (
@@ -556,7 +556,7 @@ export default function MenuPage() {
                         <label className="text-sm font-bold text-text-primary">Add extra options for this item?</label>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={hasAddons} onChange={(e) => setHasAddons(e.target.checked)} className="sr-only peer" />
-                          <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent"></div>
+                          <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                       </div>
                       {hasAddons && (
@@ -580,7 +580,7 @@ export default function MenuPage() {
                           <label className="text-sm font-bold text-text-primary">Apply Discount?</label>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={hasDiscount} onChange={(e) => setHasDiscount(e.target.checked)} className="sr-only peer" />
-                            <div className="w-7 h-4 bg-gray-200 rounded-full peer peer-checked:after:translate-x-[14px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-accent"></div>
+                            <div className="w-7 h-4 bg-gray-200 rounded-full peer peer-checked:after:translate-x-[14px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
                           </label>
                         </div>
                         {hasDiscount && (
@@ -633,7 +633,7 @@ export default function MenuPage() {
             {/* Modal Footer */}
             <div className="px-6 py-5 border-t border-border-subtle bg-white shrink-0 flex justify-end gap-3 z-10 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
               <button onClick={() => { setIsAdding(false); resetForm(); }} className="px-6 py-3.5 rounded-xl font-bold text-text-muted hover:bg-gray-100 transition-colors">Cancel</button>
-              <button onClick={handleAddItem} disabled={!form.name || (!form.basePrice && (!hasVariants || !form.variants.some(v => v.name && v.price)))} className="px-8 py-3.5 rounded-xl font-bold text-white bg-accent hover:bg-yellow-600 shadow-md transition-all disabled:opacity-50 disabled:shadow-none">
+              <button onClick={handleAddItem} disabled={!form.name || (!form.basePrice && (!hasVariants || !form.variants.some(v => v.name && v.price)))} className="px-8 py-3.5 rounded-xl font-bold text-white bg-primary hover:bg-yellow-600 shadow-md transition-all disabled:opacity-50 disabled:shadow-none">
                 {editingItemFullId ? "Save Changes" : "Save Item"}
               </button>
             </div>

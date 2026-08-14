@@ -21,6 +21,7 @@ export default function OffersPage() {
 
   const fetcher = (url: string) => api.get(url).then(res => res.data);
   const { data: stallRes, mutate } = useSWR('/stalls/merchant/my-stall', fetcher);
+  const { data: campaigns = [], mutate: mutateCampaigns } = useSWR('/stalls/merchant/campaigns', fetcher);
 
   const stall = stallRes;
   const hasOffer = stall?.active_offer_title;
@@ -59,6 +60,19 @@ export default function OffersPage() {
       alert("Failed to save offer.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestCampaign = async () => {
+    try {
+      await api.post('/stalls/merchant/campaign', {
+        title: "Monsoon Special 15% OFF",
+        description: "Run a 'Monsoon Special' 15% discount."
+      });
+      alert("Campaign request sent to Admin successfully!");
+      mutateCampaigns();
+    } catch (err) {
+      alert("Failed to request campaign.");
     }
   };
 
@@ -184,6 +198,24 @@ export default function OffersPage() {
                 </div>
               </div>
             )}
+
+            {/* Render Campaign Requests */}
+            {campaigns.length > 0 && (
+              <div className="mt-6 space-y-4">
+                <h4 className="font-extrabold text-slate-800 text-lg px-1">Campaign Requests</h4>
+                {campaigns.map((camp: any) => (
+                  <div key={camp.id} className="bg-white p-5 rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-[15px]">{camp.title}</h4>
+                      <p className="text-xs text-slate-500 font-medium mt-1 truncate max-w-[200px]">{camp.description}</p>
+                    </div>
+                    <div className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border ${camp.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : camp.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                      {camp.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -203,13 +235,7 @@ export default function OffersPage() {
                   Run a 'Monsoon Special' 15% discount. Restaurants similar to yours saw a 30% jump in orders this week!
                 </p>
                 <button 
-                  onClick={() => {
-                    setTitle("Monsoon Special 15% OFF");
-                    setDiscount("15");
-                    setMinOrder("149");
-                    setMaxDiscount("40");
-                    setIsModalOpen(true);
-                  }}
+                  onClick={handleRequestCampaign}
                   className="bg-white text-indigo-900 text-sm font-extrabold py-3.5 px-6 rounded-full shadow-lg w-full flex justify-center items-center gap-2 active:scale-95 transition-transform hover:bg-indigo-50"
                 >
                   Apply This Campaign <ChevronRight size={18} />

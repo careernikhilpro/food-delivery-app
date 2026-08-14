@@ -603,7 +603,7 @@ export default function ProfilePage() {
                 <button onClick={() => setIsEditing(false)} className="flex-1 py-3 bg-gray-100 text-text-muted text-sm font-bold rounded-xl">
                   Cancel
                 </button>
-                <button onClick={saveDetails} className="flex-1 py-3 bg-accent text-white text-sm font-bold rounded-xl shadow-md">
+                <button onClick={saveDetails} className="flex-1 py-3 bg-primary text-white text-sm font-bold rounded-xl shadow-md">
                   Save Changes
                 </button>
               </div>
@@ -739,7 +739,8 @@ export default function ProfilePage() {
                       value={merchantSettings.fssai_license}
                       onChange={e => setMerchantSettings({...merchantSettings, fssai_license: e.target.value})}
                       placeholder="14-digit FSSAI Number"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.fssai_license ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.fssai_license ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.fssai_license} disabled={!!initialMerchantSettings.fssai_license}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none ${initialMerchantSettings.fssai_license ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.fssai_license}
                     />
                   </div>
                   
@@ -750,9 +751,16 @@ export default function ProfilePage() {
                       value={merchantSettings.gst_number}
                       onChange={e => setMerchantSettings({...merchantSettings, gst_number: e.target.value})}
                       placeholder="15-digit GSTIN"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.gst_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.gst_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.gst_number} disabled={!!initialMerchantSettings.gst_number}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none ${initialMerchantSettings.fssai_license ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.fssai_license}
                     />
                   </div>
+                  
+                  {!!initialMerchantSettings.fssai_license && (
+                    <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200 mt-2">
+                      These details are verified and cannot be changed. Contact support for any modifications.
+                    </p>
+                  )}
                 </>
               )}
 
@@ -765,7 +773,8 @@ export default function ProfilePage() {
                       value={merchantSettings.bank_account_name}
                       onChange={e => setMerchantSettings({...merchantSettings, bank_account_name: e.target.value})}
                       placeholder="Name as per bank records"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.bank_account_name ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.bank_account_name ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.bank_account_name} disabled={!!initialMerchantSettings.bank_account_name}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none ${initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.bank_account_number}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -775,7 +784,8 @@ export default function ProfilePage() {
                       value={merchantSettings.bank_account_number}
                       onChange={e => setMerchantSettings({...merchantSettings, bank_account_number: e.target.value})}
                       placeholder="Account Number"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.bank_account_number} disabled={!!initialMerchantSettings.bank_account_number}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none ${initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.bank_account_number}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -785,9 +795,16 @@ export default function ProfilePage() {
                       value={merchantSettings.bank_ifsc}
                       onChange={e => setMerchantSettings({...merchantSettings, bank_ifsc: e.target.value})}
                       placeholder="e.g. SBIN0001234"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase {initialMerchantSettings.bank_ifsc ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.bank_ifsc ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.bank_ifsc} disabled={!!initialMerchantSettings.bank_ifsc}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase ${initialMerchantSettings.bank_account_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.bank_account_number}
                     />
                   </div>
+                  
+                  {!!initialMerchantSettings.bank_account_number && (
+                    <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200 mt-2">
+                      These details are verified and cannot be changed. Contact support for any modifications.
+                    </p>
+                  )}
                 </>
               )}
 
@@ -800,7 +817,8 @@ export default function ProfilePage() {
                       value={merchantSettings.pan_number}
                       onChange={e => setMerchantSettings({...merchantSettings, pan_number: e.target.value})}
                       placeholder="10-digit PAN"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase {initialMerchantSettings.pan_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.pan_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.pan_number} disabled={!!initialMerchantSettings.pan_number}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none uppercase ${initialMerchantSettings.pan_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.pan_number}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -810,9 +828,16 @@ export default function ProfilePage() {
                       value={merchantSettings.aadhaar_number}
                       onChange={e => setMerchantSettings({...merchantSettings, aadhaar_number: e.target.value})}
                       placeholder="12-digit Aadhaar"
-                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none {initialMerchantSettings.aadhaar_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''} ${initialMerchantSettings.aadhaar_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} disabled={!!initialMerchantSettings.aadhaar_number} disabled={!!initialMerchantSettings.aadhaar_number}
+                      className={`w-full border border-border-subtle rounded-xl p-3 text-sm focus:border-accent outline-none ${initialMerchantSettings.pan_number ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`} 
+                      disabled={!!initialMerchantSettings.pan_number}
                     />
                   </div>
+                  
+                  {!!initialMerchantSettings.pan_number && (
+                    <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200 mt-2">
+                      These details are verified and cannot be changed. Contact support for any modifications.
+                    </p>
+                  )}
                 </>
               )}
 
@@ -832,12 +857,15 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {activeModal !== 'help' && (
+            {activeModal !== 'help' && 
+             !(activeModal === 'business' && !!initialMerchantSettings.fssai_license) &&
+             !(activeModal === 'bank' && !!initialMerchantSettings.bank_account_number) &&
+             !(activeModal === 'kyc' && !!initialMerchantSettings.pan_number) && (
               <div className="p-4 bg-bg-alt border-t border-border-subtle">
                 <button 
                   onClick={handleSaveSettings}
                   disabled={isSavingSettings}
-                  className="w-full bg-accent text-white font-bold py-4 rounded-xl shadow-md flex items-center justify-center"
+                  className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-md flex items-center justify-center"
                 >
                   {isSavingSettings ? <Loader2 className="animate-spin" /> : "Save Changes"}
                 </button>

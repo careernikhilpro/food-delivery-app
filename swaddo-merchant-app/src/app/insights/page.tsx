@@ -115,7 +115,7 @@ export default function InsightsPage() {
                       <div key={i} className="flex-1 bg-slate-100 rounded-t-xl relative group flex justify-center cursor-pointer overflow-visible transition-all duration-300 hover:bg-slate-200" style={{ height: `${height}%`, minWidth: '12px' }}>
                         <div className="absolute bottom-0 w-full bg-slate-800 rounded-t-xl transition-all duration-300 opacity-80 group-hover:opacity-100" style={{ height: `100%` }}></div>
                         <span className="absolute -bottom-6 text-[10px] text-slate-400 font-bold truncate w-full text-center">
-                          {point.label.substring(0,3)}
+                          {point.label}
                         </span>
                         {/* Tooltip */}
                         <div className="absolute -top-10 bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none shadow-lg">

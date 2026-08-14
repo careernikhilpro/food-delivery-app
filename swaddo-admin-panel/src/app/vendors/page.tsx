@@ -13,6 +13,13 @@ export default function Vendors() {
   const [vendorDetails, setVendorDetails] = useState<any | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
 
+  // Profile Edit State
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [profileFormData, setProfileFormData] = useState({
+    fssai_license: "", gst_number: "", pan_number: "", aadhaar_number: "", 
+    bank_account_name: "", bank_account_number: "", bank_ifsc: ""
+  });
+
   // Menu Form State
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -105,6 +112,19 @@ export default function Vendors() {
       console.log("Failed to fetch vendor details");
     } finally {
       setDetailsLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.patch(`/admin/vendors/${selectedVendor.id}/profile`, profileFormData);
+      setShowProfileEdit(false);
+      refreshVendorDetails(selectedVendor.id);
+      toast.success('Vendor profile updated successfully');
+    } catch (err) {
+      console.error('Error updating vendor profile:', err);
+      toast.error('Failed to update vendor profile');
     }
   };
 
@@ -334,35 +354,99 @@ export default function Vendors() {
                     
                     {/* Merchant KYC and Bank Info */}
                     {vendorDetails && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                        <div className="bg-bg-main border border-border-subtle rounded-xl p-4">
-                          <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
-                            <Store className="w-4 h-4 text-indigo-500" /> Business Details
-                          </h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-text-muted">FSSAI:</span> <span className="font-medium text-text-primary">{vendorDetails.fssai_license || '-'}</span></div>
-                            <div className="flex justify-between"><span className="text-text-muted">GSTIN:</span> <span className="font-medium text-text-primary">{vendorDetails.gst_number || '-'}</span></div>
-                          </div>
+                      <div className="mb-8">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="font-bold text-text-primary text-lg">Merchant Profile</h3>
+                          {!showProfileEdit && (
+                            <button
+                              onClick={() => {
+                                setProfileFormData({
+                                  fssai_license: vendorDetails.fssai_license || "",
+                                  gst_number: vendorDetails.gst_number || "",
+                                  pan_number: vendorDetails.pan_number || "",
+                                  aadhaar_number: vendorDetails.aadhaar_number || "",
+                                  bank_account_name: vendorDetails.bank_account_name || "",
+                                  bank_account_number: vendorDetails.bank_account_number || "",
+                                  bank_ifsc: vendorDetails.bank_ifsc || ""
+                                });
+                                setShowProfileEdit(true);
+                              }}
+                              className="text-sm px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-100 transition-colors flex items-center gap-1"
+                            >
+                              <Edit2 className="w-4 h-4" /> Edit Profile
+                            </button>
+                          )}
                         </div>
-                        <div className="bg-bg-main border border-border-subtle rounded-xl p-4">
-                          <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
-                            <User className="w-4 h-4 text-amber-500" /> KYC Documents
-                          </h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-text-muted">PAN:</span> <span className="font-medium text-text-primary">{vendorDetails.pan_number || '-'}</span></div>
-                            <div className="flex justify-between"><span className="text-text-muted">Aadhaar:</span> <span className="font-medium text-text-primary">{vendorDetails.aadhaar_number || '-'}</span></div>
+
+                        {showProfileEdit ? (
+                          <form onSubmit={handleUpdateProfile} className="bg-bg-main border border-border-subtle rounded-xl p-5 space-y-4 shadow-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-muted">FSSAI License</label>
+                                <input type="text" value={profileFormData.fssai_license} onChange={e => setProfileFormData({...profileFormData, fssai_license: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-muted">GSTIN</label>
+                                <input type="text" value={profileFormData.gst_number} onChange={e => setProfileFormData({...profileFormData, gst_number: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-muted">PAN Number</label>
+                                <input type="text" value={profileFormData.pan_number} onChange={e => setProfileFormData({...profileFormData, pan_number: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary uppercase" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-muted">Aadhaar</label>
+                                <input type="text" value={profileFormData.aadhaar_number} onChange={e => setProfileFormData({...profileFormData, aadhaar_number: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
+                              </div>
+                              <div className="space-y-1.5 md:col-span-2">
+                                <label className="text-xs font-bold text-text-muted">Bank Account Name</label>
+                                <input type="text" value={profileFormData.bank_account_name} onChange={e => setProfileFormData({...profileFormData, bank_account_name: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-muted">Bank Account Number</label>
+                                <input type="text" value={profileFormData.bank_account_number} onChange={e => setProfileFormData({...profileFormData, bank_account_number: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-muted">Bank IFSC Code</label>
+                                <input type="text" value={profileFormData.bank_ifsc} onChange={e => setProfileFormData({...profileFormData, bank_ifsc: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary uppercase" />
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
+                              <button type="button" onClick={() => setShowProfileEdit(false)} className="px-4 py-2 border border-border-subtle rounded-lg text-sm font-semibold hover:bg-bg-alt">Cancel</button>
+                              <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90">Save Changes</button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-bg-main border border-border-subtle rounded-xl p-4">
+                              <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
+                                <Store className="w-4 h-4 text-indigo-500" /> Business Details
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between"><span className="text-text-muted">FSSAI:</span> <span className="font-medium text-text-primary">{vendorDetails.fssai_license || '-'}</span></div>
+                                <div className="flex justify-between"><span className="text-text-muted">GSTIN:</span> <span className="font-medium text-text-primary">{vendorDetails.gst_number || '-'}</span></div>
+                              </div>
+                            </div>
+                            <div className="bg-bg-main border border-border-subtle rounded-xl p-4">
+                              <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
+                                <User className="w-4 h-4 text-amber-500" /> KYC Documents
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between"><span className="text-text-muted">PAN:</span> <span className="font-medium text-text-primary">{vendorDetails.pan_number || '-'}</span></div>
+                                <div className="flex justify-between"><span className="text-text-muted">Aadhaar:</span> <span className="font-medium text-text-primary">{vendorDetails.aadhaar_number || '-'}</span></div>
+                              </div>
+                            </div>
+                            <div className="bg-bg-main border border-border-subtle rounded-xl p-4 md:col-span-2">
+                              <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
+                                <span className="text-emerald-500 font-bold">₹</span> Bank Details
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between"><span className="text-text-muted">Name:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_account_name || '-'}</span></div>
+                                <div className="flex justify-between"><span className="text-text-muted">Account No:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_account_number || '-'}</span></div>
+                                <div className="flex justify-between"><span className="text-text-muted">IFSC:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_ifsc || '-'}</span></div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="bg-bg-main border border-border-subtle rounded-xl p-4 md:col-span-2">
-                          <h4 className="text-sm font-bold text-text-primary mb-3 flex items-center gap-2">
-                            <span className="text-emerald-500 font-bold">₹</span> Bank Details
-                          </h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-text-muted">Name:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_account_name || '-'}</span></div>
-                            <div className="flex justify-between"><span className="text-text-muted">Account No:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_account_number || '-'}</span></div>
-                            <div className="flex justify-between"><span className="text-text-muted">IFSC:</span> <span className="font-medium text-text-primary">{vendorDetails.bank_ifsc || '-'}</span></div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
 

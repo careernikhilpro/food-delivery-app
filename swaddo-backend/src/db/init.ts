@@ -429,6 +429,17 @@ const runSchema = async () => {
         status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS campaign_requests (
+        id SERIAL PRIMARY KEY,
+        vendor_id INTEGER REFERENCES vendors(id) ON DELETE CASCADE,
+        stall_id INTEGER REFERENCES stalls(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected, paused
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
     await client.query('COMMIT');
