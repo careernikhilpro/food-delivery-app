@@ -184,17 +184,19 @@ export default function Profile() {
         {!isEditingProfile ? (
           <div className="flex items-center gap-4">
             <div 
-              className="w-16 h-16 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981] shrink-0 border-[3px] border-[#10B981]/20 relative overflow-hidden cursor-pointer group"
-              onClick={() => fileInputRef.current?.click()}
+              className={`w-16 h-16 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981] shrink-0 border-[3px] border-[#10B981]/20 relative overflow-hidden ${!profile?.photo_url ? 'cursor-pointer group' : ''}`}
+              onClick={() => !profile?.photo_url && fileInputRef.current?.click()}
             >
               {profile?.photo_url ? (
                 <img src={profile.photo_url} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <User size={28} strokeWidth={2.5} />
               )}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-white text-[10px] font-bold">EDIT</span>
-              </div>
+              {!profile?.photo_url && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-[10px] font-bold">EDIT</span>
+                </div>
+              )}
             </div>
             <input 
               type="file" 
@@ -210,15 +212,17 @@ export default function Profile() {
                 <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{profile?.vehicle || "Bike"}</span>
               </div>
             </div>
-            <button 
-              onClick={() => {
-                setEditForm({ name: profile?.name || '', vehicle: profile?.vehicle || '' });
-                setIsEditingProfile(true);
-              }}
-              className="absolute top-5 right-5 text-[#10B981] text-[12px] font-bold hover:text-[#059669] transition-colors uppercase tracking-wider"
-            >
-              Edit
-            </button>
+            {(!profile?.name || !profile?.vehicle) && (
+              <button 
+                onClick={() => {
+                  setEditForm({ name: profile?.name || '', vehicle: profile?.vehicle || '' });
+                  setIsEditingProfile(true);
+                }}
+                className="absolute top-5 right-5 text-[#10B981] text-[12px] font-bold hover:text-[#059669] transition-colors uppercase tracking-wider"
+              >
+                Edit
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

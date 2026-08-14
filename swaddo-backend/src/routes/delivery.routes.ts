@@ -79,6 +79,7 @@ router.get('/profile', authenticate, requireDelivery, async (req: AuthRequest, r
       name: partner.name,
       phone: partner.phone,
       vehicle: partner.vehicle_details || 'Bike',
+      photo_url: partner.photo_url || null,
       active: partner.is_active,
       kycStatus: partner.is_active ? 'verified' : 'pending',
       documents: {
