@@ -142,8 +142,36 @@ export default function Earnings() {
       </div>
 
 
+      {/* Cashout History */}
+      {cashoutHistory.length > 0 && (
+        <>
+          <h3 className="text-[16px] font-black tracking-tight text-slate-800 mb-3 px-1 mt-6">Cashout History</h3>
+          <div className="space-y-3 mb-6">
+            {cashoutHistory.map((historyItem: any) => (
+              <div key={historyItem.id} className="bg-white border border-slate-100 rounded-[16px] p-4 flex justify-between items-center shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+                <div>
+                  <h4 className="font-black text-slate-800 text-[15px]">₹{historyItem.amount}</h4>
+                  <p className="text-[11px] font-bold text-slate-400 mt-1 tracking-wide">
+                    {new Date(historyItem.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+                <div>
+                  <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full ${
+                    historyItem.status === 'pending' ? 'bg-orange-100 text-orange-600' :
+                    historyItem.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
+                    'bg-red-100 text-red-600'
+                  }`}>
+                    {historyItem.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Recent Deliveries List */}
-      <h3 className="text-[16px] font-black tracking-tight text-slate-800 mb-3 px-1">Recent Deliveries</h3>
+      <h3 className="text-[16px] font-black tracking-tight text-slate-800 mb-3 px-1 mt-2">Recent Deliveries</h3>
       <div className="space-y-3">
         {deliveries.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-[20px] border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
