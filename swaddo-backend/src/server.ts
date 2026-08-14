@@ -4,6 +4,7 @@ import { app } from './app';
 import { logger } from './utils/logger';
 import { setupWorkers } from './services/queue';
 import { startPayoutJob } from './jobs/payout.job';
+import { startRiderPayoutJob } from './jobs/riderPayout.job';
 import dotenv from 'dotenv';
 import { pool } from './db';
 
@@ -77,6 +78,7 @@ io.on('connection', (socket) => {
 // Setup mock background workers
 setupWorkers();
 startPayoutJob();
+startRiderPayoutJob();
 
 // Auto-mark riders offline if they haven't pinged in 10 minutes (App killed/device off)
 setInterval(async () => {
@@ -211,3 +213,4 @@ migrateDB().then(() => {
     logger.info(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
   });
 });
+

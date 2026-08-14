@@ -904,10 +904,11 @@ router.post('/customers/:id/reset-pin', async (req: Request, res: Response) => {
 router.get('/cashouts/pending', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT c.*, u.name as rider_name, u.phone as rider_phone 
-      FROM cashout_requests c
-      JOIN users u ON c.rider_id = u.id
-      WHERE c.status = 'pending'
+        SELECT c.*, u.name as rider_name, u.phone as rider_phone 
+        FROM cashout_requests c
+        JOIN delivery_partners dp ON c.delivery_partner_id = dp.id
+        JOIN users u ON dp.user_id = u.id
+        WHERE c.status = 'pending'
       ORDER BY c.created_at ASC
     `);
     res.json(result.rows);
@@ -920,10 +921,11 @@ router.get('/cashouts/pending', async (req: Request, res: Response) => {
 router.get('/cashouts/history', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT c.*, u.name as rider_name, u.phone as rider_phone 
-      FROM cashout_requests c
-      JOIN users u ON c.rider_id = u.id
-      WHERE c.status IN ('approved', 'rejected')
+        SELECT c.*, u.name as rider_name, u.phone as rider_phone 
+        FROM cashout_requests c
+        JOIN delivery_partners dp ON c.delivery_partner_id = dp.id
+        JOIN users u ON dp.user_id = u.id
+        WHERE c.status IN ('approved', 'rejected')
       ORDER BY c.updated_at DESC
     `);
     res.json(result.rows);
@@ -950,15 +952,15 @@ router.post('/cashouts/approve/:id', async (req: Request, res: Response) => {
     await client.query("UPDATE cashout_requests SET status = 'approved', updated_at = NOW() WHERE id = $1", [id]);
 
     await client.query(`
-      UPDATE delivery_assignments da
-      SET cashed_out = true
-      FROM orders o
-      WHERE da.order_id = o.id
-        AND da.delivery_partner_id = (SELECT id FROM delivery_partners WHERE user_id = $1 LIMIT 1)
-        AND da.status = 'completed'
-        AND da.cashed_out = false
-        AND (o.payment_method != 'cod' OR da.cash_deposited = true)
-    `, [cashout.rider_id]);
+        UPDATE delivery_assignments da
+        SET cashed_out = true
+        FROM orders o
+        WHERE da.order_id = o.id
+          AND da.delivery_partner_id = $1
+          AND da.status = 'completed'
+          AND da.cashed_out = false
+          AND (o.payment_method != 'cod' OR da.cash_deposited = true)
+      `, [cashout.delivery_partner_id]);
 
     await client.query('COMMIT');
     res.json({ message: 'Cashout approved successfully' });
