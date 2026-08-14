@@ -97,7 +97,7 @@ router.post('/login-pin', async (req: Request, res: Response) => {
     if (role === 'vendor') {
       let vendorRes = await client.query('SELECT * FROM vendors WHERE user_id = $1', [user.id]);
       if (vendorRes.rows.length === 0) {
-        vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
+        vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'inactive']);
         const newVendorId = vendorRes.rows[0].id;
         await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
       }
@@ -161,7 +161,7 @@ router.post('/register-pin', async (req: Request, res: Response) => {
         if (role === 'vendor') {
           const vendorCheck = await client.query('SELECT id FROM vendors WHERE user_id = $1', [user.id]);
           if (vendorCheck.rows.length === 0) {
-            const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
+            const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'inactive']);
             const newVendorId = vendorRes.rows[0].id;
             await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
           }
@@ -186,7 +186,7 @@ router.post('/register-pin', async (req: Request, res: Response) => {
 
       // Role-specific DB entries for brand new users
       if (role === 'vendor') {
-        const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'active']);
+        const vendorRes = await client.query('INSERT INTO vendors (user_id, business_name, status) VALUES ($1, $2, $3) RETURNING *', [user.id, '', 'inactive']);
         const newVendorId = vendorRes.rows[0].id;
         await client.query('INSERT INTO stalls (vendor_id, name, location, is_open) VALUES ($1, $2, $3, $4)', [newVendorId, '', '', false]);
       } else if (role === 'delivery') {
