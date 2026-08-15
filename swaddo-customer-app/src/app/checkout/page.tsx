@@ -444,8 +444,9 @@ export default function Checkout() {
         } else {
           fee = 36;
         }
-        
-        fee = Math.round(fee * 100) / 100;
+      }
+      
+      fee = Math.round(fee * 100) / 100;
       setDeliveryFee(fee);
       setDistanceKms(dist);
     }
