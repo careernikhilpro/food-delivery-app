@@ -345,8 +345,17 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
     });
 
     // Setup Socket
-    const socketUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:5005";
-    const socket: Socket = io(socketUrl);
+    let socketUrl = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_SOCKET_URL; 
+    if (!socketUrl && process.env.NEXT_PUBLIC_API_URL) {
+      socketUrl = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "");
+    }
+    const socket: Socket = io(socketUrl || "http://localhost:5005", {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000
+    });
 
     // Setup Geolocation Watch
     let watchId: any;

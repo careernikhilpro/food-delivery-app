@@ -344,10 +344,19 @@ function OrderTrackingContent() {
     let socketUrl = process.env.NEXT_PUBLIC_WS_URL; if (!socketUrl && process.env.NEXT_PUBLIC_API_URL) socketUrl = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, ""); const socket = io(socketUrl || "http://localhost:5005", { transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
 
     const orderChannel = `order:${orderId}`;
-    socket.on("connect", () => {
-      console.log(`Connected to global socket for order tracking`);
+    const joinRooms = () => {
+      console.log(`Joining rooms for order tracking`);
       socket.emit("join_room", orderChannel);
       socket.emit("join_room", `room_${orderId}`); // The backend broadcasts rider_location_update to room_${orderId}
+    };
+
+    if (socket.connected) {
+      joinRooms();
+    }
+    
+    socket.on("connect", () => {
+      console.log(`Connected to global socket for order tracking`);
+      joinRooms();
     });
 
     socket.on('rider_location_update', (data: any) => {
