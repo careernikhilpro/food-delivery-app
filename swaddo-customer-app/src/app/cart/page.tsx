@@ -388,10 +388,6 @@ export default function Cart() {
           } else {
             fee = 36;
           }
-          
-          if (subtotal < 99) {
-            fee += 20; // Small order fee
-          }
         }
         
         fee = Math.round(fee * 100) / 100;
@@ -554,9 +550,10 @@ export default function Cart() {
     }
   }
 
+  const smallOrderFee = baseItemTotal > 0 && baseItemTotal < 99 ? 20 : 0;
   const itemTotal = baseItemTotal - discountAmount;
   const GST = Math.round(itemTotal * 0.05);
-  const finalTotal = itemTotal + GST + deliveryFee;
+  const finalTotal = itemTotal + GST + deliveryFee + smallOrderFee;
   
   const totalSaved = cart.items.reduce((sum, item) => sum + (Math.round(item.price * 1.20) - item.price) * item.quantity, 0) + discountAmount;
 
@@ -1352,12 +1349,6 @@ export default function Cart() {
             )}
           </div>
 
-          {baseItemTotal < 99 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex items-center justify-between text-orange-700 shadow-sm">
-              <span className="text-[13px] font-bold">₹20 small order fee applied (Orders &lt; ₹99)</span>
-            </div>
-          )}
-
           {/* Bill Summary */}
           <div
             className={`bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden transition-all duration-300 ${isBillExpanded ? "pb-0" : ""}`}
@@ -1376,14 +1367,14 @@ export default function Cart() {
                       To Pay
                     </span>
                     <span className="text-[14px] text-gray-400 line-through font-medium">
-                      ₹{finalTotal + totalSaved}
+                      ₹{(finalTotal + totalSaved).toFixed(2)}
                     </span>
                     <span className="font-bold text-[15px] text-gray-800">
-                      ₹{finalTotal}
+                      ₹{finalTotal.toFixed(2)}
                     </span>
                   </div>
                   <span className="text-green-600 text-[13px] font-bold mt-0.5">
-                    ₹{totalSaved} saved on the total!
+                    ₹{totalSaved.toFixed(2)} saved on the total!
                   </span>
                 </div>
               </div>
@@ -1412,10 +1403,10 @@ export default function Cart() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500 line-through font-medium">
-                        ₹{baseItemTotal + totalSaved - discountAmount}
+                        ₹{(baseItemTotal + totalSaved - discountAmount).toFixed(2)}
                       </span>
                       <span className="text-[#00A14F] font-bold">
-                        ₹{baseItemTotal}
+                        ₹{baseItemTotal.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -1428,7 +1419,7 @@ export default function Cart() {
                           Discount ({stallOfferDiscount}%)
                         </span>
                         <span className="text-[#00A14F] font-bold">
-                          -₹{discountAmount}
+                          -₹{discountAmount.toFixed(2)}
                         </span>
                       </div>
                     </>
@@ -1441,16 +1432,30 @@ export default function Cart() {
                       Delivery Fee | {distanceKms ? distanceKms : "..."} kms
                     </span>
                     <span className="text-gray-600 font-medium">
-                      ₹{deliveryFee}
+                      ₹{deliveryFee.toFixed(2)}
                     </span>
                   </div>
+
+                  {smallOrderFee > 0 && (
+                    <div className="flex justify-between items-start text-[14px]">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none self-start">
+                          Small Order Fee
+                        </span>
+                        <span className="text-[11px] text-[#00A14F] font-bold mt-1">Add ₹{(99 - baseItemTotal).toFixed(2)} more to remove this</span>
+                      </div>
+                      <span className="text-gray-600 font-medium">
+                        ₹{smallOrderFee.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between text-[14px]">
                     <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none">
                       Platform Fee
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500 line-through font-medium">₹5</span>
+                      <span className="text-gray-500 line-through font-medium">₹5.00</span>
                       <span className="text-[#00A14F] font-bold">Free</span>
                     </div>
                   </div>
@@ -1460,7 +1465,7 @@ export default function Cart() {
                       Packaging Fee
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500 line-through font-medium">₹10</span>
+                      <span className="text-gray-500 line-through font-medium">₹10.00</span>
                       <span className="text-[#00A14F] font-bold">Free</span>
                     </div>
                   </div>

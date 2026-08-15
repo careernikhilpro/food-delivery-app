@@ -445,12 +445,7 @@ export default function Checkout() {
           fee = 36;
         }
         
-        if (cartTotal < 99) {
-          fee += 20; // Small order fee
-        }
-      }
-      
-      fee = Math.round(fee * 100) / 100;
+        fee = Math.round(fee * 100) / 100;
       setDeliveryFee(fee);
       setDistanceKms(dist);
     }
@@ -470,7 +465,8 @@ export default function Checkout() {
     }
   }
 
-  const finalTotal = cartTotal - discountAmount + taxAndFees + deliveryFee;
+  const smallOrderFee = cartTotal > 0 && cartTotal < 99 ? 20 : 0;
+  const finalTotal = cartTotal - discountAmount + taxAndFees + deliveryFee + smallOrderFee;
 
   const handlePlaceOrder = () => {
     if (!cart.stallId || cart.items.length === 0) return;
@@ -866,35 +862,38 @@ export default function Checkout() {
               <Receipt size={18} className="text-primary"/> Bill Summary
             </h3>
             
-            {cartTotal < 99 && (
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex items-center justify-between text-orange-700 shadow-sm">
-                  <span className="text-[13px] font-bold">₹20 small order fee applied (Orders &lt; ₹99)</span>
-                </div>
-              )}
-
             <div className="space-y-3 text-sm font-medium">
               <div className="flex justify-between text-text-primary">
                 <span>Item Total</span>
-                <span>₹{cartTotal}</span>
+                <span>₹{cartTotal.toFixed(2)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold bg-green-50 p-2 rounded-lg -mx-2 px-2">
                   <span>Offer Discount</span>
-                  <span>-₹{discountAmount}</span>
+                  <span>-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-text-muted">
                 <span>Taxes & Fees</span>
-                <span>₹{taxAndFees}</span>
+                <span>₹{taxAndFees.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-text-muted">
                 <span>Delivery Fee</span>
-                <span>₹{deliveryFee}</span>
+                <span>₹{deliveryFee.toFixed(2)}</span>
               </div>
+              {smallOrderFee > 0 && (
+                <div className="flex justify-between text-text-muted">
+                  <div className="flex flex-col">
+                    <span>Small Order Fee</span>
+                    <span className="text-[11px] text-[#00A14F] font-bold mt-0.5">Add ₹{(99 - cartTotal).toFixed(2)} more to remove this</span>
+                  </div>
+                  <span>₹{smallOrderFee.toFixed(2)}</span>
+                </div>
+              )}
               
               <div className="border-t border-dashed border-gray-300 pt-4 mt-4 flex justify-between font-black text-text-primary text-xl">
                 <span>To Pay</span>
-                <span>₹{finalTotal}</span>
+                <span>₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
             
