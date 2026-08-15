@@ -658,25 +658,34 @@ function OrderTrackingContent() {
                   <MessageSquare size={16} className="text-primary" />
                   Order Details
                 </h3>
-                <div className="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100">
-                  {orderStatus.orderData.items && orderStatus.orderData.items.length > 0 ? (
-                    orderStatus.orderData.items.map((item: any, idx: number) => (
-                      <div key={idx} className="flex justify-between items-start mb-3 last:mb-0 pb-3 last:pb-0 border-b border-gray-100 last:border-0">
-                        <div className="flex gap-3">
-                          <div className={`w-4 h-4 mt-0.5 rounded flex items-center justify-center border shrink-0 ${item.is_veg !== false ? 'border-green-600' : 'border-red-600'}`}>
-                            <div className={`w-2 h-2 rounded-full ${item.is_veg !== false ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                  <div className="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100">
+                    {orderStatus.orderData.items ? (
+                      (typeof orderStatus.orderData.items === 'string' 
+                        ? orderStatus.orderData.items.split(', ').map(s => {
+                            const [qtyName, price] = s.split('|');
+                            const match = qtyName.match(/^(\d+)x\s+(.*)$/);
+                            return match 
+                              ? { quantity: Number(match[1]), name: match[2], price: Number(price || 0), is_veg: true }
+                              : { quantity: 1, name: qtyName, price: Number(price || 0), is_veg: true };
+                          })
+                        : orderStatus.orderData.items
+                      ).map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-start mb-3 last:mb-0 pb-3 last:pb-0 border-b border-gray-100 last:border-0">
+                          <div className="flex gap-3">
+                            <div className={`w-4 h-4 mt-0.5 rounded flex items-center justify-center border shrink-0 ${item.is_veg !== false ? 'border-green-600' : 'border-red-600'}`}>
+                              <div className={`w-2 h-2 rounded-full ${item.is_veg !== false ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                            </div>
+                            <div>
+                              <p className="font-bold text-[14px] text-gray-800 leading-tight">{item.name}</p>
+                              <p className="text-gray-500 text-[12px] mt-0.5 font-medium">Qty: {item.quantity}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-[14px] text-gray-800 leading-tight">{item.name}</p>
-                            <p className="text-gray-500 text-[12px] mt-0.5 font-medium">Qty: {item.quantity}</p>
+                          <div className="font-bold text-[14px] text-gray-900">
+                            ₹{Math.round(item.price * item.quantity)}
                           </div>
                         </div>
-                        <div className="font-bold text-[14px] text-gray-900">
-                          ₹{Math.round(item.price * item.quantity)}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
+                      ))
+                    ) : (
                     <p className="text-sm text-gray-500 italic">No items found.</p>
                   )}
                   
