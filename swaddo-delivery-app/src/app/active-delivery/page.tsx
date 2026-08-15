@@ -602,6 +602,14 @@ function ActiveDeliveryContentInner({ mapboxToken }: { mapboxToken: string }) {
                 </div>
               )}
 
+              {/* Order Items Info for Customer Delivery */}
+              {orderData?.items && stageIndex >= 2 && (
+                <div className="bg-slate-50 border border-slate-100 rounded-[20px] p-5 mb-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-slate-400">Order Items</p>
+                  <p className="text-[14px] font-bold text-slate-700">{orderData.items}</p>
+                </div>
+              )}
+
               {/* COD Banner & Checkbox */}
               {orderData?.paymentMethod === 'cod' && stageIndex >= 2 && (
                 <div className="bg-orange-50 border border-orange-100 rounded-[20px] p-5 mb-5 shadow-sm">

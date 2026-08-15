@@ -31,7 +31,7 @@ router.get('/merchant/stats', authenticate, requireVendor, async (req: AuthReque
       LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.stall_id = $1 
       AND o.status != 'payment_pending'
-      AND (o.created_at AT TIME ZONE 'Asia/Kolkata')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+      AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
     `, [stallId]);
     
     // Get avg rating from stall itself
@@ -89,7 +89,7 @@ router.get('/merchant/insights', authenticate, requireVendor, async (req: AuthRe
         COALESCE(SUM(CASE WHEN o.status = 'delivered' THEN (oi.price_at_time * oi.quantity) ELSE 0 END), 0) as total_revenue
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND o.status != 'payment_pending' AND (o.created_at AT TIME ZONE 'Asia/Kolkata')::date >= ${dateFilter}
+      WHERE o.stall_id = $1 AND o.status != 'payment_pending' AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date >= ${dateFilter}
     `, [stallId]);
 
     const prevStatsRes = await pool.query(`
@@ -98,19 +98,19 @@ router.get('/merchant/insights', authenticate, requireVendor, async (req: AuthRe
         COALESCE(SUM(CASE WHEN o.status = 'delivered' THEN (oi.price_at_time * oi.quantity) ELSE 0 END), 0) as total_revenue
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND o.status != 'payment_pending' AND (o.created_at AT TIME ZONE 'Asia/Kolkata')::date >= ${prevDateFilterStart} AND (o.created_at AT TIME ZONE 'Asia/Kolkata')::date <= ${prevDateFilterEnd}
+      WHERE o.stall_id = $1 AND o.status != 'payment_pending' AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date >= ${prevDateFilterStart} AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date <= ${prevDateFilterEnd}
     `, [stallId]);
 
     // For chart data (group by date)
     const chartRes = await pool.query(`
       SELECT 
-        TO_CHAR(o.created_at AT TIME ZONE 'Asia/Kolkata', 'Mon DD') as label,
+        TO_CHAR(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'Mon DD') as label,
         COALESCE(SUM(oi.price_at_time * oi.quantity), 0) as revenue
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND o.status = 'delivered' AND (o.created_at AT TIME ZONE 'Asia/Kolkata')::date >= ${dateFilter}
-      GROUP BY TO_CHAR(o.created_at AT TIME ZONE 'Asia/Kolkata', 'Mon DD'), (o.created_at AT TIME ZONE 'Asia/Kolkata')::date
-      ORDER BY (o.created_at AT TIME ZONE 'Asia/Kolkata')::date ASC
+      WHERE o.stall_id = $1 AND o.status = 'delivered' AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date >= ${dateFilter}
+      GROUP BY TO_CHAR(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'Mon DD'), (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date
+      ORDER BY (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date ASC
     `, [stallId]);
 
     // Top selling items
@@ -119,7 +119,7 @@ router.get('/merchant/insights', authenticate, requireVendor, async (req: AuthRe
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.stall_id = $1 AND (o.created_at AT TIME ZONE 'Asia/Kolkata')::date >= ${dateFilter}
+      WHERE o.stall_id = $1 AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date >= ${dateFilter}
       GROUP BY m.id, m.name
       ORDER BY total_quantity DESC
       LIMIT 3
@@ -335,7 +335,7 @@ router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthReq
         COALESCE(SUM(oi.price_at_time * oi.quantity), 0) as amount
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
+      WHERE o.stall_id = $1 AND o.status = 'delivered' AND DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
     `, [stallId]);
 
     const todayOrders = parseInt(todayRes.rows[0].orders);
@@ -345,13 +345,13 @@ router.get('/merchant/payouts', authenticate, requireVendor, async (req: AuthReq
       const net = todayAmount * (1 - commissionRate / 100);
       const commissionAmount = todayAmount * (commissionRate / 100);
       
-      const todayString = new Date().toISOString().split('T')[0];
-      const hasToday = history.some(h => new Date(h.date).toISOString().split('T')[0] === todayString);
+      const todayString = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const hasToday = history.some(h => new Date(h.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) === todayString);
       
       if (!hasToday) {
         availableBalance += net;
         history.unshift({
-          date: new Date().toISOString(),
+          date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }),
           amount: net,
           gross_amount: todayAmount,
           commission_rate: commissionRate,
@@ -698,6 +698,9 @@ router.delete('/:id/menu/:itemId', authenticate, requireVendor, async (req: Auth
 });
 
 export default router;
+
+
+
 
 
 

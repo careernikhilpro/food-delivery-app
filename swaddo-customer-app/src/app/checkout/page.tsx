@@ -82,6 +82,9 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 'upi' or 'cod'
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showOnlineConfirmModal, setShowOnlineConfirmModal] = useState(false);
+  const [showCodConfirmModal, setShowCodConfirmModal] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(119);
   const [phone, setPhone] = useState("+91 98765 43210");
   const [houseNumber, setHouseNumber] = useState("");
 
@@ -91,6 +94,23 @@ export default function Checkout() {
   const [deliveryInstructions, setDeliveryInstructions] = useState("");
   const [restaurantInstructions, setRestaurantInstructions] = useState("");
   
+  useEffect(() => {
+    if (cartTotal >= 199 && paymentMethod === "cod") {
+      setPaymentMethod("upi");
+    }
+  }, [cartTotal, paymentMethod]);
+
+  useEffect(() => {
+    let timer: any;
+    if (showCodConfirmModal && timeLeft > 0) {
+      timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (showCodConfirmModal && timeLeft === 0) {
+      setShowCodConfirmModal(false);
+      executeOrder();
+    }
+    return () => clearTimeout(timer);
+  }, [showCodConfirmModal, timeLeft]);
+
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
@@ -452,9 +472,27 @@ export default function Checkout() {
 
   const finalTotal = cartTotal - discountAmount + taxAndFees + deliveryFee;
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = () => {
     if (!cart.stallId || cart.items.length === 0) return;
+    
+    const selectedAddr = savedAddresses.find(a => a.id === selectedAddressId);
+    if (!selectedAddr) {
+      alert("Please select or add a delivery address.");
+      return;
+    }
+
+    if (paymentMethod === "upi") {
+      setShowOnlineConfirmModal(true);
+    } else {
+      setTimeLeft(119); // 1:59
+      setShowCodConfirmModal(true);
+    }
+  };
+
+  const executeOrder = async () => {
     setIsPlacingOrder(true);
+    setShowOnlineConfirmModal(false);
+    setShowCodConfirmModal(false);
     
     const selectedAddr = savedAddresses.find(a => a.id === selectedAddressId);
     if (!selectedAddr) {
@@ -589,6 +627,65 @@ export default function Checkout() {
 
   return (
     <>
+      {showOnlineConfirmModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-[16px] text-gray-800">Confirm Payment</h3>
+              <button onClick={() => setShowOnlineConfirmModal(false)} className="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 text-center text-gray-700">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard size={28} className="text-blue-500" />
+              </div>
+              <p className="font-medium text-[15px] leading-relaxed">
+                Once the order is placed, it cannot be canceled. Do you want to proceed with online payment?
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 flex gap-3">
+              <button onClick={() => setShowOnlineConfirmModal(false)} className="flex-1 py-3.5 font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={executeOrder} className="flex-1 py-3.5 bg-primary text-white font-bold rounded-xl shadow-[0_4px_12px_rgba(0,161,79,0.25)] hover:bg-primary/90 transition-colors">
+                Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCodConfirmModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[24px] shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200 text-center">
+            <div className="p-6">
+              <h3 className="font-bold text-[18px] mb-2 text-gray-800">Confirm Cash on Delivery</h3>
+              <div className="text-[42px] font-black text-primary my-4 tracking-tight">
+                {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+              </div>
+              <p className="text-[14px] text-gray-600 mb-6 font-medium leading-relaxed">
+                Your order will be placed automatically when the timer ends. Once placed, it cannot be canceled.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setShowCodConfirmModal(false); setTimeLeft(119); }} 
+                  className="flex-1 py-3.5 bg-gray-100 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={executeOrder} 
+                  className="flex-1 py-3.5 bg-primary text-white font-bold rounded-xl shadow-[0_4px_12px_rgba(0,161,79,0.25)] hover:bg-primary/90 transition-colors"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="app-scroll-container bg-bg-main pb-48 xl:pb-12 xl:pt-8 font-body">
         <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       
@@ -694,24 +791,26 @@ export default function Checkout() {
                 </div>
               </button>
 
-              <button 
-                onClick={() => setPaymentMethod("cod")}
-                className={`w-full flex items-center gap-4 p-4 rounded-[16px] border transition-all text-left ${
-                  paymentMethod === "cod" 
-                    ? "border-primary bg-primary/5 shadow-sm" 
-                    : "border-transparent bg-white shadow-native hover:shadow-native-lg"
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${paymentMethod === "cod" ? "bg-primary text-white" : "bg-gray-50 text-text-muted"}`}>
-                  <Banknote size={20} />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="font-bold text-text-primary text-[14px]">Cash on Delivery</span>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "cod" ? "border-primary" : "border-border-subtle"}`}>
-                  {paymentMethod === "cod" && <div className="w-2.5 h-2.5 bg-primary rounded-full"></div>}
-                </div>
-              </button>
+              {cartTotal < 199 && (
+                <button 
+                  onClick={() => setPaymentMethod("cod")}
+                  className={`w-full flex items-center gap-4 p-4 rounded-[16px] border transition-all text-left ${
+                    paymentMethod === "cod" 
+                      ? "border-primary bg-primary/5 shadow-sm" 
+                      : "border-transparent bg-white shadow-native hover:shadow-native-lg"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${paymentMethod === "cod" ? "bg-primary text-white" : "bg-gray-50 text-text-muted"}`}>
+                    <Banknote size={20} />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="font-bold text-text-primary text-[14px]">Cash on Delivery</span>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "cod" ? "border-primary" : "border-border-subtle"}`}>
+                    {paymentMethod === "cod" && <div className="w-2.5 h-2.5 bg-primary rounded-full"></div>}
+                  </div>
+                </button>
+              )}
             </div>
           </div>
 

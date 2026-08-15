@@ -576,82 +576,119 @@ function OrderTrackingContent() {
         </motion.div>
       </div>
 
-      {/* ETA Bottom Sheet UI */}
-      <div className="absolute bottom-0 left-0 w-full z-10 pointer-events-auto">
-        <motion.div 
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          transition={{ type: "spring", stiffness: 250, damping: 25 }}
-          className="bg-[#F8F9FA]/95 backdrop-blur-3xl rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] p-6 pb-safe border-t border-white/80 relative"
-        >
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-14 h-1.5 bg-gray-300/60 rounded-full"></div>
-          
-          <div className="flex justify-between items-end mt-4 mb-6">
-            <div>
-              <p className="text-gray-500 font-bold text-[11px] mb-0.5 uppercase tracking-widest">Estimated Arrival</p>
-              <h1 className="text-[42px] font-heading font-black text-primary leading-none tracking-tighter drop-shadow-sm">{orderStatus.eta.replace(' Mins', '')}<span className="text-[24px] ml-1">Mins</span></h1>
-            </div>
-            <div className="text-right pb-1">
-              <p className="text-gray-500 font-bold text-[10px] mb-1 uppercase tracking-widest">Distance</p>
-              <p className="text-[16px] font-heading font-black text-gray-900 leading-none">{routeDistance}</p>
-            </div>
-          </div>
-
-          {/* Delivery Partner Info */}
-          {orderStatus.rider && (
-            <div className="bg-white rounded-[24px] p-4 flex items-center gap-4 border border-gray-100 mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              
-              <div className="w-[54px] h-[54px] bg-gradient-to-br from-primary to-orange-400 rounded-full border-[3px] border-orange-50 shadow-md flex items-center justify-center flex-shrink-0 relative z-10 overflow-hidden">
-              {orderStatus.rider.photo ? (
-                <img src={orderStatus.rider.photo} alt={orderStatus.rider.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-white font-heading font-black text-[22px]">{orderStatus.rider.name?.charAt(0) || 'R'}</span>
-              )}
-              </div>
-              <div className="flex-1 relative z-10">
-                <h3 className="font-heading font-black text-gray-900 text-[17px] leading-tight mb-0.5">{orderStatus.rider.name || 'Ramu K.'}</h3>
-                <div className="flex items-center text-[12px] font-bold text-gray-500 tracking-wide">
-                  <Star size={13} className="text-yellow-500 fill-yellow-500 mr-1" />
-                  4.8 • {orderStatus.rider.vehicle || 'Bike'}
-                </div>
-              </div>
-              <div className="flex gap-2 relative z-10">
-                <button className="w-12 h-12 bg-gray-50 hover:bg-gray-100 rounded-full flex items-center justify-center shadow-sm text-primary transition-colors active:scale-95">
-                  <MessageSquare size={20} />
-                </button>
-                <a href={`tel:${orderStatus.rider.phone || ''}`} className="w-12 h-12 bg-primary hover:bg-primary-hover rounded-full flex items-center justify-center shadow-lg shadow-primary/30 text-white active:scale-95 transition-all">
-                  <Phone size={20} className="fill-white" />
-                </a>
-              </div>
-            </div>
-          )}
-
-          {/* Status Timeline */}
-          <div className="relative pt-2 pl-2">
-            <div className="absolute left-6 top-3 bottom-8 w-1 bg-gray-200 rounded-full"></div>
-            {/* Active Track Highlight */}
-            <div className="absolute left-6 top-3 w-1 bg-primary rounded-full transition-all duration-700" style={{ height: `${(orderStatus.stageIndex / (stages.length - 1)) * 100}%` }}></div>
+        {/* ETA Bottom Sheet UI */}
+        <div className="absolute bottom-0 left-0 w-full z-10 pointer-events-auto">
+          <motion.div 
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            transition={{ type: "spring", stiffness: 250, damping: 25 }}
+            className="bg-[#F8F9FA]/95 backdrop-blur-3xl rounded-t-[40px] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] p-6 pb-safe border-t border-white/80 relative max-h-[65vh] overflow-y-auto hide-scrollbar"
+          >
+            <div className="sticky top-0 left-1/2 -translate-x-1/2 w-14 h-1.5 bg-gray-300/60 rounded-full mb-4 mx-auto z-20"></div>
             
-            {stages.map((stage: string, index: number) => {
-              const isCompleted = index <= orderStatus.stageIndex;
-              const isCurrent = index === orderStatus.stageIndex;
-              
-              return (
-                <div key={index} className={`flex items-start mb-6 last:mb-2 relative z-10 transition-all duration-500 ${isCompleted ? 'opacity-100' : 'opacity-40'}`}>
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs mr-4 transition-all duration-500 shrink-0 ${isCompleted ? 'bg-primary shadow-[0_4px_12px_rgba(232,76,28,0.3)] scale-110 ring-4 ring-orange-50' : 'bg-gray-200 border-2 border-white text-gray-400'}`}>
-                    {isCompleted ? <Check size={16} strokeWidth={3.5} /> : <span className="font-bold">{index + 1}</span>}
-                  </div>
-                  <div className={`pt-2 transition-all duration-500 ${isCurrent ? 'scale-105 origin-left' : ''}`}>
-                    <h4 className={`font-black tracking-tight text-[15px] ${isCurrent ? 'text-primary' : 'text-gray-900'}`}>{stage}</h4>
-                    {isCurrent && <p className="text-gray-500 text-[12px] font-medium mt-0.5 leading-snug">Your order is currently {stage.toLowerCase()}</p>}
+            <div className="flex justify-between items-end mt-2 mb-6">
+              <div>
+                <p className="text-gray-500 font-bold text-[11px] mb-0.5 uppercase tracking-widest">Estimated Arrival</p>
+                <h1 className="text-[42px] font-heading font-black text-primary leading-none tracking-tighter drop-shadow-sm">{orderStatus.eta.replace(' Mins', '')}<span className="text-[24px] ml-1">Mins</span></h1>
+              </div>
+              <div className="text-right pb-1">
+                <p className="text-gray-500 font-bold text-[10px] mb-1 uppercase tracking-widest">Distance</p>
+                <p className="text-[16px] font-heading font-black text-gray-900 leading-none">{routeDistance}</p>
+              </div>
+            </div>
+
+            {/* Delivery Partner Info */}
+            {orderStatus.rider && (
+              <div className="bg-white rounded-[24px] p-4 flex items-center gap-4 border border-gray-100 mb-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
+                <div className="w-[54px] h-[54px] bg-gradient-to-br from-primary to-orange-400 rounded-full border-[3px] border-orange-50 shadow-md flex items-center justify-center flex-shrink-0 relative z-10 overflow-hidden">
+                {orderStatus.rider.photo ? (
+                  <img src={orderStatus.rider.photo} alt={orderStatus.rider.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white font-heading font-black text-[22px]">{orderStatus.rider.name?.charAt(0) || 'R'}</span>
+                )}
+                </div>
+                <div className="flex-1 relative z-10">
+                  <h3 className="font-black text-[16px] text-gray-900 leading-tight">{orderStatus.rider.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-gray-500 font-bold text-[12px] uppercase tracking-wider">{orderStatus.rider.vehicle}</span>
+                    <div className="flex items-center text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded-md">
+                      <Star size={10} className="fill-current mr-0.5" />
+                      <span className="text-[10px] font-bold">4.8</span>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      </div>
+                <div className="flex gap-2 relative z-10">
+                  <a href={`tel:${orderStatus.rider.phone}`} className="w-10 h-10 bg-[#00A14F]/10 rounded-full flex items-center justify-center text-[#00A14F] hover:bg-[#00A14F] hover:text-white transition-colors">
+                    <Phone size={18} />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Tracking Stages */}
+            <div className="relative pt-2 pl-4 mt-8">
+              <div className="absolute left-6 top-3 bottom-8 w-1 bg-gray-200 rounded-full"></div>
+              {/* Active Track Highlight */}
+              <div className="absolute left-6 top-3 w-1 bg-primary rounded-full transition-all duration-700" style={{ height: `${(orderStatus.stageIndex / (stages.length - 1)) * 100}%` }}></div>
+              
+              {stages.map((stage: string, index: number) => {
+                const isCompleted = index <= orderStatus.stageIndex;
+                const isCurrent = index === orderStatus.stageIndex;
+                
+                return (
+                  <div key={index} className={`flex items-start mb-6 last:mb-2 relative z-10 transition-all duration-500 ${isCompleted ? 'opacity-100' : 'opacity-40'}`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs mr-4 transition-all duration-500 shrink-0 ${isCompleted ? 'bg-primary shadow-[0_4px_12px_rgba(232,76,28,0.3)] scale-110 ring-4 ring-orange-50' : 'bg-gray-200 border-2 border-white text-gray-400'}`}>
+                      {isCompleted ? <Check size={16} strokeWidth={3.5} /> : <span className="font-bold">{index + 1}</span>}
+                    </div>
+                    <div className={`pt-2 transition-all duration-500 ${isCurrent ? 'scale-105 origin-left' : ''}`}>
+                      <h4 className={`font-black tracking-tight text-[15px] ${isCurrent ? 'text-primary' : 'text-gray-900'}`}>{stage}</h4>
+                      {isCurrent && <p className="text-gray-500 text-[12px] font-medium mt-0.5 leading-snug">Your order is currently {stage.toLowerCase()}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Order Details */}
+            {orderStatus.orderData && (
+              <div className="mt-8 pt-6 border-t border-gray-200/60">
+                <h3 className="font-black text-[16px] text-gray-900 mb-4 flex items-center gap-2">
+                  <MessageSquare size={16} className="text-primary" />
+                  Order Details
+                </h3>
+                <div className="bg-white rounded-[20px] p-4 shadow-sm border border-gray-100">
+                  {orderStatus.orderData.items && orderStatus.orderData.items.length > 0 ? (
+                    orderStatus.orderData.items.map((item: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-start mb-3 last:mb-0 pb-3 last:pb-0 border-b border-gray-100 last:border-0">
+                        <div className="flex gap-3">
+                          <div className={`w-4 h-4 mt-0.5 rounded flex items-center justify-center border shrink-0 ${item.is_veg !== false ? 'border-green-600' : 'border-red-600'}`}>
+                            <div className={`w-2 h-2 rounded-full ${item.is_veg !== false ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                          </div>
+                          <div>
+                            <p className="font-bold text-[14px] text-gray-800 leading-tight">{item.name}</p>
+                            <p className="text-gray-500 text-[12px] mt-0.5 font-medium">Qty: {item.quantity}</p>
+                          </div>
+                        </div>
+                        <div className="font-bold text-[14px] text-gray-900">
+                          ₹{Math.round(item.price * item.quantity)}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No items found.</p>
+                  )}
+                  
+                  <div className="mt-4 pt-3 border-t border-dashed border-gray-200 flex justify-between items-center">
+                    <span className="font-bold text-gray-600 text-[14px]">Item Total</span>
+                    <span className="font-black text-[15px] text-gray-900">₹{orderStatus.orderData.item_total}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
     </div>
   );
 }

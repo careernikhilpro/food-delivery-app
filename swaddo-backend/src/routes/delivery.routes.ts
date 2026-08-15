@@ -475,7 +475,7 @@ router.get('/dashboard', authenticate, requireDelivery, async (req: AuthRequest,
         COUNT(id) as total_deliveries,
         COALESCE(SUM(earnings_amount), 0) as total_earnings
       FROM delivery_assignments
-      WHERE delivery_partner_id = $1 AND status = 'completed' AND DATE(assigned_at AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
+      WHERE delivery_partner_id = $1 AND status = 'completed' AND DATE(assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
     `, [partnerId]);
 
     const userRes = await pool.query(`SELECT float_limit FROM users WHERE id = $1`, [req.user!.id]);
@@ -617,10 +617,10 @@ router.get('/earnings', authenticate, requireDelivery, async (req: AuthRequest, 
 
     const earningsStatsRes = await pool.query(`
       SELECT 
-        SUM(CASE WHEN DATE(assigned_at AT TIME ZONE 'Asia/Kolkata') = DATE(now() AT TIME ZONE 'Asia/Kolkata') THEN earnings_amount ELSE 0 END) as today_earnings,
-        SUM(CASE WHEN (assigned_at AT TIME ZONE 'Asia/Kolkata') >= (now() AT TIME ZONE 'Asia/Kolkata') - interval '7 days' THEN earnings_amount ELSE 0 END) as week_earnings,
-        SUM(CASE WHEN EXTRACT(MONTH FROM (assigned_at AT TIME ZONE 'Asia/Kolkata')) = EXTRACT(MONTH FROM (now() AT TIME ZONE 'Asia/Kolkata')) 
-                  AND EXTRACT(YEAR FROM (assigned_at AT TIME ZONE 'Asia/Kolkata')) = EXTRACT(YEAR FROM (now() AT TIME ZONE 'Asia/Kolkata')) 
+        SUM(CASE WHEN DATE(assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') = DATE(now() AT TIME ZONE 'Asia/Kolkata') THEN earnings_amount ELSE 0 END) as today_earnings,
+        SUM(CASE WHEN (assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') >= (now() AT TIME ZONE 'Asia/Kolkata') - interval '7 days' THEN earnings_amount ELSE 0 END) as week_earnings,
+        SUM(CASE WHEN EXTRACT(MONTH FROM (assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')) = EXTRACT(MONTH FROM (now() AT TIME ZONE 'Asia/Kolkata')) 
+                  AND EXTRACT(YEAR FROM (assigned_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')) = EXTRACT(YEAR FROM (now() AT TIME ZONE 'Asia/Kolkata')) 
              THEN earnings_amount ELSE 0 END) as month_earnings
       FROM delivery_assignments 
       WHERE delivery_partner_id = $1 AND status = 'completed'
@@ -750,7 +750,7 @@ router.post('/cashout/request', authenticate, requireDelivery, async (req: AuthR
     const recentRes = await pool.query(`
       SELECT id FROM cashout_requests 
       WHERE delivery_partner_id = $1 
-      AND created_at AT TIME ZONE 'Asia/Kolkata' >= $2::date
+      AND created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata' >= $2::date
     `, [partnerId, todayStr]);
 
     if (recentRes.rows.length > 0) {
@@ -817,3 +817,5 @@ router.get('/cashout/history', authenticate, requireDelivery, async (req: AuthRe
 });
 
 export default router;
+
+
