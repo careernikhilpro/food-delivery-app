@@ -1299,7 +1299,7 @@ export default function Cart() {
                       <div className="w-full border-t border-dashed border-gray-200"></div>
                       <div className="flex items-center justify-between text-[14px]">
                         <span className="text-[#00A14F] font-bold">
-                          Store Discount ({stallOfferDiscount}%)
+                          Discount ({stallOfferDiscount}%)
                         </span>
                         <span className="text-[#00A14F] font-bold">
                           -₹{discountAmount}

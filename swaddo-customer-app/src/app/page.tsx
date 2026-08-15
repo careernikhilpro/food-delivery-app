@@ -109,7 +109,7 @@ export default function Home() {
           rating: Number(stall.rating || 4.1).toFixed(1),
           deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
           categories: stall.tags || "Food",
-          deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
+          deliveryInfo: (stall.active_offer_is_active && stall.active_offer_discount ? `${Number(stall.active_offer_discount)}% OFF up to ₹${stall.active_offer_max} • ` : "") + `Free Delivery • Items At ₹${stall.min_price || 99}`,
           isPureVeg: !!stall.is_pure_veg && stall.is_pure_veg !== 'false' && stall.is_pure_veg !== '0',
           isOpen: stall.is_open,
         }));
