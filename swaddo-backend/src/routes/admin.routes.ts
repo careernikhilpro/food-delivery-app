@@ -1119,5 +1119,29 @@ router.get('/offers', async (req: Request, res: Response) => {
   }
 });
 
+// Update Store Offer (Admin)
+router.put('/offers/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, discount, minOrder, maxDiscount, isActive } = req.body;
+    
+    await pool.query(
+      `UPDATE stalls 
+       SET active_offer_title = $1, 
+           active_offer_discount = $2, 
+           active_offer_min = $3, 
+           active_offer_max = $4,
+           active_offer_is_active = $5
+       WHERE id = $6`,
+      [title, discount, minOrder, maxDiscount, isActive, id]
+    );
+    
+    res.json({ message: 'Offer updated successfully' });
+  } catch (err) {
+    logger.error('Update offer error', err);
+    res.status(500).json({ message: 'Error updating offer' });
+  }
+});
+
 export default router;
 
