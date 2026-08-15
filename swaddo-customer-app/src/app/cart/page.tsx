@@ -406,6 +406,7 @@ export default function Cart() {
     savedAddresses,
     selectedAddressId,
     cart.items.length,
+    cartTotal,
   ]);
 
   const handleMapDragEnd = async (lat: number, lng: number) => {
@@ -1486,7 +1487,7 @@ export default function Cart() {
                       To Pay
                     </span>
                     <span className="font-bold text-[15px] text-gray-800">
-                      ₹{finalTotal}
+                      ₹{finalTotal.toFixed(2)}
                     </span>
                   </div>
                 </div>

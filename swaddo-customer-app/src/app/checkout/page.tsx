@@ -449,7 +449,7 @@ export default function Checkout() {
       setDeliveryFee(fee);
       setDistanceKms(dist);
     }
-  }, [stallCoords, mapLat, mapLng]);
+  }, [stallCoords, mapLat, mapLng, cartTotal]);
 
   const taxAndFees = Math.round(cartTotal * 0.05);
   
