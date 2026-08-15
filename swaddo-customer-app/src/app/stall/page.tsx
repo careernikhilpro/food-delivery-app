@@ -274,12 +274,16 @@ function StallDetailContent() {
              const liveData = await liveRouteRes.json();
              if (liveData.status === 'success' && liveData.data) physicalDistanceKm = liveData.data.distanceKm;
           }
-          if (active && (browsingDistanceKm >= 4.0 || physicalDistanceKm >= 4.0)) currentItemMarkup = 20;
+          if (active && (browsingDistanceKm >= 4.0 || physicalDistanceKm >= 4.0)) {
+            // currentItemMarkup = 20; // DISABLED FOR NOW: Replaced with >4km blocking logic in cart
+          }
         } catch (e) {
           if (active) {
             let browsingDist = (latitude && longitude) ? getDistance(parseFloat(stallData.latitude), parseFloat(stallData.longitude), latitude, longitude) : 0;
             let physicalDist = (liveLatitude && liveLongitude) ? getDistance(parseFloat(stallData.latitude), parseFloat(stallData.longitude), liveLatitude, liveLongitude) : 0;
-            if (browsingDist >= 3.2 || physicalDist >= 3.2) currentItemMarkup = 20;
+            if (browsingDist >= 3.2 || physicalDist >= 3.2) {
+              // currentItemMarkup = 20; // DISABLED FOR NOW
+            }
           }
         }
       }

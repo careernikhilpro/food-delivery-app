@@ -369,6 +369,7 @@ export default function Checkout() {
   const [stallCoords, setStallCoords] = useState<{lat: number, lng: number} | null>(null);
   const [stallInfo, setStallInfo] = useState<any>(null);
   const [deliveryFee, setDeliveryFee] = useState(20); 
+  const [distanceKms, setDistanceKms] = useState<number | null>(null);
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -398,19 +399,40 @@ export default function Checkout() {
     if (stallCoords && mapLat && mapLng) {
       const dist = getDistance(stallCoords.lat, stallCoords.lng, mapLat, mapLng);
       let fee = 18;
-      if (dist <= 1.4) {
-        fee = 18;
-      } else if (dist <= 2.0) {
-        fee = 18 + ((dist - 1.4) / 0.6) * 5;
-      } else if (dist <= 3.0) {
-        fee = 23 + ((dist - 2.0) / 1.0) * 6;
-      } else if (dist <= 4.0) {
-        fee = 29 + ((dist - 3.0) / 1.0) * 7;
+      
+      if (cartTotal >= 199) {
+        if (dist <= 2.0) {
+          fee = 0;
+        } else if (dist <= 2.5) {
+          fee = 7;
+        } else if (dist <= 3.0) {
+          fee = 7 + ((dist - 2.5) / 0.5) * 5;
+        } else if (dist <= 4.0) {
+          fee = 12 + ((dist - 3.0) / 1.0) * 12;
+        } else {
+          fee = 24;
+        }
       } else {
-        fee = 36;
+        if (dist <= 1.4) {
+          fee = 18;
+        } else if (dist <= 2.0) {
+          fee = 18 + ((dist - 1.4) / 0.6) * 5;
+        } else if (dist <= 3.0) {
+          fee = 23 + ((dist - 2.0) / 1.0) * 6;
+        } else if (dist <= 4.0) {
+          fee = 29 + ((dist - 3.0) / 1.0) * 7;
+        } else {
+          fee = 36;
+        }
+        
+        if (cartTotal < 99) {
+          fee += 20; // Small order fee
+        }
       }
+      
       fee = Math.round(fee * 100) / 100;
       setDeliveryFee(fee);
+      setDistanceKms(dist);
     }
   }, [stallCoords, mapLat, mapLng]);
 
@@ -745,6 +767,12 @@ export default function Checkout() {
               <Receipt size={18} className="text-primary"/> Bill Summary
             </h3>
             
+            {cartTotal < 99 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex items-center justify-between text-orange-700 shadow-sm">
+                  <span className="text-[13px] font-bold">₹20 small order fee applied (Orders &lt; ₹99)</span>
+                </div>
+              )}
+
             <div className="space-y-3 text-sm font-medium">
               <div className="flex justify-between text-text-primary">
                 <span>Item Total</span>
@@ -778,34 +806,57 @@ export default function Checkout() {
           </div>
 
           <div className="hidden xl:block">
-            <button 
-              onClick={handlePlaceOrder}
-              disabled={isPlacingOrder}
-              className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-[16px] shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
-            >
-              {isPlacingOrder ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                `Place Order • ₹${finalTotal}`
-              )}
-            </button>
+            {distanceKms !== null && distanceKms > 4.0 ? (
+              <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+                <div className="flex justify-center mb-2">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <MapPin className="text-orange-500" size={20} />
+                  </div>
+                </div>
+                <h3 className="font-bold text-gray-800 mb-1">Out of Delivery Range</h3>
+                <p className="text-xs text-gray-600">
+                  This restaurant is {distanceKms.toFixed(1)} km away. We will be available soon at your location!
+                </p>
+              </div>
+            ) : (
+              <button 
+                onClick={handlePlaceOrder}
+                disabled={isPlacingOrder}
+                className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-[16px] shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
+              >
+                {isPlacingOrder ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  `Place Order • ₹${finalTotal}`
+                )}
+              </button>
+            )}
           </div>
 
         </div>
       </div>
 
       <div className="xl:hidden fixed bottom-[85px] left-4 right-4 z-40">
-        <button 
-          onClick={handlePlaceOrder}
-          disabled={isPlacingOrder}
-          className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-[16px] shadow-[0_8px_30px_rgba(226,64,28,0.3)] transition-all flex items-center justify-center gap-2 active:scale-95"
-        >
-          {isPlacingOrder ? (
-            <Loader2 className="animate-spin" size={20} />
-          ) : (
-            `Place Order • ₹${finalTotal}`
-          )}
-        </button>
+        {distanceKms !== null && distanceKms > 4.0 ? (
+          <div className="mb-2 bg-orange-50 border border-orange-200 rounded-xl p-4 text-center shadow-lg">
+            <h3 className="font-bold text-gray-800 text-sm mb-1">Out of Delivery Range</h3>
+            <p className="text-xs text-gray-600">
+              {distanceKms.toFixed(1)} km away. We will be available soon at your location!
+            </p>
+          </div>
+        ) : (
+          <button 
+            onClick={handlePlaceOrder}
+            disabled={isPlacingOrder}
+            className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-[16px] shadow-[0_8px_30px_rgba(226,64,28,0.3)] transition-all flex items-center justify-center gap-2 active:scale-95"
+          >
+            {isPlacingOrder ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              `Place Order • ₹${finalTotal}`
+            )}
+          </button>
+        )}
       </div>
 
     </div>

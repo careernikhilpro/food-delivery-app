@@ -260,7 +260,7 @@ router.get('/merchant/campaigns', authenticate, requireVendor, async (req: AuthR
 router.post('/merchant/campaign', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
-    const { title, description } = req.body;
+    const { title, description, startTime, endTime } = req.body;
     
     const vendorRes = await pool.query('SELECT id FROM vendors WHERE user_id = $1 LIMIT 1', [userId]);
     if (vendorRes.rows.length === 0) return res.status(404).json({ message: 'Vendor not found' });
@@ -271,9 +271,9 @@ router.post('/merchant/campaign', authenticate, requireVendor, async (req: AuthR
     const stallId = stallRes.rows[0].id;
 
     const campaignRes = await pool.query(
-      `INSERT INTO campaign_requests (vendor_id, stall_id, title, description, status) 
-       VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
-      [vendorId, stallId, title, description]
+      `INSERT INTO campaign_requests (vendor_id, stall_id, title, description, start_time, end_time, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
+      [vendorId, stallId, title, description, startTime || null, endTime || null]
     );
     
     res.status(201).json(campaignRes.rows[0]);

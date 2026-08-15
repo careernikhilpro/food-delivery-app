@@ -352,24 +352,45 @@ export default function Cart() {
             data.data &&
             data.data.distanceKm >= 4.0
           ) {
-            newMarkup = 20;
+            // newMarkup = 20; // DISABLED FOR NOW: Only blocking orders > 4km instead of marking up
           }
         } catch (e) {
-          if (haversineDist >= 3.2) newMarkup = 20;
+          // if (haversineDist >= 3.2) newMarkup = 20; // DISABLED FOR NOW
         }
 
+        const subtotal = cart.items.reduce((sum: any, item: any) => sum + item.price * (item.quantity || item.qty || 1), 0);
         let fee = 18;
-        if (actualDist <= 1.4) {
-          fee = 18;
-        } else if (actualDist <= 2.0) {
-          fee = 18 + ((actualDist - 1.4) / 0.6) * 5;
-        } else if (actualDist <= 3.0) {
-          fee = 23 + ((actualDist - 2.0) / 1.0) * 6;
-        } else if (actualDist <= 4.0) {
-          fee = 29 + ((actualDist - 3.0) / 1.0) * 7;
+        
+        if (subtotal >= 199) {
+          if (actualDist <= 2.0) {
+            fee = 0;
+          } else if (actualDist <= 2.5) {
+            fee = 7;
+          } else if (actualDist <= 3.0) {
+            fee = 7 + ((actualDist - 2.5) / 0.5) * 5;
+          } else if (actualDist <= 4.0) {
+            fee = 12 + ((actualDist - 3.0) / 1.0) * 12;
+          } else {
+            fee = 24;
+          }
         } else {
-          fee = 36;
+          if (actualDist <= 1.4) {
+            fee = 18;
+          } else if (actualDist <= 2.0) {
+            fee = 18 + ((actualDist - 1.4) / 0.6) * 5;
+          } else if (actualDist <= 3.0) {
+            fee = 23 + ((actualDist - 2.0) / 1.0) * 6;
+          } else if (actualDist <= 4.0) {
+            fee = 29 + ((actualDist - 3.0) / 1.0) * 7;
+          } else {
+            fee = 36;
+          }
+          
+          if (subtotal < 99) {
+            fee += 20; // Small order fee
+          }
         }
+        
         fee = Math.round(fee * 100) / 100;
 
         setDeliveryFee(fee);
@@ -1232,6 +1253,12 @@ export default function Cart() {
             </label>
           </div>
 
+          {baseItemTotal < 99 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex items-center justify-between text-orange-700 shadow-sm">
+              <span className="text-[13px] font-bold">₹20 small order fee applied (Orders &lt; ₹99)</span>
+            </div>
+          )}
+
           {/* Bill Summary */}
           <div
             className={`bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden transition-all duration-300 ${isBillExpanded ? "pb-0" : ""}`}
@@ -1481,17 +1508,30 @@ export default function Cart() {
               CHANGE
             </span>
           </div>
-
-          <button
-            onClick={handlePlaceOrder}
-            disabled={isPlacingOrder}
-            className="w-full bg-[#00A14F] disabled:bg-gray-400 text-white font-bold text-[16px] py-3.5 rounded-xl shadow-[0_4px_12px_rgba(0,161,79,0.25)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-          >
-            {isPlacingOrder ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : null}
-            {isPlacingOrder ? "Processing..." : "Proceed to Pay"}
-          </button>
+          {distanceKms && parseFloat(distanceKms) > 4.0 ? (
+            <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <MapPin className="text-orange-500" size={20} />
+                </div>
+              </div>
+              <h3 className="font-bold text-gray-800 mb-1">Out of Delivery Range</h3>
+              <p className="text-xs text-gray-600">
+                This restaurant is {distanceKms} km away. We will be available soon at your location!
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={handlePlaceOrder}
+              disabled={isPlacingOrder}
+              className="w-full bg-[#00A14F] disabled:bg-gray-400 text-white font-bold text-[16px] py-3.5 rounded-xl shadow-[0_4px_12px_rgba(0,161,79,0.25)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+            >
+              {isPlacingOrder ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : null}
+              {isPlacingOrder ? "Processing..." : "Proceed to Pay"}
+            </button>
+          )}
         </div>
       </div>
 

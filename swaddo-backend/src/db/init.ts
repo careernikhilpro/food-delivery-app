@@ -436,6 +436,8 @@ const runSchema = async () => {
         stall_id INTEGER REFERENCES stalls(id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
         description TEXT,
+        start_time TIMESTAMP,
+        end_time TIMESTAMP,
         status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected, paused
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

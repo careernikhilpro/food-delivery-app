@@ -22,6 +22,8 @@ export default function OffersPage() {
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [campaignTitle, setCampaignTitle] = useState("Monsoon Special 15% OFF");
   const [campaignDesc, setCampaignDesc] = useState("Run a 'Monsoon Special' 15% discount.");
+  const [campaignStartTime, setCampaignStartTime] = useState("");
+  const [campaignEndTime, setCampaignEndTime] = useState("");
 
   const fetcher = (url: string) => api.get(url).then(res => res.data);
   const { data: stallRes, mutate } = useSWR('/stalls/merchant/my-stall', fetcher);
@@ -73,7 +75,9 @@ export default function OffersPage() {
     try {
       await api.post('/stalls/merchant/campaign', {
         title: campaignTitle,
-        description: campaignDesc
+        description: campaignDesc,
+        startTime: campaignStartTime ? new Date(campaignStartTime).toISOString() : null,
+        endTime: campaignEndTime ? new Date(campaignEndTime).toISOString() : null
       });
       alert("Campaign request sent to Admin successfully!");
       mutateCampaigns();
@@ -356,6 +360,28 @@ export default function OffersPage() {
                       placeholder="Enter details..."
                       required
                     ></textarea>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">Start Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        value={campaignStartTime}
+                        onChange={(e) => setCampaignStartTime(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">End Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        value={campaignEndTime}
+                        onChange={(e) => setCampaignEndTime(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
