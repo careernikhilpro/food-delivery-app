@@ -519,6 +519,11 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       activeOfferMin: stall.active_offer_min,
       activeOfferMax: stall.active_offer_max,
       activeOfferIsActive: stall.active_offer_is_active,
+      active_offer_title: stall.active_offer_title,
+      active_offer_discount: stall.active_offer_discount,
+      active_offer_min: stall.active_offer_min,
+      active_offer_max: stall.active_offer_max,
+      active_offer_is_active: stall.active_offer_is_active,
       is_cutlery_enabled: stall.is_cutlery_enabled
     });
   } catch (err) {
