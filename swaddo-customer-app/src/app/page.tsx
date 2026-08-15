@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, MapPin, Star, Heart, Mic, Camera, ChevronDown, CheckCircle2, Menu, Clock, X, Check, Plus, Minus } from "lucide-react";
+import { Search, MapPin, Star, Heart, Mic, Camera, ChevronDown, CheckCircle2, Menu, Clock, X, Check, Plus, Minus, TicketPercent, Bike } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { motion, AnimatePresence } from "framer-motion";
 import LocationSelector from "@/components/LocationSelector";
@@ -109,7 +109,8 @@ export default function Home() {
           rating: Number(stall.rating || 4.1).toFixed(1),
           deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
           categories: stall.tags || "Food",
-          deliveryInfo: (stall.active_offer_is_active && stall.active_offer_discount ? `${Number(stall.active_offer_discount)}% OFF up to ₹${stall.active_offer_max} • ` : "") + `Free Delivery • Items At ₹${stall.min_price || 99}`,
+          offerText: stall.active_offer_is_active && stall.active_offer_discount ? `${Number(stall.active_offer_discount)}% OFF up to ₹${stall.active_offer_max}` : null,
+          deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
           isPureVeg: !!stall.is_pure_veg && stall.is_pure_veg !== 'false' && stall.is_pure_veg !== '0',
           isOpen: stall.is_open,
         }));
@@ -1043,8 +1044,15 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                <span className="text-[13px] font-bold">{data.rating} <span className="font-medium text-gray-500">• {data.deliveryTime} • {data.categories}</span></span>
             </div>
             
+            {data.offerText && (
+              <div className="flex items-center gap-1.5 text-gray-600 mt-1">
+                 <TicketPercent size={14} className="text-[#00A14F]" />
+                 <span className="text-[13px] font-bold text-[#00A14F]">{data.offerText}</span>
+              </div>
+            )}
+            
             <div className="flex items-center gap-1.5 text-gray-600 mt-1">
-               <div className="bg-[#00A14F] text-white text-[9px] font-black rounded-sm px-[3px] py-[1px] leading-none">%</div>
+               <Bike size={14} className="text-gray-500" />
                <span className="text-[13px] font-medium">{data.deliveryInfo}</span>
             </div>
          </Link>
