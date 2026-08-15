@@ -19,6 +19,10 @@ export default function OffersPage() {
   const [minOrder, setMinOrder] = useState("199");
   const [maxDiscount, setMaxDiscount] = useState("50");
 
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [campaignTitle, setCampaignTitle] = useState("Monsoon Special 15% OFF");
+  const [campaignDesc, setCampaignDesc] = useState("Run a 'Monsoon Special' 15% discount.");
+
   const fetcher = (url: string) => api.get(url).then(res => res.data);
   const { data: stallRes, mutate } = useSWR('/stalls/merchant/my-stall', fetcher);
   const { data: campaigns = [], mutate: mutateCampaigns } = useSWR('/stalls/merchant/campaigns', fetcher);
@@ -63,16 +67,21 @@ export default function OffersPage() {
     }
   };
 
-  const handleRequestCampaign = async () => {
+  const submitCampaignRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
       await api.post('/stalls/merchant/campaign', {
-        title: "Monsoon Special 15% OFF",
-        description: "Run a 'Monsoon Special' 15% discount."
+        title: campaignTitle,
+        description: campaignDesc
       });
       alert("Campaign request sent to Admin successfully!");
       mutateCampaigns();
+      setIsCampaignModalOpen(false);
     } catch (err) {
       alert("Failed to request campaign.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -235,7 +244,7 @@ export default function OffersPage() {
                   Run a 'Monsoon Special' 15% discount. Restaurants similar to yours saw a 30% jump in orders this week!
                 </p>
                 <button 
-                  onClick={handleRequestCampaign}
+                  onClick={() => setIsCampaignModalOpen(true)}
                   className="bg-white text-indigo-900 text-sm font-extrabold py-3.5 px-6 rounded-full shadow-lg w-full flex justify-center items-center gap-2 active:scale-95 transition-transform hover:bg-indigo-50"
                 >
                   Apply This Campaign <ChevronRight size={18} />
@@ -296,6 +305,67 @@ export default function OffersPage() {
                     className="w-full bg-slate-900 text-white font-bold py-4 rounded-full shadow-[0_8px_20px_rgba(15,23,42,0.2)] active:scale-95 transition-transform flex justify-center items-center gap-2 disabled:opacity-70 hover:bg-slate-800"
                   >
                     {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> Saving...</> : 'Save & Make Live'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {isCampaignModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-white sticky top-0 z-10">
+                <h3 className="text-xl font-extrabold text-slate-900">Request Campaign</h3>
+                <button onClick={() => setIsCampaignModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full p-1.5">
+                  <XCircle size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={submitCampaignRequest} className="p-6 overflow-y-auto">
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Campaign Title</label>
+                    <input
+                      type="text"
+                      value={campaignTitle}
+                      onChange={(e) => setCampaignTitle(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                      placeholder="e.g. Monsoon Special 15% OFF"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Campaign Details</label>
+                    <textarea
+                      value={campaignDesc}
+                      onChange={(e) => setCampaignDesc(e.target.value)}
+                      rows={3}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                      placeholder="Enter details..."
+                      required
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-4 border-t border-slate-100 bg-white">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full bg-slate-900 text-white font-extrabold text-base py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? <><Loader2 size={20} className="animate-spin" /> Submitting...</> : "Submit Request"}
                   </button>
                 </div>
               </form>
