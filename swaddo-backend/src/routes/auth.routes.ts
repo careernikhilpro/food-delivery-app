@@ -28,6 +28,16 @@ router.get('/check-user', async (req: Request, res: Response) => {
 
     if (userRes.rows.length > 0) {
       const user = userRes.rows[0];
+      
+      // Strict Role Separation: Delivery vs Customer/Merchant
+      if (role === 'delivery' && !user.delivery_pin_hash && (user.customer_pin_hash || user.vendor_pin_hash)) {
+        return res.status(403).json({ message: 'Phone number registered as a Customer/Merchant. Delivery partners must use a separate phone number.' });
+      }
+      
+      if ((role === 'customer' || role === 'vendor') && user.delivery_pin_hash && !user.customer_pin_hash && !user.vendor_pin_hash) {
+        return res.status(403).json({ message: 'Phone number is registered as a Delivery Partner and cannot be used for Customer/Merchant apps.' });
+      }
+
       const pinColumn = role === 'vendor' ? 'vendor_pin_hash' : role === 'delivery' ? 'delivery_pin_hash' : 'customer_pin_hash';
       const hasSpecificPin = !!user[pinColumn];
       // Fallback: If they have a global pin_hash but no specific one, we'll consider it set for now and migrate it on login
@@ -66,6 +76,16 @@ router.post('/login-pin', async (req: Request, res: Response) => {
     }
 
     const user = userRes.rows[0];
+    
+    // Strict Role Separation: Delivery vs Customer/Merchant
+    if (role === 'delivery' && !user.delivery_pin_hash && (user.customer_pin_hash || user.vendor_pin_hash)) {
+      return res.status(403).json({ message: 'Phone number registered as a Customer/Merchant. Delivery partners must use a separate phone number.' });
+    }
+    
+    if ((role === 'customer' || role === 'vendor') && user.delivery_pin_hash && !user.customer_pin_hash && !user.vendor_pin_hash) {
+      return res.status(403).json({ message: 'Phone number is registered as a Delivery Partner and cannot be used for Customer/Merchant apps.' });
+    }
+
     const pinColumn = role === 'vendor' ? 'vendor_pin_hash' : role === 'delivery' ? 'delivery_pin_hash' : 'customer_pin_hash';
     let targetPinHash = user[pinColumn];
     
@@ -142,6 +162,18 @@ router.post('/register-pin', async (req: Request, res: Response) => {
 
     if (existingRes.rows.length > 0) {
       user = existingRes.rows[0];
+      
+      // Strict Role Separation: Delivery vs Customer/Merchant
+      if (role === 'delivery' && (user.customer_pin_hash || user.vendor_pin_hash)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: 'Phone number already registered as a Customer/Merchant. Delivery partners must use a separate phone number.' });
+      }
+      
+      if ((role === 'customer' || role === 'vendor') && user.delivery_pin_hash) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: 'Phone number is registered as a Delivery Partner and cannot be used for Customer/Merchant apps.' });
+      }
+
       if (user[pinColumn]) {
         await client.query('ROLLBACK');
         return res.status(400).json({ message: 'User already has a PIN for this role. Please login.' });
