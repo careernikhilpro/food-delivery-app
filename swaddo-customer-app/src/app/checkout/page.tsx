@@ -79,7 +79,7 @@ export default function Checkout() {
   const { cart, cartTotal, clearCart } = useCart();
   const { currentLocation, setCurrentLocation, latitude, longitude, setCoordinates } = useLocation();
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'upi' or 'cod'
+  const [paymentMethod, setPaymentMethod] = useState("upi"); // 'upi' or 'cod'
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showOnlineConfirmModal, setShowOnlineConfirmModal] = useState(false);
@@ -774,20 +774,26 @@ export default function Checkout() {
             
             <div className="space-y-3">
               <button 
-                disabled
-                className={`w-full flex items-center gap-4 p-4 rounded-[16px] border transition-all text-left border-transparent bg-gray-50 opacity-60 cursor-not-allowed`}
+                onClick={() => setPaymentMethod("upi")}
+                className={`w-full flex items-center gap-4 p-4 rounded-[16px] border transition-all text-left ${
+                  paymentMethod === "upi" 
+                    ? "border-primary bg-primary/5 shadow-sm" 
+                    : "border-transparent bg-white shadow-native hover:shadow-native-lg"
+                }`}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-gray-100 text-gray-400`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${paymentMethod === "upi" ? "bg-primary text-white" : "bg-gray-50 text-text-muted"}`}>
                   <Wallet size={20} />
                 </div>
                 <div className="flex flex-col flex-1">
-                  <span className="font-bold text-gray-400 text-[14px] line-through">Pay via UPI / Online</span>
-                  <span className="text-[11px] text-red-500 mt-0.5 font-bold">Currently Unavailable</span>
+                  <span className="font-bold text-text-primary text-[14px]">Pay via UPI / Online</span>
+                  <span className="text-[11px] text-text-muted mt-0.5 font-medium">Safe and secure payments</span>
                 </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center border-gray-200`}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "upi" ? "border-primary" : "border-border-subtle"}`}>
+                  {paymentMethod === "upi" && <div className="w-2.5 h-2.5 bg-primary rounded-full"></div>}
                 </div>
               </button>
 
+              {/* COD Option temporarily hidden
               {cartTotal < 199 && (
                 <button 
                   onClick={() => setPaymentMethod("cod")}
@@ -808,6 +814,7 @@ export default function Checkout() {
                   </div>
                 </button>
               )}
+              */}
             </div>
           </div>
 
