@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import { Check, X } from "lucide-react";
 
+import Cookies from "js-cookie";
+
 export default function Settings() {
   const [codEnabled, setCodEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function Settings() {
   }, []);
 
   const toggleCod = async () => {
-    const token = localStorage.getItem("swaddo_admin_token");
+    const token = Cookies.get("swaddo_admin_token") || Cookies.get("token");
     const newState = !codEnabled;
     try {
       setCodEnabled(newState);
