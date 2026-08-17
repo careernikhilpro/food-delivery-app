@@ -157,7 +157,7 @@ export default function Cart() {
 
   // States
   const [isBillExpanded, setIsBillExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState("upi");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showOnlineConfirmModal, setShowOnlineConfirmModal] = useState(false);
   const [showCodConfirmModal, setShowCodConfirmModal] = useState(false);
@@ -1322,6 +1322,7 @@ export default function Cart() {
 
             <div style={{ display: 'none' }} className="w-full h-[1px] border-t border-dashed border-gray-200"></div>
 
+            {/* Cash on Delivery option temporarily hidden 
             {baseItemTotal < 199 && (
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div
@@ -1348,6 +1349,7 @@ export default function Cart() {
                 </div>
               </label>
             )}
+            */}
           </div>
 
           {/* Bill Summary */}
