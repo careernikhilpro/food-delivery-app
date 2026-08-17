@@ -1143,5 +1143,21 @@ router.put('/offers/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Settings Toggle API
+router.put('/settings/cod', authenticateAdmin, async (req: Request, res: Response) => {
+  try {
+    const { enabled } = req.body;
+    await pool.query(`
+      INSERT INTO app_settings (key, value) 
+      VALUES ($1, $2) 
+      ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP
+    `, ['cod_enabled', enabled]);
+    res.json({ message: 'COD setting updated successfully', enabled });
+  } catch (err) {
+    logger.error('Update settings error', err);
+    res.status(500).json({ message: 'Error updating setting' });
+  }
+});
+
 export default router;
 

@@ -74,9 +74,13 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     }
     if (!deliveryLat || !deliveryLng) return res.status(400).json({ message: 'Missing required field: deliveryLat or deliveryLng' });
     
-    // STRICTLY REJECT COD
+    // Check if COD is enabled in settings
     if (paymentMethod === 'cod') {
-      return res.status(400).json({ message: 'Cash on Delivery is currently disabled. Please update your app or select online payment.' });
+      const settingRes = await client.query("SELECT value FROM app_settings WHERE key = 'cod_enabled'");
+      const codEnabled = settingRes.rows.length > 0 ? (settingRes.rows[0].value === true || settingRes.rows[0].value === 'true') : false;
+      if (!codEnabled) {
+        return res.status(400).json({ message: 'Cash on Delivery is currently disabled. Please select online payment.' });
+      }
     }
 
     const isCod = paymentMethod === 'cod';

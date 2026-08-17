@@ -54,6 +54,17 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/location', locationRoutes);
 
+// Public Settings API
+app.get('/api/settings/cod', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM app_settings WHERE key = 'cod_enabled'");
+    const isEnabled = result.rows.length > 0 ? result.rows[0].value : false;
+    res.json({ enabled: isEnabled === true || isEnabled === 'true' });
+  } catch (err) {
+    res.json({ enabled: false });
+  }
+});
+
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
