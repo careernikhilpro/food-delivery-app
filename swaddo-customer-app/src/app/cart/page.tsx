@@ -162,6 +162,15 @@ export default function Cart() {
   const [showOnlineConfirmModal, setShowOnlineConfirmModal] = useState(false);
   const [showCodConfirmModal, setShowCodConfirmModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState(119);
+  const [isCodEnabled, setIsCodEnabled] = useState(false);
+
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+    fetch(`${baseUrl}/settings/cod`)
+      .then(res => res.json())
+      .then(data => setIsCodEnabled(data.enabled))
+      .catch(() => setIsCodEnabled(false));
+  }, []);
 
   // Cart & Suggestion States
   const [stallCoords, setStallCoords] = useState<{
@@ -1322,8 +1331,7 @@ export default function Cart() {
 
             <div style={{ display: 'none' }} className="w-full h-[1px] border-t border-dashed border-gray-200"></div>
 
-            {/* Cash on Delivery option temporarily hidden 
-            {baseItemTotal < 199 && (
+            {isCodEnabled && baseItemTotal < 199 && (
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${paymentMethod === "cod" ? "border-[#FF007F]" : "border-gray-300"}`}
@@ -1349,7 +1357,6 @@ export default function Cart() {
                 </div>
               </label>
             )}
-            */}
           </div>
 
           {/* Bill Summary */}

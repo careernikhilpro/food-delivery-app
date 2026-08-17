@@ -87,12 +87,21 @@ export default function Checkout() {
   const [timeLeft, setTimeLeft] = useState(119);
   const [phone, setPhone] = useState("+91 98765 43210");
   const [houseNumber, setHouseNumber] = useState("");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
+  const [restaurantInstructions, setRestaurantInstructions] = useState("");
+  const [isCodEnabled, setIsCodEnabled] = useState(false);
+  
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+    fetch(`${baseUrl}/settings/cod`)
+      .then(res => res.json())
+      .then(data => setIsCodEnabled(data.enabled))
+      .catch(() => setIsCodEnabled(false));
+  }, []);
 
   // Address Management State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
-  const [deliveryInstructions, setDeliveryInstructions] = useState("");
-  const [restaurantInstructions, setRestaurantInstructions] = useState("");
   
   useEffect(() => {
     if (cartTotal >= 199 && paymentMethod === "cod") {
@@ -793,8 +802,7 @@ export default function Checkout() {
                 </div>
               </button>
 
-              {/* COD Option temporarily hidden
-              {cartTotal < 199 && (
+              {isCodEnabled && cartTotal < 199 && (
                 <button 
                   onClick={() => setPaymentMethod("cod")}
                   className={`w-full flex items-center gap-4 p-4 rounded-[16px] border transition-all text-left ${
@@ -814,7 +822,6 @@ export default function Checkout() {
                   </div>
                 </button>
               )}
-              */}
             </div>
           </div>
 
