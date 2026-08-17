@@ -1144,7 +1144,7 @@ router.put('/offers/:id', async (req: Request, res: Response) => {
 });
 
 // Settings Toggle API
-router.put('/settings/cod', authenticateAdmin, async (req: Request, res: Response) => {
+router.put('/settings/cod', async (req: Request, res: Response) => {
   try {
     const { enabled } = req.body;
     await pool.query(`
