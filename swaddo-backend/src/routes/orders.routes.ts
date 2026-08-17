@@ -74,6 +74,11 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     }
     if (!deliveryLat || !deliveryLng) return res.status(400).json({ message: 'Missing required field: deliveryLat or deliveryLng' });
     
+    // STRICTLY REJECT COD
+    if (paymentMethod === 'cod') {
+      return res.status(400).json({ message: 'Cash on Delivery is currently disabled. Please update your app or select online payment.' });
+    }
+
     const isCod = paymentMethod === 'cod';
     const initialStatus = isCod ? 'placed' : 'payment_pending';
     
