@@ -96,6 +96,18 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     if (!stallLoc.is_open) {
       return res.status(400).json({ message: 'Stall is currently not accepting orders' });
     }
+
+    // Validate Menu Items Availability
+    if (items && items.length > 0) {
+      const itemIds = items.map((i: any) => i.id);
+      const menuRes = await client.query('SELECT id, name, is_available FROM menu_items WHERE id = ANY($1)', [itemIds]);
+      for (const item of items) {
+        const dbItem = menuRes.rows.find((r: any) => r.id === Number(item.id));
+        if (dbItem && dbItem.is_available === false) {
+          return res.status(400).json({ message: `Sorry, ${dbItem.name} is currently out of stock.` });
+        }
+      }
+    }
     
     if (stallLoc.latitude && stallLoc.longitude) {
       const R = 6371; // km

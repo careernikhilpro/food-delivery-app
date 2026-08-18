@@ -598,7 +598,7 @@ router.put('/:id', authenticate, requireVendor, async (req: AuthRequest, res: Re
 router.get('/:id/menu', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 ORDER BY id DESC', [id]);
+    const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 AND is_available = true ORDER BY id DESC', [id]);
     res.json(result.rows);
   } catch (err) {
     next(err);
