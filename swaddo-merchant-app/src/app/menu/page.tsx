@@ -49,7 +49,7 @@ export default function MenuPage() {
   const stallId = stallData?.id || null;
 
   const { data: menuData, error, isLoading: isMenuLoading, mutate: mutateMenu } = useSWR(
-    stallId ? `/stalls/${stallId}/menu` : null,
+    stallId ? `/stalls/${stallId}/menu/all` : null,
     async (url) => {
       const res = await api.get(url);
       return res.data;
