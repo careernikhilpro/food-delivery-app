@@ -605,6 +605,24 @@ router.get('/:id/menu', async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
+// Get ALL Menu Items for a Stall (Vendor Only - includes hidden items)
+router.get('/:id/menu/all', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    
+    // Verify ownership
+    const check = await pool.query('SELECT s.* FROM stalls s JOIN vendors v ON s.vendor_id = v.id WHERE s.id = $1 AND v.user_id = $2', [id, req.user!.id]);
+    if (check.rows.length === 0) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 ORDER BY id DESC', [id]);
+    res.json(result.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Add Menu Item (Vendor Only)
 router.post('/:id/menu', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
