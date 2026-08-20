@@ -560,7 +560,7 @@ export default function Cart() {
     }
   }
 
-  const smallOrderFee = baseItemTotal > 0 && baseItemTotal < 99 ? 20 : 0;
+  const smallOrderFee = baseItemTotal > 0 && baseItemTotal < 49 ? 9 : 0;
   const itemTotal = baseItemTotal - discountAmount;
   const GST = Math.round(itemTotal * 0.05);
   const finalTotal = itemTotal + GST + deliveryFee + smallOrderFee;
@@ -1452,7 +1452,7 @@ export default function Cart() {
                         <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none self-start">
                           Small Order Fee
                         </span>
-                        <span className="text-[11px] text-[#00A14F] font-bold mt-1">Add ₹{(99 - baseItemTotal).toFixed(2)} more to remove this</span>
+                        <span className="text-[11px] text-[#00A14F] font-bold mt-1">Add ₹{(49 - baseItemTotal).toFixed(2)} more to remove this</span>
                       </div>
                       <span className="text-gray-600 font-medium">
                         ₹{smallOrderFee.toFixed(2)}

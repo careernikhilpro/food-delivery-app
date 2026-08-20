@@ -496,7 +496,7 @@ export default function Checkout() {
     }
   }
 
-  const smallOrderFee = cartTotal > 0 && cartTotal < 99 ? 20 : 0;
+  const smallOrderFee = cartTotal > 0 && cartTotal < 49 ? 9 : 0;
   const finalTotal = cartTotal - discountAmount + taxAndFees + deliveryFee + smallOrderFee;
 
   const handlePlaceOrder = () => {
@@ -921,7 +921,7 @@ export default function Checkout() {
                 <div className="flex justify-between text-text-muted">
                   <div className="flex flex-col">
                     <span>Small Order Fee</span>
-                    <span className="text-[11px] text-[#00A14F] font-bold mt-0.5">Add ₹{(99 - cartTotal).toFixed(2)} more to remove this</span>
+                    <span className="text-[11px] text-[#00A14F] font-bold mt-0.5">Add ₹{(49 - cartTotal).toFixed(2)} more to remove this</span>
                   </div>
                   <span>₹{smallOrderFee.toFixed(2)}</span>
                 </div>
