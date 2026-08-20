@@ -13,7 +13,7 @@ export const getCustomerOrderNotification = (status: string, orderId: string, ex
   const riderName = extraData.riderName || 'your delivery partner';
 
   switch (status) {
-    case 'placed':
+    case 'pending':
       return {
         title: 'Order Received! 🛎️',
         body: `We've received your order. Waiting for ${stallName} to confirm.`,
@@ -70,7 +70,7 @@ export const getCustomerOrderNotification = (status: string, orderId: string, ex
 
 export const getMerchantNotification = (status: string, orderId: string): NotificationPayload | null => {
   switch (status) {
-    case 'placed':
+    case 'pending':
     case 'payment_pending':
       return {
         title: 'New Order Received! 🔔',
