@@ -595,15 +595,36 @@ router.put('/:id', authenticate, requireVendor, async (req: AuthRequest, res: Re
 });
 
 // Get Menu Items for a Stall
-router.get('/:id/menu', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 ORDER BY id DESC', [id]);
-    res.json(result.rows);
-  } catch (err) {
-    next(err);
-  }
-});
+  router.get('/:id/menu', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      let isVendor = false;
+      
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_change_in_production';
+          const payload = require('jsonwebtoken').verify(token, JWT_SECRET) as any;
+          if (payload.role === 'vendor') {
+            isVendor = true;
+          }
+        } catch (e) {
+          // Ignore token errors
+        }
+      }
+
+      if (isVendor) {
+        const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 ORDER BY id DESC', [id]);
+        res.json(result.rows);
+      } else {
+        const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 AND is_available = true ORDER BY id DESC', [id]);
+        res.json(result.rows);
+      }
+    } catch (err) {
+      next(err);
+    }
+  });
 
 // Get ALL Menu Items for a Stall (Vendor Only - includes hidden items)
 router.get('/:id/menu/all', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
