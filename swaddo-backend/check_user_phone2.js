@@ -4,8 +4,8 @@ const client = new Client({
 });
 async function run() {
   await client.connect();
-  const res = await client.query('SELECT * FROM users WHERE id IN (5, 92)');
-  console.log('Users:', res.rows);
+  const res = await client.query(`SELECT id, phone, name, role FROM users WHERE phone LIKE '%7319979739'`);
+  console.log('User:', res.rows);
   await client.end();
 }
 run();

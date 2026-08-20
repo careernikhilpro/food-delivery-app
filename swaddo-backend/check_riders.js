@@ -4,8 +4,8 @@ const client = new Client({
 });
 async function run() {
   await client.connect();
-  const res = await client.query('SELECT * FROM users WHERE id IN (5, 92)');
-  console.log('Users:', res.rows);
+  const res = await client.query('SELECT COUNT(*) FROM delivery_partners');
+  console.log('Riders count:', res.rows[0].count);
   await client.end();
 }
 run();

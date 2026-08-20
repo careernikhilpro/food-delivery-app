@@ -109,7 +109,7 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     }
 
     const isCod = paymentMethod === 'cod';
-    const initialStatus = isCod ? 'placed' : 'payment_pending';
+    const initialStatus = isCod ? 'pending' : 'payment_pending';
     
     // Haversine Distance Check and Open Status
     const stallRes = await client.query('SELECT latitude, longitude, is_open FROM stalls WHERE id = $1', [stallId]);
@@ -655,7 +655,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
         ) as items_summary
         FROM orders o
         LEFT JOIN stalls s ON o.stall_id = s.id
-        WHERE o.customer_id = $1
+        WHERE o.customer_id = $1 AND o.status != 'payment_pending'
         ORDER BY o.created_at DESC LIMIT $2 OFFSET $3
       `;
       params = [req.user!.id, limit, offset];
