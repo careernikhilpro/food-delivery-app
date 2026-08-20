@@ -394,7 +394,7 @@ router.get('/search/all', async (req: Request, res: Response, next: NextFunction
     );
 
     const dishesRes = await pool.query(
-      "SELECT m.id, m.name, m.price, m.image_url, m.is_veg, m.description, m.has_variants, m.variants, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 LIMIT 30",
+      "SELECT m.id, m.name, m.price, m.image_url, m.is_veg, m.description, m.has_variants, m.variants, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 AND m.is_available = true LIMIT 30",
       [`%${q}%`]
     );
 
@@ -421,7 +421,7 @@ router.get('/category/:name', async (req: Request, res: Response, next: NextFunc
               m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open 
        FROM menu_items m 
        JOIN stalls s ON m.stall_id = s.id 
-       WHERE LOWER(m.name) LIKE $1 OR LOWER(m.category) LIKE $1`,
+       WHERE (LOWER(m.name) LIKE $1 OR LOWER(m.category) LIKE $1) AND m.is_available = true`,
       [`%${searchTerm}%`]
     );
     
@@ -598,7 +598,7 @@ router.put('/:id', authenticate, requireVendor, async (req: AuthRequest, res: Re
 router.get('/:id/menu', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 AND is_available = true ORDER BY id DESC', [id]);
+    const result = await pool.query('SELECT * FROM menu_items WHERE stall_id = $1 ORDER BY id DESC', [id]);
     res.json(result.rows);
   } catch (err) {
     next(err);
