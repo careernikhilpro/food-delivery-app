@@ -39,6 +39,31 @@ async function verifyOrderAccess(orderId: string, user: { id: number, role: stri
   return { authorized: true };
 }
 
+// Log a checkout visit
+router.post('/checkout-visit', async (req: Request, res: Response) => {
+  try {
+    const { customer_phone, customer_name, cart_items, cart_total, address, stall_id } = req.body;
+    if (!customer_phone) return res.status(400).json({ message: "Phone required" });
+
+    await pool.query(`
+      INSERT INTO checkout_visits (customer_phone, customer_name, cart_items, cart_total, address, stall_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (customer_phone) DO UPDATE SET 
+        customer_name = EXCLUDED.customer_name,
+        cart_items = EXCLUDED.cart_items,
+        cart_total = EXCLUDED.cart_total,
+        address = EXCLUDED.address,
+        stall_id = EXCLUDED.stall_id,
+        updated_at = CURRENT_TIMESTAMP
+    `, [customer_phone, customer_name, JSON.stringify(cart_items || []), cart_total || 0, address || '', stall_id]);
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Failed to log checkout visit", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 const orderLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 10,

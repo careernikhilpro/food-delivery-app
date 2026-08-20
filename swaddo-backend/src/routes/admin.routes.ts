@@ -1159,5 +1159,16 @@ router.put('/settings/cod', async (req: Request, res: Response) => {
   }
 });
 
+// Get Checkout Visits
+router.get('/checkout-visits', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query('SELECT * FROM checkout_visits ORDER BY updated_at DESC LIMIT 200');
+    res.json(result.rows);
+  } catch (err) {
+    logger.error('Error fetching checkout visits', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
 
