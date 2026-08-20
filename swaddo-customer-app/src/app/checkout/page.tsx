@@ -461,6 +461,27 @@ export default function Checkout() {
     }
   }, [stallCoords, mapLat, mapLng, cartTotal]);
 
+  // Log Checkout Visit
+  useEffect(() => {
+    if (cart.items.length > 0 && phone) {
+      let currentAddress = mapAddress;
+      if (!currentAddress && selectedAddressId) {
+        const addr = savedAddresses.find(a => a.id === selectedAddressId);
+        if (addr) currentAddress = addr.fullAddress;
+      }
+      
+      const visitData = {
+        customer_phone: phone,
+        customer_name: savedAddresses[0]?.customerName || "Customer",
+        cart_items: cart.items,
+        cart_total: cartTotal,
+        address: currentAddress || "",
+        stall_id: cart.stallId
+      };
+      api.post('/orders/checkout-visit', visitData).catch(() => {});
+    }
+  }, [cart.items, phone, mapAddress, selectedAddressId, cartTotal, cart.stallId, savedAddresses]);
+
   const taxAndFees = Math.round(cartTotal * 0.05);
   
   // Offer Logic Calculation
