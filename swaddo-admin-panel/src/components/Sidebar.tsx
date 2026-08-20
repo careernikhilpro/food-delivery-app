@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Store, ShoppingBag, ShieldAlert, Bike, LogOut, Bell, MessageSquare, ChevronRight, Users, Banknote, CreditCard, Megaphone, Settings } from "lucide-react";
+import { LayoutDashboard, Store, ShoppingBag, ShieldAlert, Bike, LogOut, Bell, MessageSquare, ChevronRight, Users, Banknote, CreditCard, Megaphone, Settings, Eye } from "lucide-react";
 import Cookies from "js-cookie";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export default function Sidebar() {
     { name: "Promotions", href: "/promotions", icon: Megaphone },
     { name: "Riders", href: "/riders", icon: Bike },
     { name: "Customers", href: "/customers", icon: Users },
+    { name: "Checkout Visits", href: "/checkout-visits", icon: Eye },
     { name: "Floating Cash", href: "/floating-cash", icon: Banknote },
     { name: "Vendor Payouts", href: "/vendor-payouts", icon: CreditCard },
     { name: "Rider Cashouts", href: "/rider-cashouts", icon: CreditCard },
