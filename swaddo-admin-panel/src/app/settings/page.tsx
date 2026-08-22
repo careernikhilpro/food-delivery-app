@@ -11,7 +11,7 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch(process.env.NEXT_PUBLIC_API_URL + "/settings/cod")
+    fetch(process.env.NEXT_PUBLIC_API_URL + "/settings/cod", { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setCodEnabled(data.enabled);

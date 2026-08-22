@@ -92,10 +92,8 @@ export default function Checkout() {
   const [isCodEnabled, setIsCodEnabled] = useState(false);
   
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
-    fetch(`${baseUrl}/settings/cod`)
-      .then(res => res.json())
-      .then(data => setIsCodEnabled(data.enabled))
+    api.get("/settings/cod")
+      .then(res => setIsCodEnabled(res.data.enabled))
       .catch(() => setIsCodEnabled(false));
   }, []);
 
