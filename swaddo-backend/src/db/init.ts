@@ -305,6 +305,20 @@ const runSchema = async () => {
         earnings_amount DECIMAL(10,2) DEFAULT 0.00
       );
 
+      CREATE TABLE IF NOT EXISTS coupons (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        discount_percentage DECIMAL(5,2) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key VARCHAR(50) PRIMARY KEY,
+        value VARCHAR(255),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS deposit_history (
         id SERIAL PRIMARY KEY,
         delivery_partner_id INTEGER REFERENCES delivery_partners(id),
