@@ -607,7 +607,7 @@ export default function Checkout() {
               clearCart();
               setShowSuccessModal(true);
               setTimeout(() => {
-                router.push(`/`);
+                router.push(`/track?id=${orderRes.data.order_id}`);
               }, 2000);
             } catch (err: any) {
               console.error(err);
