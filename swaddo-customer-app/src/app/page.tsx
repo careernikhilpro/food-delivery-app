@@ -40,6 +40,13 @@ const categories = [
   { name: "Cutlet", image: "/categories/cutlet.png", price: "49" },
 ];
 
+const optimizeImage = (url: string, width: number = 400) => {
+  if (!url) return '';
+  if (url.startsWith('/')) return url;
+  if (url.includes('wsrv.nl') || url.includes('unsplash.com') || url.includes('picsum.photos')) return url;
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&q=80`;
+};
+
 export default function Home() {
   const router = useRouter();
   const { currentLocation, fullAddress } = useLocation();
@@ -456,7 +463,7 @@ export default function Home() {
                   {/* Image Area */}
                   <div className="relative w-full h-[110px] bg-blue-50/50 rounded-t-2xl overflow-visible">
                     <div className="absolute inset-0 rounded-t-2xl overflow-hidden">
-                       <Image src={item.image_url || fallbackImg} alt={item.name} fill className={`object-cover ${!item.image_url && fallbackImg.includes('gulab') ? 'scale-125' : ''}`} />
+                       <Image src={optimizeImage(item.image_url || fallbackImg)} alt={item.name} fill className={`object-cover ${!item.image_url && fallbackImg.includes('gulab') ? 'scale-125' : ''}`} />
                     </div>
                     
                     {/* Popular Tag */}
@@ -524,8 +531,12 @@ export default function Home() {
                   {/* Details */}
                   <div className="p-2.5 pt-3 pb-3">
                     <div className="flex items-center gap-1 mb-1">
-                      <div className={`w-2.5 h-2.5 rounded-sm border flex items-center justify-center ${item.is_veg !== false ? 'border-green-600' : 'border-red-600'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${item.is_veg !== false ? 'bg-green-600' : 'bg-red-600'}`} />
+                      <div className={`w-2.5 h-2.5 rounded-sm border flex items-center justify-center ${item.is_veg ? 'border-green-600' : 'border-[#8B3A1A]'}`}>
+                        {item.is_veg ? (
+                          <div className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+                        ) : (
+                          <div className="w-0 h-0 border-l-[2.5px] border-l-transparent border-r-[2.5px] border-r-transparent border-b-[5px] border-b-[#8B3A1A] mt-[1px]" />
+                        )}
                       </div>
                       <div className="text-[9px] font-bold text-gray-400 bg-gray-50 px-1 rounded line-clamp-1 truncate">{item.stall_name}</div>
                     </div>
@@ -584,7 +595,7 @@ export default function Home() {
                 {/* Image Area */}
                 <div className="relative w-full h-[110px] bg-blue-50/50 rounded-t-2xl overflow-visible">
                   <div className="absolute inset-0 rounded-t-2xl overflow-hidden">
-                     <Image src={item.image_url || "/categories/burger.png"} alt={item.name} fill className="object-cover" />
+                     <Image src={optimizeImage(item.image_url || "/categories/burger.png")} alt={item.name} fill className="object-cover" />
                   </div>
                   
                   {/* Popular Tag */}
@@ -1076,7 +1087,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
               return (
               <div key={idx} className="flex flex-col shrink-0 w-[140px] snap-start">
                  <div className="relative w-full h-[120px] rounded-[16px] overflow-hidden mb-2 shadow-sm border border-gray-100">
-                   <Image src={item.image} alt={item.name} fill className="object-cover" />
+                   <Image src={optimizeImage(item.image)} alt={item.name} fill className="object-cover" />
                    <div className="absolute top-0 w-full h-[40%] bg-gradient-to-b from-black/40 to-transparent"></div>
                    {item.isPopular && (
                      <div className="absolute top-2 left-2 bg-white px-2 py-0.5 rounded-full shadow-sm">
@@ -1147,9 +1158,13 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                  )}
                  <div className="flex flex-col gap-1">
                     <div className="flex items-start gap-1">
-                       <div className="mt-[3px] shrink-0 w-[11px] h-[11px] border border-[#00A14F] flex items-center justify-center rounded-[2px]">
-                          <div className="w-1.5 h-1.5 bg-[#00A14F] rounded-full"></div>
-                       </div>
+                         <div className={`mt-[3px] shrink-0 w-[11px] h-[11px] border flex items-center justify-center rounded-[2px] ${item.is_veg ? 'border-[#00A14F]' : 'border-[#8B3A1A]'}`}>
+                            {item.is_veg ? (
+                              <div className="w-1.5 h-1.5 bg-[#00A14F] rounded-full"></div>
+                            ) : (
+                              <div className="w-0 h-0 border-l-[2px] border-l-transparent border-r-[2px] border-r-transparent border-b-[4px] border-b-[#8B3A1A] mt-[1px]"></div>
+                            )}
+                         </div>
                        <h4 className="text-[13px] font-bold text-gray-900 leading-tight">{item.name}</h4>
                     </div>
                     <div className="flex flex-col pl-[15px] mt-0.5 gap-1">
@@ -1227,7 +1242,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
         {/* Header */}
         <div className="bg-white p-4 rounded-t-3xl flex items-center gap-3 shadow-sm z-10 shrink-0 border-b border-gray-100">
           <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 relative bg-gray-50 border border-gray-100">
-            <Image src={item.image} alt={item.name} fill className="object-cover" />
+            <Image src={optimizeImage(item.image)} alt={item.name} fill className="object-cover" />
           </div>
           <h3 className="font-extrabold text-[17px] text-gray-900 leading-tight">{item.name}</h3>
         </div>
