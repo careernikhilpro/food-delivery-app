@@ -115,11 +115,11 @@ export default function Home() {
             if (stall.offers && Array.isArray(stall.offers) && stall.offers.length > 0) {
               const activeOffers = stall.offers.filter((o: any) => o.isActive || o.isActive === 'true');
               if (activeOffers.length > 0) {
-                generatedOfferText = activeOffers.map((o: any) => `${Number(o.discountPercentage || o.discount)}% OFF up to ₹${Math.round(o.maxDiscount)} (Above ₹${Math.round(o.minOrderValue || o.minOrder)})`).join(' • ');
+                generatedOfferText = activeOffers.map((o: any) => `${Number(o.discountPercentage || o.discount)}% OFF up to \u20B9${Math.round(o.maxDiscount)} on orders above \u20B9${Math.round(o.minOrderValue || o.minOrder)}`).join(' \u2022 ');
               }
             } 
             if (!generatedOfferText && stall.active_offer_is_active && stall.active_offer_discount) {
-               generatedOfferText = `${Number(stall.active_offer_discount)}% OFF up to ₹${Math.round(stall.active_offer_max)} (Above ₹${Math.round(stall.active_offer_min)})`;
+               generatedOfferText = `${Number(stall.active_offer_discount)}% OFF up to \u20B9${Math.round(stall.active_offer_max)} on orders above \u20B9${Math.round(stall.active_offer_min)}`;
             }
 
             return {
