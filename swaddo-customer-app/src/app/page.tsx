@@ -109,18 +109,31 @@ export default function Home() {
   useEffect(() => {
     // Fetch Stalls
     api.get("/stalls").then((res) => {
-      if (res.data && Array.isArray(res.data.data)) {
-        let backendStalls = res.data.data.map((stall: any) => ({
-          id: stall.id,
-          name: stall.name,
-          rating: Number(stall.rating || 4.1).toFixed(1),
-          deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
-          categories: stall.tags || "Food",
-          offerText: stall.active_offer_is_active && stall.active_offer_discount ? `${Number(stall.active_offer_discount)}% OFF up to ₹${stall.active_offer_max}` : null,
-          deliveryInfo: `Free Delivery • Items At ₹${stall.min_price || 99}`,
-          isPureVeg: !!stall.is_pure_veg && stall.is_pure_veg !== 'false' && stall.is_pure_veg !== '0',
-          isOpen: stall.is_open,
-        }));
+        if (res.data && Array.isArray(res.data.data)) {
+          let backendStalls = res.data.data.map((stall: any) => {
+            let generatedOfferText = null;
+            if (stall.offers && Array.isArray(stall.offers) && stall.offers.length > 0) {
+              const activeOffers = stall.offers.filter((o: any) => o.isActive || o.isActive === 'true');
+              if (activeOffers.length > 0) {
+                generatedOfferText = activeOffers.map((o: any) => `${Number(o.discountPercentage || o.discount)}% OFF up to ₹${Math.round(o.maxDiscount)} (Above ₹${Math.round(o.minOrderValue || o.minOrder)})`).join(' • ');
+              }
+            } 
+            if (!generatedOfferText && stall.active_offer_is_active && stall.active_offer_discount) {
+               generatedOfferText = `${Number(stall.active_offer_discount)}% OFF up to ₹${Math.round(stall.active_offer_max)} (Above ₹${Math.round(stall.active_offer_min)})`;
+            }
+
+            return {
+              id: stall.id,
+              name: stall.name,
+              rating: Number(stall.rating || 4.1).toFixed(1),
+              deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
+              categories: stall.tags || "Food",
+              offerText: generatedOfferText,
+              deliveryInfo: `Free Delivery • Items At ₹${Math.round(stall.min_price || 99)}`,
+              isPureVeg: !!stall.is_pure_veg && stall.is_pure_veg !== 'false' && stall.is_pure_veg !== '0',
+              isOpen: stall.is_open,
+            };
+          });      
         console.log("Fetched Stalls:", backendStalls);
         setStalls(backendStalls);
       }
