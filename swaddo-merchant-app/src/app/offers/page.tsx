@@ -35,18 +35,6 @@ export default function OffersPage() {
   const stall = stallRes;
   const offers = stall?.offers || [];
   
-  // Fallback for older stalls that haven't migrated
-  if (stall && offers.length === 0 && stall.active_offer_title) {
-    offers.push({
-      id: generateId(),
-      title: stall.active_offer_title,
-      discountPercentage: stall.active_offer_discount,
-      minOrderValue: stall.active_offer_min,
-      maxDiscount: stall.active_offer_max,
-      isActive: stall.active_offer_is_active
-    });
-  }
-
   const handleToggleOffer = async (offerId: string, turnOn: boolean) => {
     if (!stall) return;
     try {
@@ -226,7 +214,7 @@ export default function OffersPage() {
                     
                     <div className="bg-slate-50 rounded-2xl p-4 mb-5 border border-slate-100">
                       <p className="text-[13px] text-slate-600 font-medium leading-relaxed">
-                        Flat <span className="font-bold text-slate-900">{offer.discountPercentage}% off</span> on orders above <span className="font-bold text-slate-900">,1{offer.minOrderValue}</span>. Max discount <span className="font-bold text-slate-900">,1{offer.maxDiscount}</span>.
+                        Flat <span className="font-bold text-slate-900">{offer.discountPercentage}% off</span> on orders above <span className="font-bold text-slate-900">&#8377;{offer.minOrderValue}</span>. Max discount <span className="font-bold text-slate-900">&#8377;{offer.maxDiscount}</span>.
                       </p>
                     </div>
                     
@@ -333,13 +321,13 @@ export default function OffersPage() {
                     <input required type="number" min="1" max="100" value={discount} onChange={e => setDiscount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white outline-none transition-all" placeholder="20" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Max (,1)</label>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Max (&#8377;)</label>
                     <input required type="number" min="1" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white outline-none transition-all" placeholder="50" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Min Order (,1)</label>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Min Order (&#8377;)</label>
                   <input required type="number" min="0" value={minOrder} onChange={e => setMinOrder(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white outline-none transition-all" placeholder="199" />
                 </div>
 
