@@ -482,9 +482,29 @@ export default function Checkout() {
 
   const taxAndFees = Math.round(cartTotal * 0.05);
   
-  // Offer Logic Calculation
+  // Offer Logic Calculation (Support Multiple Offers)
   let discountAmount = 0;
-  if (stallInfo?.active_offer_is_active && stallInfo?.active_offer_discount) {
+  
+  // New Array Logic
+  if (stallInfo?.offers && Array.isArray(stallInfo.offers) && stallInfo.offers.length > 0) {
+    const activeOffers = stallInfo.offers.filter((o: any) => o.isActive || o.isActive === 'true' || o.isActive === true);
+    
+    activeOffers.forEach((o: any) => {
+      const minOrder = parseFloat(o.minOrderValue || o.minOrder) || 0;
+      const maxDiscount = parseFloat(o.maxDiscount) || Infinity;
+      const discountPct = parseFloat(o.discountPercentage || o.discount) || 0;
+      
+      if (cartTotal >= minOrder) {
+        const amt = Math.min((cartTotal * discountPct) / 100, maxDiscount);
+        if (amt > discountAmount) {
+          discountAmount = amt;
+        }
+      }
+    });
+    discountAmount = Math.round(discountAmount);
+  } 
+  // Fallback to old single offer logic if array not present
+  else if (stallInfo?.active_offer_is_active && stallInfo?.active_offer_discount) {
     const minOrder = parseFloat(stallInfo.active_offer_min) || 0;
     const maxDiscount = parseFloat(stallInfo.active_offer_max) || Infinity;
     const discountPct = parseFloat(stallInfo.active_offer_discount);

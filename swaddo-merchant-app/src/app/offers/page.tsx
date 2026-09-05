@@ -1,11 +1,13 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { Tag, Plus, Megaphone, CheckCircle2, ChevronRight, XCircle, Loader2 } from "lucide-react";
+import { Tag, Plus, Megaphone, CheckCircle2, ChevronRight, XCircle, Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
+
+const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export default function OffersPage() {
   useAuth();
@@ -14,6 +16,7 @@ export default function OffersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form State
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [title, setTitle] = useState("Flat 20% OFF");
   const [discount, setDiscount] = useState("20");
   const [minOrder, setMinOrder] = useState("199");
@@ -30,22 +33,40 @@ export default function OffersPage() {
   const { data: campaigns = [], mutate: mutateCampaigns } = useSWR('/stalls/merchant/campaigns', fetcher);
 
   const stall = stallRes;
-  const hasOffer = stall?.active_offer_title;
-  const isActive = stall?.active_offer_is_active;
+  const offers = stall?.offers || [];
+  
+  // Fallback for older stalls that haven't migrated
+  if (stall && offers.length === 0 && stall.active_offer_title) {
+    offers.push({
+      id: generateId(),
+      title: stall.active_offer_title,
+      discountPercentage: stall.active_offer_discount,
+      minOrderValue: stall.active_offer_min,
+      maxDiscount: stall.active_offer_max,
+      isActive: stall.active_offer_is_active
+    });
+  }
 
-  const handleToggleOffer = async (turnOn: boolean) => {
+  const handleToggleOffer = async (offerId: string, turnOn: boolean) => {
     if (!stall) return;
     try {
-      await api.put('/stalls/merchant/offer', {
-        title: stall.active_offer_title,
-        discountPercentage: stall.active_offer_discount,
-        minOrderValue: stall.active_offer_min,
-        maxDiscount: stall.active_offer_max,
-        isActive: turnOn
-      });
+      const updatedOffers = offers.map((o: any) => o.id === offerId ? { ...o, isActive: turnOn } : o);
+      await api.put('/stalls/merchant/offers', { offers: updatedOffers });
       mutate();
     } catch (err) {
       alert("Failed to update offer status.");
+    }
+  };
+
+  const handleDeleteOffer = async (offerId: string) => {
+    if (!stall) return;
+    if (!confirm("Are you sure you want to delete this offer?")) return;
+    try {
+      const updatedOffers = offers.filter((o: any) => o.id !== offerId);
+      await api.put('/stalls/merchant/offers', { offers: updatedOffers });
+      mutate();
+    } catch (err) {
+      alert("Failed to delete offer.");
     }
   };
 
@@ -53,13 +74,23 @@ export default function OffersPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.put('/stalls/merchant/offer', {
+      const newOffer = {
+        id: editingOfferId || generateId(),
         title,
         discountPercentage: parseFloat(discount),
         minOrderValue: parseFloat(minOrder),
         maxDiscount: parseFloat(maxDiscount),
         isActive: true
-      });
+      };
+
+      let updatedOffers = [...offers];
+      if (editingOfferId) {
+        updatedOffers = updatedOffers.map(o => o.id === editingOfferId ? newOffer : o);
+      } else {
+        updatedOffers.push(newOffer);
+      }
+
+      await api.put('/stalls/merchant/offers', { offers: updatedOffers });
       await mutate();
       setIsModalOpen(false);
     } catch (err) {
@@ -89,18 +120,21 @@ export default function OffersPage() {
     }
   };
 
-  const openEditModal = () => {
-    if (stall && stall.active_offer_title) {
-      setTitle(stall.active_offer_title);
-      setDiscount(stall.active_offer_discount?.toString() || "");
-      setMinOrder(stall.active_offer_min?.toString() || "");
-      setMaxDiscount(stall.active_offer_max?.toString() || "");
-    } else {
-      setTitle("Flat 20% OFF");
-      setDiscount("20");
-      setMinOrder("199");
-      setMaxDiscount("50");
-    }
+  const openCreateModal = () => {
+    setEditingOfferId(null);
+    setTitle("");
+    setDiscount("");
+    setMinOrder("");
+    setMaxDiscount("");
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (offer: any) => {
+    setEditingOfferId(offer.id);
+    setTitle(offer.title);
+    setDiscount(offer.discountPercentage?.toString() || "");
+    setMinOrder(offer.minOrderValue?.toString() || "");
+    setMaxDiscount(offer.maxDiscount?.toString() || "");
     setIsModalOpen(true);
   };
 
@@ -113,7 +147,7 @@ export default function OffersPage() {
           <p className="text-slate-500 text-sm font-medium mt-1">Boost your sales</p>
         </div>
         <button 
-          onClick={openEditModal}
+          onClick={openCreateModal}
           className="bg-slate-900 text-white w-12 h-12 rounded-full shadow-[0_8px_20px_rgba(15,23,42,0.25)] flex items-center justify-center hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all"
         >
           <Plus size={24} />
@@ -127,13 +161,13 @@ export default function OffersPage() {
             onClick={() => setActiveTab('active')}
             className={`flex-1 py-2.5 text-sm font-extrabold rounded-full transition-all ${activeTab === 'active' ? 'bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.05)]' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            My Campaign
+            My Offers
           </button>
           <button 
             onClick={() => setActiveTab('recommended')}
             className={`flex-1 py-2.5 text-sm font-extrabold rounded-full transition-all ${activeTab === 'recommended' ? 'bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.05)]' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            Recommended
+            Campaigns
           </button>
         </div>
       </div>
@@ -152,65 +186,97 @@ export default function OffersPage() {
                   <div className="w-full h-10 bg-slate-100 rounded-2xl mt-2"></div>
                 </div>
               </div>
-            ) : !hasOffer ? (
+            ) : offers.length === 0 ? (
               <div className="bg-white p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-50 text-center flex flex-col items-center">
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-5 border border-slate-100">
                   <Tag className="text-slate-300" size={32} />
                 </div>
                 <h3 className="font-extrabold text-slate-800 text-xl mb-2">No Active Offers</h3>
-                <p className="text-[13px] text-slate-500 mb-8 font-medium max-w-[250px] leading-relaxed">Create a discount campaign to attract more customers and boost your daily sales.</p>
+                <p className="text-[13px] text-slate-500 mb-8 font-medium max-w-[250px] leading-relaxed">Create discount campaigns to attract more customers and boost your daily sales.</p>
                 <button 
-                  onClick={openEditModal}
+                  onClick={openCreateModal}
                   className="bg-slate-900 text-white font-bold py-3.5 px-8 rounded-full shadow-[0_8px_20px_rgba(15,23,42,0.2)] w-full active:scale-95 transition-transform"
                 >
-                  Create Offer
+                  Create First Offer
                 </button>
               </div>
             ) : (
-              <div className={`bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border ${isActive ? 'border-slate-50' : 'border-slate-200 opacity-80'} relative overflow-hidden transition-all group`}>
-                {isActive && <div className="absolute -top-12 -right-12 w-40 h-40 bg-green-50 rounded-full -z-10 group-hover:scale-150 transition-transform duration-700"></div>}
-                <div className="flex justify-between items-start mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className={`${isActive ? 'bg-slate-900 shadow-md' : 'bg-slate-300'} text-white p-2.5 rounded-2xl`}>
-                      <Tag size={20} />
+              <div className="space-y-4">
+                {offers.map((offer: any) => (
+                  <div key={offer.id} className={`bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border ${offer.isActive ? 'border-slate-50' : 'border-slate-200 opacity-80'} relative overflow-hidden transition-all group`}>
+                    {offer.isActive && <div className="absolute -top-12 -right-12 w-40 h-40 bg-green-50 rounded-full -z-10 group-hover:scale-150 transition-transform duration-700"></div>}
+                    <div className="flex justify-between items-start mb-5">
+                      <div className="flex items-center gap-3">
+                        <div className={`${offer.isActive ? 'bg-slate-900 shadow-md' : 'bg-slate-300'} text-white p-2.5 rounded-2xl`}>
+                          <Tag size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-slate-800 text-lg">{offer.title}</h3>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleDeleteOffer(offer.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                          <Trash2 size={16} />
+                        </button>
+                        <div className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${offer.isActive ? 'text-green-700 bg-green-50 border-green-200' : 'text-slate-500 bg-slate-100 border-slate-200'}`}>
+                          {offer.isActive ? <><CheckCircle2 size={12} /> LIVE</> : 'PAUSED'}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-extrabold text-slate-800 text-lg">{stall.active_offer_title}</h3>
+                    
+                    <div className="bg-slate-50 rounded-2xl p-4 mb-5 border border-slate-100">
+                      <p className="text-[13px] text-slate-600 font-medium leading-relaxed">
+                        Flat <span className="font-bold text-slate-900">{offer.discountPercentage}% off</span> on orders above <span className="font-bold text-slate-900">,1{offer.minOrderValue}</span>. Max discount <span className="font-bold text-slate-900">,1{offer.maxDiscount}</span>.
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <button onClick={() => openEditModal(offer)} className="text-sm font-extrabold text-slate-900 flex items-center gap-1 hover:text-accent transition-colors">
+                        Edit Details <ChevronRight size={16} />
+                      </button>
+                      {offer.isActive ? (
+                        <button 
+                          onClick={() => handleToggleOffer(offer.id, false)}
+                          className="text-slate-700 text-xs font-bold bg-white border border-slate-200 px-5 py-2.5 rounded-full flex items-center shadow-sm active:scale-95 transition-transform hover:bg-slate-50"
+                        >
+                          Pause Offer
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleToggleOffer(offer.id, true)}
+                          className="text-white text-xs font-bold bg-slate-900 px-5 py-2.5 rounded-full flex items-center shadow-md active:scale-95 transition-transform hover:bg-slate-800"
+                        >
+                          Resume Offer
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${isActive ? 'text-green-700 bg-green-50 border-green-200' : 'text-slate-500 bg-slate-100 border-slate-200'}`}>
-                    {isActive ? <><CheckCircle2 size={12} /> LIVE</> : 'PAUSED'}
-                  </div>
-                </div>
+                ))}
                 
-                <div className="bg-slate-50 rounded-2xl p-4 mb-5 border border-slate-100">
-                  <p className="text-[13px] text-slate-600 font-medium leading-relaxed">
-                    Flat <span className="font-bold text-slate-900">{stall.active_offer_discount}% off</span> on orders above <span className="font-bold text-slate-900">₹{stall.active_offer_min}</span>. Max discount <span className="font-bold text-slate-900">₹{stall.active_offer_max}</span>.
-                  </p>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <button onClick={openEditModal} className="text-sm font-extrabold text-slate-900 flex items-center gap-1 hover:text-accent transition-colors">
-                    Edit Details <ChevronRight size={16} />
-                  </button>
-                  {isActive ? (
-                    <button 
-                      onClick={() => handleToggleOffer(false)}
-                      className="text-slate-700 text-xs font-bold bg-white border border-slate-200 px-5 py-2.5 rounded-full flex items-center shadow-sm active:scale-95 transition-transform hover:bg-slate-50"
-                    >
-                      Pause Offer
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleToggleOffer(true)}
-                      className="text-white text-xs font-bold bg-slate-900 px-5 py-2.5 rounded-full flex items-center shadow-md active:scale-95 transition-transform hover:bg-slate-800"
-                    >
-                      Resume Offer
-                    </button>
-                  )}
-                </div>
+                <button 
+                  onClick={openCreateModal}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-3xl border-2 border-dashed border-slate-300 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus size={20} /> Add Another Offer
+                </button>
               </div>
             )}
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-50 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[100px] -z-10 transition-transform duration-500 group-hover:scale-110"></div>
+              <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-5 shadow-sm">
+                <Megaphone size={28} />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-xl mb-3">Custom Campaign</h3>
+              <p className="text-[13px] text-slate-500 font-medium mb-6 leading-relaxed">
+                Want to run a special festival campaign? Send a request to the admin to set up a custom promotional banner and offer.
+              </p>
+              <button onClick={() => setIsCampaignModalOpen(true)} className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-full shadow-[0_8px_20px_rgba(15,23,42,0.2)] active:scale-95 transition-transform">
+                Request Campaign
+              </button>
+            </div>
 
             {/* Render Campaign Requests */}
             {campaigns.length > 0 && (
@@ -229,52 +295,27 @@ export default function OffersPage() {
                 ))}
               </div>
             )}
-          </>
-        ) : (
-          <>
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 p-8 rounded-3xl shadow-[0_12px_40px_rgba(49,46,129,0.3)] relative overflow-hidden text-white">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
-              <div className="absolute top-6 right-6 text-indigo-300 opacity-60">
-                <Megaphone size={48} />
-              </div>
-              <div className="relative z-10">
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full w-max mb-5 text-[10px] font-bold tracking-widest uppercase">
-                  Trending
-                </div>
-                <h3 className="font-extrabold text-2xl w-[85%] leading-tight mb-3">
-                  Boost orders on Rainy Days!
-                </h3>
-                <p className="text-sm text-indigo-100/80 mb-8 w-[90%] font-medium leading-relaxed">
-                  Run a 'Monsoon Special' 15% discount. Restaurants similar to yours saw a 30% jump in orders this week!
-                </p>
-                <button 
-                  onClick={() => setIsCampaignModalOpen(true)}
-                  className="bg-white text-indigo-900 text-sm font-extrabold py-3.5 px-6 rounded-full shadow-lg w-full flex justify-center items-center gap-2 active:scale-95 transition-transform hover:bg-indigo-50"
-                >
-                  Apply This Campaign <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          </>
+          </div>
         )}
       </div>
 
-      {/* Create/Edit Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 bg-slate-900/40 backdrop-blur-sm flex flex-col justify-end"
-            onClick={() => setIsModalOpen(false)}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
           >
-            <motion.div 
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="bg-white rounded-t-[2rem] w-full p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]"
-              onClick={(e) => e.stopPropagation()}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl relative"
             >
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Configure Offer</h2>
+                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{editingOfferId ? 'Edit Offer' : 'Configure Offer'}</h2>
                 <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
                   <XCircle size={20} />
                 </button>
@@ -292,13 +333,13 @@ export default function OffersPage() {
                     <input required type="number" min="1" max="100" value={discount} onChange={e => setDiscount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white outline-none transition-all" placeholder="20" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Max (₹)</label>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Max (,1)</label>
                     <input required type="number" min="1" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white outline-none transition-all" placeholder="50" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Min Order (₹)</label>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Min Order (,1)</label>
                   <input required type="number" min="0" value={minOrder} onChange={e => setMinOrder(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white outline-none transition-all" placeholder="199" />
                 </div>
 
@@ -328,7 +369,7 @@ export default function OffersPage() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+              className="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
             >
               <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-white sticky top-0 z-10">
                 <h3 className="text-xl font-extrabold text-slate-900">Request Campaign</h3>

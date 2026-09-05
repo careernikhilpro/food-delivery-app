@@ -626,6 +626,32 @@ router.put('/:id', authenticate, requireVendor, async (req: AuthRequest, res: Re
     }
   });
 
+// Update Merchant Multiple Offers (Vendor Only)
+router.put('/merchant/offers', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+    const { offers } = req.body; // Array of offer objects
+    
+    if (!Array.isArray(offers)) {
+      return res.status(400).json({ message: 'Offers must be an array' });
+    }
+
+    const vendorRes = await pool.query('SELECT id FROM vendors WHERE user_id = $1 LIMIT 1', [userId]);
+    if (vendorRes.rows.length === 0) return res.status(404).json({ message: 'Vendor not found' });
+    const vendorId = vendorRes.rows[0].id;
+
+    const stallRes = await pool.query(
+      `UPDATE stalls SET offers = $1::jsonb WHERE vendor_id = $2 RETURNING *`,
+      [JSON.stringify(offers), vendorId]
+    );
+
+    if (stallRes.rows.length === 0) return res.status(404).json({ message: 'Stall not found' });
+    res.json(stallRes.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Get ALL Menu Items for a Stall (Vendor Only - includes hidden items)
 router.get('/:id/menu/all', authenticate, requireVendor, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
