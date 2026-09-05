@@ -794,25 +794,33 @@ import { notificationService } from '../services/notification';
 
 router.post('/notifications/send', async (req: Request, res: Response) => {
   try {
-    const { title, message, segment, imageUrl } = req.body;
+    const { title, message, segment, imageUrl, phones } = req.body;
     if (!title || !message) {
       return res.status(400).json({ message: 'Title and message are required' });
     }
     
     let query = '';
-    // Select users based on segment
-    if (segment === 'customers') {
-      query = `SELECT id, fcm_token FROM users`;
-    } else if (segment === 'merchants') {
-      query = `SELECT u.id, u.fcm_token FROM users u JOIN vendors v ON u.id = v.user_id`;
-    } else if (segment === 'riders') {
-      query = `SELECT u.id, u.fcm_token FROM users u JOIN delivery_partners dp ON u.id = dp.user_id`;
+    let queryParams: any[] = [];
+    
+    if (phones && Array.isArray(phones) && phones.length > 0) {
+      // If a list of phone numbers is provided, target only those users
+      query = `SELECT id, fcm_token FROM users WHERE phone = ANY($1)`;
+      queryParams = [phones];
     } else {
-      // all
-      query = `SELECT id, fcm_token FROM users`;
+      // Otherwise, fallback to the segment logic
+      if (segment === 'customers') {
+        query = `SELECT id, fcm_token FROM users WHERE role = 'customer'`;
+      } else if (segment === 'merchants') {
+        query = `SELECT u.id, u.fcm_token FROM users u JOIN vendors v ON u.id = v.user_id`;
+      } else if (segment === 'riders') {
+        query = `SELECT u.id, u.fcm_token FROM users u JOIN delivery_partners dp ON u.id = dp.user_id`;
+      } else {
+        // all
+        query = `SELECT id, fcm_token FROM users`;
+      }
     }
 
-    const result = await pool.query(query);
+    const result = await pool.query(query, queryParams);
     const users = result.rows;
 
     if (users.length === 0) {
