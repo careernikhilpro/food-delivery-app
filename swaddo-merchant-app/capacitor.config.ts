@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     androidScheme: 'https',
-    hostname: 'swaddo.in'
+    hostname: 'swaddo.in',
+    url: 'https://food-delivery-app-theta-rust.vercel.app'
   },
   plugins: {
     SplashScreen: {
