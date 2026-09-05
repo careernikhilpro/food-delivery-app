@@ -33,7 +33,18 @@ export default function OffersPage() {
   const { data: campaigns = [], mutate: mutateCampaigns } = useSWR('/stalls/merchant/campaigns', fetcher);
 
   const stall = stallRes;
-  const offers = stall?.offers || [];
+  let offers = stall?.offers || [];
+  
+  if (stall && offers.length === 0 && stall.active_offer_title) {
+    offers = [{
+      id: "legacy_offer",
+      title: stall.active_offer_title,
+      discountPercentage: stall.active_offer_discount,
+      minOrderValue: stall.active_offer_min,
+      maxDiscount: stall.active_offer_max,
+      isActive: stall.active_offer_is_active
+    }];
+  }
   
   const handleToggleOffer = async (offerId: string, turnOn: boolean) => {
     if (!stall) return;

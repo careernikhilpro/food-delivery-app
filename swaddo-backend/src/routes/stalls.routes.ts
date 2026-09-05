@@ -641,7 +641,14 @@ router.put('/merchant/offers', authenticate, requireVendor, async (req: AuthRequ
     const vendorId = vendorRes.rows[0].id;
 
     const stallRes = await pool.query(
-      `UPDATE stalls SET offers = $1::jsonb WHERE vendor_id = $2 RETURNING *`,
+      `UPDATE stalls SET 
+        offers = $1::jsonb,
+        active_offer_title = NULL,
+        active_offer_discount = NULL,
+        active_offer_min = NULL,
+        active_offer_max = NULL,
+        active_offer_is_active = false
+       WHERE vendor_id = $2 RETURNING *`,
       [JSON.stringify(offers), vendorId]
     );
 
