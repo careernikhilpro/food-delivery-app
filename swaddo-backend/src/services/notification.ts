@@ -182,6 +182,12 @@ export const notificationService = {
           body
         },
         data: stringifyData(data) || {},
+        android: {
+          priority: 'high' as const,
+          notification: {
+            sound: 'default'
+          }
+        },
         tokens
       };
 
@@ -207,6 +213,12 @@ export const notificationService = {
           body
         },
         data: stringifyData(data) || {},
+        android: {
+          priority: 'high' as const,
+          notification: {
+            sound: 'default'
+          }
+        },
         token
       };
 
