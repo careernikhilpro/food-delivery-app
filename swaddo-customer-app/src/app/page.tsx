@@ -111,15 +111,15 @@ export default function Home() {
     api.get("/stalls").then((res) => {
         if (res.data && Array.isArray(res.data.data)) {
           let backendStalls = res.data.data.map((stall: any) => {
-            let generatedOfferText = null;
+            let generatedOffers: string[] = [];
             if (stall.offers && Array.isArray(stall.offers) && stall.offers.length > 0) {
               const activeOffers = stall.offers.filter((o: any) => o.isActive || o.isActive === 'true');
               if (activeOffers.length > 0) {
-                generatedOfferText = activeOffers.map((o: any) => `${Number(o.discountPercentage || o.discount)}% OFF up to \u20B9${Math.round(o.maxDiscount)} on orders above \u20B9${Math.round(o.minOrderValue || o.minOrder)}`).join(' \u2022 ');
+                generatedOffers = activeOffers.map((o: any) => `${Number(o.discountPercentage || o.discount)}% OFF up to \u20B9${Math.round(o.maxDiscount)} min order \u20B9${Math.round(o.minOrderValue || o.minOrder)}`);
               }
             } 
-            if (!generatedOfferText && stall.active_offer_is_active && stall.active_offer_discount) {
-               generatedOfferText = `${Number(stall.active_offer_discount)}% OFF up to \u20B9${Math.round(stall.active_offer_max)} on orders above \u20B9${Math.round(stall.active_offer_min)}`;
+            if (generatedOffers.length === 0 && stall.active_offer_is_active && stall.active_offer_discount) {
+               generatedOffers = [`${Number(stall.active_offer_discount)}% OFF up to \u20B9${Math.round(stall.active_offer_max)} min order \u20B9${Math.round(stall.active_offer_min)}`];
             }
 
             return {
@@ -128,7 +128,8 @@ export default function Home() {
               rating: Number(stall.rating || 4.1).toFixed(1),
               deliveryTime: `${Number(stall.prep_time) || 30}-${(Number(stall.prep_time) || 30) + 10} mins`,
               categories: stall.tags || "Food",
-              offerText: generatedOfferText,
+              offerText: generatedOffers.length > 0 ? generatedOffers[0] : null,
+              offersList: generatedOffers,
               deliveryInfo: `Free Delivery • Items At ₹${Math.round(stall.min_price || 99)}`,
               isPureVeg: !!stall.is_pure_veg && stall.is_pure_veg !== 'false' && stall.is_pure_veg !== '0',
               isOpen: stall.is_open,
@@ -1060,7 +1061,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                )}
                <h3 className="text-gray-900 font-black text-[22px] tracking-tight leading-none mt-0.5">{data.name}</h3>
             </div>
-            
+           
             <div className="flex items-center gap-1.5 text-gray-700 mt-2">
                <div className="bg-[#00A14F] text-white rounded-full p-[2.5px] shadow-sm">
                   <Star size={9} className="fill-white" />
@@ -1068,7 +1069,16 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                <span className="text-[13px] font-bold">{data.rating} <span className="font-medium text-gray-500">• {data.deliveryTime} • {data.categories}</span></span>
             </div>
             
-            {data.offerText && (
+            {data.offersList && data.offersList.length > 0 ? (
+              <div className="flex flex-col gap-1 mt-1.5">
+                {data.offersList.map((offerStr: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-1.5 text-gray-600">
+                     <TicketPercent size={14} className="text-[#00A14F] shrink-0 mt-[2px]" />
+                     <span className="text-[13px] font-bold text-[#00A14F] leading-tight">{offerStr}</span>
+                  </div>
+                ))}
+              </div>
+            ) : data.offerText && (
               <div className="flex items-center gap-1.5 text-gray-600 mt-1">
                  <TicketPercent size={14} className="text-[#00A14F]" />
                  <span className="text-[13px] font-bold text-[#00A14F]">{data.offerText}</span>
