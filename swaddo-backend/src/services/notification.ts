@@ -188,6 +188,13 @@ export const notificationService = {
             sound: 'default'
           }
         },
+        webpush: {
+          notification: {
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-192x192.png',
+            vibrate: [200, 100, 200, 100, 200, 100, 200]
+          }
+        },
         tokens
       };
 
@@ -217,6 +224,13 @@ export const notificationService = {
           priority: 'high' as const,
           notification: {
             sound: 'default'
+          }
+        },
+        webpush: {
+          notification: {
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-192x192.png',
+            vibrate: [200, 100, 200, 100, 200, 100, 200]
           }
         },
         token
