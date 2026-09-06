@@ -271,9 +271,41 @@ router.put('/stalls/:id', async (req: Request, res: Response) => {
     }
 
     res.json(updateRes.rows[0]);
-  } catch (err) {
-    console.error('Error updating stall:', err);
-    res.status(500).json({ message: 'Error updating stall' });
+    } catch (err) {
+      logger.error('Error updating stall details from admin', err);
+      res.status(500).json({ message: 'Error updating stall' });
+    }
+  });
+
+// Toggle Free Delivery for Stall
+router.patch('/stalls/:id/free-delivery', async (req: Request, res: Response) => {
+  try {
+    const stallId = req.params.id;
+    const { is_free_delivery } = req.body;
+    const result = await pool.query(
+      'UPDATE stalls SET is_free_delivery = $1 WHERE id = $2 RETURNING *',
+      [is_free_delivery, stallId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Stall not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating free delivery status' });
+  }
+});
+
+// Toggle Free Delivery for Menu Item
+router.patch('/vendors/menu/:itemId/free-delivery', async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    const { is_free_delivery } = req.body;
+    const result = await pool.query(
+      'UPDATE menu_items SET is_free_delivery = $1 WHERE id = $2 RETURNING *',
+      [is_free_delivery, itemId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Item not found' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating item free delivery status' });
   }
 });
 
@@ -1071,6 +1103,35 @@ router.patch('/vendors/:id/profile', async (req: Request, res: Response) => {
   } catch (err) {
     logger.error('Update vendor profile error', err);
     res.status(500).json({ message: 'Error updating vendor profile' });
+  }
+});
+
+// Admin Update Vendor Phone Number
+router.patch('/vendors/:id/phone', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { phone } = req.body;
+    
+    // Get the user_id for this vendor
+    const vendorRes = await pool.query('SELECT user_id FROM vendors WHERE id = $1', [id]);
+    if (vendorRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+    
+    const userId = vendorRes.rows[0].user_id;
+    
+    // Check if phone number is already taken
+    const phoneCheck = await pool.query('SELECT id FROM users WHERE phone = $1 AND id != $2', [phone, userId]);
+    if (phoneCheck.rows.length > 0) {
+      return res.status(400).json({ message: 'Phone number already in use by another user' });
+    }
+    
+    // Update phone number
+    const result = await pool.query('UPDATE users SET phone = $1 WHERE id = $2 RETURNING *', [phone, userId]);
+    res.json({ message: 'Phone number updated successfully', user: result.rows[0] });
+  } catch (err) {
+    logger.error('Update vendor phone error', err);
+    res.status(500).json({ message: 'Error updating vendor phone number' });
   }
 });
 

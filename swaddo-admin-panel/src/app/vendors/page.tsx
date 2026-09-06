@@ -17,7 +17,7 @@ export default function Vendors() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [profileFormData, setProfileFormData] = useState({
     fssai_license: "", gst_number: "", pan_number: "", aadhaar_number: "", 
-    bank_account_name: "", bank_account_number: "", bank_ifsc: ""
+    bank_account_name: "", bank_account_number: "", bank_ifsc: "", phone: ""
   });
 
   // Menu Form State
@@ -119,6 +119,12 @@ export default function Vendors() {
     e.preventDefault();
     try {
       await api.patch(`/admin/vendors/${selectedVendor.id}/profile`, profileFormData);
+      if (profileFormData.phone && profileFormData.phone !== selectedVendor.phone) {
+        await api.patch(`/admin/vendors/${selectedVendor.id}/phone`, { phone: profileFormData.phone });
+        // Update local state so it doesn't require hard reload
+        setSelectedVendor({ ...selectedVendor, phone: profileFormData.phone });
+        fetchVendors();
+      }
       setShowProfileEdit(false);
       refreshVendorDetails(selectedVendor.id);
       toast.success('Vendor profile updated successfully');
@@ -225,6 +231,26 @@ export default function Vendors() {
       if (selectedVendor) refreshVendorDetails(selectedVendor.id);
     } catch (error) {
       toast.error("Failed to delete item");
+    }
+  };
+
+  const handleToggleStallFreeDelivery = async (stallId: number, currentStatus: boolean) => {
+    try {
+      await api.patch(`/admin/stalls/${stallId}/free-delivery`, { is_free_delivery: !currentStatus });
+      toast.success(`Free Delivery ${!currentStatus ? 'enabled' : 'disabled'} for stall`);
+      if (selectedVendor) refreshVendorDetails(selectedVendor.id);
+    } catch (error) {
+      toast.error('Failed to update Free Delivery for stall');
+    }
+  };
+
+  const handleToggleItemFreeDelivery = async (itemId: number, currentStatus: boolean) => {
+    try {
+      await api.patch(`/admin/vendors/menu/${itemId}/free-delivery`, { is_free_delivery: !currentStatus });
+      toast.success(`Free Delivery ${!currentStatus ? 'enabled' : 'disabled'} for item`);
+      if (selectedVendor) refreshVendorDetails(selectedVendor.id);
+    } catch (error) {
+      toast.error('Failed to update Free Delivery for item');
     }
   };
 
@@ -367,7 +393,8 @@ export default function Vendors() {
                                   aadhaar_number: vendorDetails.aadhaar_number || "",
                                   bank_account_name: vendorDetails.bank_account_name || "",
                                   bank_account_number: vendorDetails.bank_account_number || "",
-                                  bank_ifsc: vendorDetails.bank_ifsc || ""
+                                  bank_ifsc: vendorDetails.bank_ifsc || "",
+                                  phone: selectedVendor.phone || ""
                                 });
                                 setShowProfileEdit(true);
                               }}
@@ -400,6 +427,10 @@ export default function Vendors() {
                               <div className="space-y-1.5 md:col-span-2">
                                 <label className="text-xs font-bold text-text-muted">Bank Account Name</label>
                                 <input type="text" value={profileFormData.bank_account_name} onChange={e => setProfileFormData({...profileFormData, bank_account_name: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
+                              </div>
+                              <div className="space-y-1.5 md:col-span-2">
+                                <label className="text-xs font-bold text-text-muted">Phone Number</label>
+                                <input type="text" value={profileFormData.phone} onChange={e => setProfileFormData({...profileFormData, phone: e.target.value})} className="w-full p-2 border border-border-subtle rounded-lg text-sm outline-none focus:border-primary" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-text-muted">Bank Account Number</label>
@@ -472,7 +503,13 @@ export default function Vendors() {
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <span className={`ml-auto px-2 py-1 text-xs font-bold rounded-lg border uppercase tracking-wider ${stall.is_open ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                            <button
+                              onClick={() => handleToggleStallFreeDelivery(stall.id, stall.is_free_delivery)}
+                              className={`ml-auto px-2 py-1 text-xs font-bold rounded-lg border uppercase tracking-wider cursor-pointer hover:opacity-80 transition-opacity ${stall.is_free_delivery ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200'}`}
+                            >
+                              {stall.is_free_delivery ? 'Free Delivery: ON' : 'Free Delivery: OFF'}
+                            </button>
+                            <span className={`ml-2 px-2 py-1 text-xs font-bold rounded-lg border uppercase tracking-wider ${stall.is_open ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
                               {stall.is_open ? 'Open' : 'Closed'}
                             </span>
                           </h3>
@@ -541,6 +578,12 @@ export default function Vendors() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => handleToggleItemFreeDelivery(item.id, item.is_free_delivery)}
+                                        className={`px-2 py-1 text-[10px] font-bold rounded border uppercase tracking-wider transition-colors ${item.is_free_delivery ? 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}
+                                      >
+                                        Free Del
+                                      </button>
                                       <button 
                                         onClick={() => {
                                           setActiveStallId(stall.id);

@@ -395,7 +395,8 @@ export default function Checkout() {
 
   const [stallCoords, setStallCoords] = useState<{lat: number, lng: number} | null>(null);
   const [stallInfo, setStallInfo] = useState<any>(null);
-  const [deliveryFee, setDeliveryFee] = useState(20); 
+  const [deliveryFee, setDeliveryFee] = useState(20);
+    const [originalDeliveryFee, setOriginalDeliveryFee] = useState<number | null>(null); 
   const [distanceKms, setDistanceKms] = useState<number | null>(null);
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -454,10 +455,21 @@ export default function Checkout() {
       }
       
       fee = Math.round(fee * 100) / 100;
-      setDeliveryFee(fee);
-      setDistanceKms(dist);
-    }
-  }, [stallCoords, mapLat, mapLng, cartTotal]);
+        
+        const hasFreeDeliveryItem = cart.items.some((item: any) => item.is_free_delivery === true);
+        const isFreeDeliveryStore = stallInfo?.is_free_delivery === true;
+
+        if (isFreeDeliveryStore || hasFreeDeliveryItem) {
+          setOriginalDeliveryFee(fee);
+          setDeliveryFee(0);
+        } else {
+          setOriginalDeliveryFee(null);
+          setDeliveryFee(fee);
+        }
+        
+        setDistanceKms(dist);
+      }
+    }, [stallCoords, mapLat, mapLng, cartTotal, cart.items, stallInfo]);
 
   // Log Checkout Visit
   useEffect(() => {
@@ -931,10 +943,19 @@ export default function Checkout() {
                 <span>Taxes & Fees</span>
                 <span>₹{taxAndFees.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-text-muted">
-                <span>Delivery Fee</span>
-                <span>₹{deliveryFee.toFixed(2)}</span>
-              </div>
+                <div className="flex justify-between text-text-muted">
+                  <span>Delivery Fee</span>
+                  <div className="flex items-center gap-2">
+                    {originalDeliveryFee !== null && (
+                      <span className="line-through text-xs text-gray-400">
+                        &#8377;{originalDeliveryFee.toFixed(2)}
+                      </span>
+                    )}
+                    <span className={originalDeliveryFee !== null ? "text-green-600 font-bold" : ""}>
+                      {originalDeliveryFee !== null ? "FREE" : `\u20B9${deliveryFee.toFixed(2)}`}
+                    </span>
+                  </div>
+                </div>
               {smallOrderFee > 0 && (
                 <div className="flex justify-between text-text-muted">
                   <div className="flex flex-col">
