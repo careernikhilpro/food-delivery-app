@@ -129,8 +129,12 @@ function StallDetailContent() {
       isVeg: item.is_veg === true || item.is_veg === 'true' || item.is_veg === 1 || item.is_veg === '1',
       isSoldOut: item.is_available === false,
       category: (item.category && item.category.trim().toLowerCase() !== "all") ? item.category : "Others",
-      image: (item.image_url && !item.image_url.includes('unsplash.com') && !item.image_url.includes('picsum.photos')) ? item.image_url : ""
-    }));
+        image: (item.image_url && !item.image_url.includes('unsplash.com') && !item.image_url.includes('picsum.photos')) ? item.image_url : "",
+        variants: item.variants,
+        discount_percentage: item.discount_percentage,
+        is_free_delivery: item.is_free_delivery,
+        addons: item.addons
+      }));
   }, [rawMenuData]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [itemFavorites, setItemFavorites] = useState<string[]>([]);
@@ -789,14 +793,14 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 z-50 transition-opacity" onClick={() => setModalState({ isOpen: false, stallId: '', stallName: '', item: null })} />
+      <div className="fixed inset-0 bg-black/60 z-[150] transition-opacity" onClick={() => setModalState({ isOpen: false, stallId: '', stallName: '', item: null })} />
       
       {/* Floating Close Button */}
-      <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-10 h-10 bg-[#2D3035] shadow-lg rounded-full flex items-center justify-center text-white cursor-pointer z-[60]" onClick={() => setModalState({ isOpen: false, stallId: '', stallName: '', item: null })}>
+      <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-10 h-10 bg-[#2D3035] shadow-lg rounded-full flex items-center justify-center text-white cursor-pointer z-[160]" onClick={() => setModalState({ isOpen: false, stallId: '', stallName: '', item: null })}>
         <X size={18} strokeWidth={2.5} />
       </div>
 
-      <div className={`fixed ${cartItemCount > 0 ? 'bottom-[85px]' : 'bottom-0'} left-0 w-full bg-[#f3f4f6] rounded-t-3xl z-50 overflow-hidden flex flex-col max-h-[80vh] transition-all duration-300`}>
+      <div className={`fixed ${cartItemCount > 0 ? 'bottom-[85px]' : 'bottom-0'} left-0 w-full bg-[#f3f4f6] rounded-t-3xl z-[150] overflow-hidden flex flex-col max-h-[80vh] transition-all duration-300`}>
         {/* Header */}
         <div className="bg-white p-4 rounded-t-3xl flex items-center gap-3 shadow-sm z-10 shrink-0 border-b border-gray-100">
           <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 relative bg-gray-50 border border-gray-100">
