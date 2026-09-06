@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useMemo } from "react";
 import useSWR from "swr";
 import { StallCardShimmer, MenuItemShimmer } from "@/components/Shimmer";
-import { ArrowLeft, Share2, Star, Clock, MapPin, Plus, Minus, ShoppingBag, Loader2, Heart, Tag, Search, ChevronDown, BookOpen } from "lucide-react";
+import { X, ArrowLeft, Share2, Star, Clock, MapPin, Plus, Minus, ShoppingBag, Loader2, Heart, Tag, Search, ChevronDown, BookOpen } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -148,7 +148,7 @@ function StallDetailContent() {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement;
       setIsScrolled(target.scrollTop > 50);
-      setIsDeepScrolled(target.scrollTop > 260); // Approx height where search bar disappears
+      setIsDeepScrolled(target.scrollTop > 340); // Approx height where search bar disappears
     };
 
     if (scrollContainer) {
