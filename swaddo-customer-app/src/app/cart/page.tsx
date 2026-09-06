@@ -570,12 +570,31 @@ export default function Cart() {
     return () => clearTimeout(timer);
   }, [showCodConfirmModal, timeLeft]);
   
-  let discountAmount = 0;
-  if (stallOfferIsActive && stallOfferDiscount > 0 && baseItemTotal >= stallOfferMin) {
+    let discountAmount = 0;
+  let activeDiscountPct = 0;
+  
+  if (stallOffers && stallOffers.length > 0) {
+    let bestDiscount = 0;
+    const activeOffers = stallOffers.filter((o: any) => o.isActive || o.is_active);
+    activeOffers.forEach((o: any) => {
+      const minOrder = parseFloat(o.minOrderValue || o.minOrder) || 0;
+      const maxDiscount = parseFloat(o.maxDiscount) || Infinity;
+      const discountPct = parseFloat(o.discountPercentage || o.discount) || 0;
+      if (baseItemTotal >= minOrder) {
+        const amt = Math.min((baseItemTotal * discountPct) / 100, maxDiscount);
+        if (amt > bestDiscount) {
+          bestDiscount = amt;
+          activeDiscountPct = discountPct;
+        }
+      }
+    });
+    discountAmount = Math.round(bestDiscount);
+  } else if (stallOfferIsActive && stallOfferDiscount > 0 && baseItemTotal >= stallOfferMin) {
     discountAmount = Math.round(baseItemTotal * (stallOfferDiscount / 100));
     if (stallOfferMax > 0 && discountAmount > stallOfferMax) {
       discountAmount = stallOfferMax;
     }
+    activeDiscountPct = stallOfferDiscount;
   }
 
   const smallOrderFee = baseItemTotal > 0 && baseItemTotal < 49 ? 9 : 0;
