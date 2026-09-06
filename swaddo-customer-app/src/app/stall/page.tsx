@@ -355,8 +355,10 @@ function StallDetailContent() {
   const renderMenuItem = (item: any) => {
     const qty = cart.stallId === stallId ? (cart.items.find(i => i.id === item.id.toString())?.quantity || 0) : 0;
     const basePrice = Number(item.price) + itemMarkup;
-    const originalPrice = Math.floor(basePrice * 1.3); // Fake original price
-    const otherAppPrice = `${Math.floor(basePrice * 1.4)}-${Math.floor(basePrice * 1.5)}`;
+      const discountPercentage = Number(item.discount_percentage) || 0;
+      const hasDiscount = discountPercentage > 0;
+      const originalPrice = hasDiscount ? Math.round(basePrice / (1 - (discountPercentage / 100))) : basePrice;
+      const otherAppPrice = hasDiscount ? `${Math.floor(originalPrice * 1.05)}-${Math.floor(originalPrice * 1.15)}` : null;
     
     return (
       <motion.div 
@@ -417,14 +419,22 @@ function StallDetailContent() {
           </div>
           
           <div className="flex items-center gap-1.5 mb-1 mt-auto pt-1">
-            <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">₹{originalPrice}</span>
-            <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">₹{basePrice}</span>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
-            <span className="text-gray-500 text-[11px] font-medium">Other apps: ₹{otherAppPrice}</span>
-          </div>
+              {hasDiscount ? (
+                <>
+                  <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">&#8377;{originalPrice}</span>
+                  <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">&#8377;{basePrice}</span>
+                </>
+              ) : (
+                <span className="text-gray-900 text-[13px] font-black">&#8377;{basePrice}</span>
+              )}
+            </div>
+            
+            {hasDiscount && otherAppPrice && (
+              <div className="flex items-center gap-1">
+                <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
+                <span className="text-gray-500 text-[11px] font-medium">Other apps: &#8377;{otherAppPrice}</span>
+              </div>
+            )}
         </div>
       </motion.div>
     );
@@ -638,8 +648,7 @@ function StallDetailContent() {
               <div key={cat} className="pt-2 mb-8">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2">
-                    <PromoIcon className="w-6 h-6 object-contain" />
-                    <h2 className="text-[15px] font-black text-[#C2185B] tracking-tight leading-none uppercase">20% LOWER PRICES vs OTHER APPS</h2>
+                    <h2 className="text-[17px] font-black text-gray-900 tracking-tight leading-none capitalize">{cat}</h2>
                   </div>
                   <ChevronDown size={20} className="text-gray-400" />
                 </div>
