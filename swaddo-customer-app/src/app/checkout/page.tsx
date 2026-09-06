@@ -395,6 +395,7 @@ export default function Checkout() {
 
   const [stallCoords, setStallCoords] = useState<{lat: number, lng: number} | null>(null);
   const [stallInfo, setStallInfo] = useState<any>(null);
+    const [liveMenu, setLiveMenu] = useState<any[]>([]);
   const [deliveryFee, setDeliveryFee] = useState(20);
     const [originalDeliveryFee, setOriginalDeliveryFee] = useState<number | null>(null); 
   const [distanceKms, setDistanceKms] = useState<number | null>(null);
@@ -412,7 +413,7 @@ export default function Checkout() {
 
   useEffect(() => {
     if (cart.stallId) {
-      api.get(`/stalls/${cart.stallId}`).then(res => {
+      api.get(`/stalls/${cart.stallId}`).then(res => { 
         if (res.data) {
           setStallInfo(res.data);
           if (res.data.latitude && res.data.longitude) {
@@ -420,6 +421,7 @@ export default function Checkout() {
           }
         }
       }).catch(console.error);
+      api.get(`/stalls/${cart.stallId}/menu`).then(res => setLiveMenu(res.data)).catch(console.error);
     }
   }, [cart.stallId]);
 
@@ -456,7 +458,10 @@ export default function Checkout() {
       
       fee = Math.round(fee * 100) / 100;
         
-        const hasFreeDeliveryItem = cart.items.some((item: any) => item.is_free_delivery === true);
+        const hasFreeDeliveryItem = cart.items.some((item: any) => {
+          const liveItem = liveMenu.find((m: any) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
+          return liveItem?.is_free_delivery === true || item.is_free_delivery === true;
+        });
         const isFreeDeliveryStore = stallInfo?.is_free_delivery === true;
 
         if (isFreeDeliveryStore || hasFreeDeliveryItem) {
@@ -469,7 +474,7 @@ export default function Checkout() {
         
         setDistanceKms(dist);
       }
-    }, [stallCoords, mapLat, mapLng, cartTotal, cart.items, stallInfo]);
+    }, [stallCoords, mapLat, mapLng, cartTotal, cart.items, stallInfo, liveMenu]);
 
   // Log Checkout Visit
   useEffect(() => {
