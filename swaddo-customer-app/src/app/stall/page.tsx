@@ -393,7 +393,8 @@ function StallDetailContent() {
             ) : qty === 0 ? (
               <button 
                 onClick={() => {
-                  if (item.has_variants && item.variants && item.variants.length > 0) {
+                  const parsedVariants = typeof item.variants === 'string' ? JSON.parse(item.variants) : (item.variants || []);
+                  if (parsedVariants.length > 0) {
                     setVariantModal({ isOpen: true, stallId: stallId as string, stallName: stallData.name, item });
                   } else {
                     handleUpdateCartLocal(item, 1);
@@ -406,7 +407,8 @@ function StallDetailContent() {
             ) : (
               <div className="flex items-center justify-between w-20 h-10 bg-white text-[#D81B60] font-black text-sm rounded-full shadow-md border-[2px] border-[#F48FB1] overflow-hidden px-1">
                 <button onClick={() => {
-                  if (item.has_variants && item.variants && item.variants.length > 0) {
+                  const parsedVariants = typeof item.variants === 'string' ? JSON.parse(item.variants) : (item.variants || []);
+                  if (parsedVariants.length > 0) {
                     if (variantsInCart.length === 1) {
                       updateQuantity(stallId as string, stallData.name, variantsInCart[0], -1);
                     } else {
@@ -418,7 +420,8 @@ function StallDetailContent() {
                 }} className="w-6 h-full flex justify-center items-center hover:bg-pink-50 transition-colors"><Minus size={14} strokeWidth={3.5} /></button>
                 <span className="text-[14px] text-gray-900">{qty}</span>
                 <button onClick={() => {
-                  if (item.has_variants && item.variants && item.variants.length > 0) {
+                  const parsedVariants = typeof item.variants === 'string' ? JSON.parse(item.variants) : (item.variants || []);
+                  if (parsedVariants.length > 0) {
                     setVariantModal({ isOpen: true, stallId: stallId as string, stallName: stallData.name, item });
                   } else {
                     handleUpdateCartLocal(item, 1);
@@ -449,7 +452,6 @@ function StallDetailContent() {
               <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
               <span className="text-gray-500 text-[11px] font-medium">Other apps: &#8377;{otherAppPrice}</span>
             </div>
-            )}
         </div>
       </motion.div>
     );
