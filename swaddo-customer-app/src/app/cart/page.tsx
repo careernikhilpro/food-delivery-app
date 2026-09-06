@@ -270,6 +270,7 @@ export default function Cart() {
         .then((res) => {
           if (res.data) {
             setIsCutleryEnabled(res.data.is_cutlery_enabled === true);
+            setIsFreeDeliveryStore(res.data.is_free_delivery === true);
             setStallOfferTitle(res.data.active_offer_title || null);
             setStallOfferIsActive(res.data.active_offer_is_active === true);
             setStallOfferDiscount(res.data.active_offer_discount ? parseFloat(res.data.active_offer_discount) : 0);
@@ -309,6 +310,8 @@ export default function Cart() {
   const [cookingRequest, setCookingRequest] = useState("");
   const [cutleryNeeded, setCutleryNeeded] = useState(false);
   const [isCutleryEnabled, setIsCutleryEnabled] = useState(false);
+  const [isFreeDeliveryStore, setIsFreeDeliveryStore] = useState(false);
+  const [originalDeliveryFee, setOriginalDeliveryFee] = useState<number | null>(null);
   const [stallOfferTitle, setStallOfferTitle] = useState<string | null>(null);
   const [stallOfferIsActive, setStallOfferIsActive] = useState(false);
   const [stallOfferDiscount, setStallOfferDiscount] = useState(0);
@@ -400,8 +403,20 @@ export default function Cart() {
         }
         
         fee = Math.round(fee * 100) / 100;
+        
+        const hasFreeDeliveryItem = cart.items.some((item) => {
+          const liveItem = stallMenu.find((m) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
+          return liveItem?.is_free_delivery === true || item.is_free_delivery === true;
+        });
 
-        setDeliveryFee(fee);
+        if (isFreeDeliveryStore || hasFreeDeliveryItem) {
+          setOriginalDeliveryFee(fee);
+          setDeliveryFee(0);
+        } else {
+          setOriginalDeliveryFee(null);
+          setDeliveryFee(fee);
+        }
+
         setDistanceKms(actualDist.toFixed(1));
         setFoodMarkup(newMarkup);
       }
@@ -1441,9 +1456,16 @@ export default function Cart() {
                     <span className="text-gray-500 font-medium border-b border-dashed border-gray-400 pb-[1px] leading-none">
                       Delivery Fee | {distanceKms ? distanceKms : "..."} kms
                     </span>
-                    <span className="text-gray-600 font-medium">
-                      ₹{deliveryFee.toFixed(2)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {originalDeliveryFee !== null && (
+                        <span className="line-through text-xs text-gray-400">
+                          &#8377;{originalDeliveryFee.toFixed(2)}
+                        </span>
+                      )}
+                      <span className={originalDeliveryFee !== null ? "text-green-600 font-bold" : "text-gray-600 font-medium"}>
+                        {originalDeliveryFee !== null ? "FREE" : `₹${deliveryFee.toFixed(2)}`}
+                      </span>
+                    </div>
                   </div>
 
                   {smallOrderFee > 0 && (
