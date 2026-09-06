@@ -357,10 +357,8 @@ function StallDetailContent() {
     const variantsInCart = cart.stallId === stallId ? cart.items.filter(i => i.id === item.id.toString() || i.id.startsWith(`${item.id}_`)) : [];
       const qty = variantsInCart.reduce((sum, i) => sum + i.quantity, 0);
     const basePrice = Number(item.price) + itemMarkup;
-      const discountPercentage = Number(item.discount_percentage) || 0;
-      const hasDiscount = discountPercentage > 0;
-      const originalPrice = hasDiscount ? Math.round(basePrice / (1 - (discountPercentage / 100))) : basePrice;
-      const otherAppPrice = hasDiscount ? `${Math.floor(originalPrice * 1.05)}-${Math.floor(originalPrice * 1.15)}` : null;
+      const originalPrice = Math.floor(basePrice * 1.3); // Fake original price
+      const otherAppPrice = `${Math.floor(basePrice * 1.4)}-${Math.floor(basePrice * 1.5)}`;
     
     return (
       <motion.div 
@@ -443,21 +441,14 @@ function StallDetailContent() {
           </div>
           
           <div className="flex items-center gap-1.5 mb-1 mt-auto pt-1">
-              {hasDiscount ? (
-                <>
-                  <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">&#8377;{originalPrice}</span>
-                  <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">&#8377;{basePrice}</span>
-                </>
-              ) : (
-                <span className="text-gray-900 text-[13px] font-black">&#8377;{basePrice}</span>
-              )}
+              <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">&#8377;{originalPrice}</span>
+              <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">&#8377;{basePrice}</span>
             </div>
             
-            {hasDiscount && otherAppPrice && (
-              <div className="flex items-center gap-1">
-                <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
-                <span className="text-gray-500 text-[11px] font-medium">Other apps: &#8377;{otherAppPrice}</span>
-              </div>
+            <div className="flex items-center gap-1">
+              <PromoIcon className="w-4 h-4 object-contain opacity-70 grayscale" />
+              <span className="text-gray-500 text-[11px] font-medium">Other apps: &#8377;{otherAppPrice}</span>
+            </div>
             )}
         </div>
       </motion.div>

@@ -580,7 +580,7 @@ export default function Cart() {
   const GST = Math.round(itemTotal * 0.05);
   const finalTotal = itemTotal + GST + deliveryFee + smallOrderFee;
   
-  const totalSaved = cart.items.reduce((sum, item) => sum + (Math.round(item.price * 1.20) - item.price) * item.quantity, 0) + discountAmount;
+  const totalSaved = cart.items.reduce((sum, item) => sum + (Math.round(item.price * 1.30) - item.price) * item.quantity, 0) + discountAmount;
 
   const handlePlaceOrder = () => {
     if (!cart.stallId || cart.items.length === 0) return;
@@ -947,7 +947,7 @@ export default function Cart() {
                     </div>
                     <div className="flex flex-col items-end w-[40px]">
                       <span className="text-[12px] text-gray-400 line-through font-medium mb-0.5">
-                        ₹{Math.round(item.price * 1.20) * item.quantity}
+                        ₹{Math.round(item.price * 1.30) * item.quantity}
                       </span>
                       <span className="font-bold text-[14px] text-gray-800">
                         ₹{Number(item.price) * item.quantity}
