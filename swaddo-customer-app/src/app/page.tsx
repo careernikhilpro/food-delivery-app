@@ -365,7 +365,7 @@ export default function Home() {
 */}
                  <div className="absolute right-[0%] top-[-10px] w-[65%] h-[200px] bg-[#FCE38A] z-0" style={{ clipPath: 'polygon(40% 0%, 100% 0%, 75% 50%, 85% 100%, 0% 100%, 75% 50%)' }}></div>
                  <div className="relative z-10 flex flex-col max-w-[60%] pl-5 mb-0 justify-center h-full">
-                   <div className="relative w-[190px] h-[110px] mt-0 mb-1">
+                   <div className="relative w-[210px] h-[130px] -mt-4 mb-1 scale-105 origin-left">
                      <Image 
                        src="/chicken_special.png" 
                        alt="Chicken Special Sunday Offer" 
