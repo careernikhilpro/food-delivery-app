@@ -343,24 +343,37 @@ export default function Home() {
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               className="absolute inset-0 w-full h-full flex justify-between items-center"
             >
-               <div className="absolute right-[0%] top-[-10px] w-[65%] h-[200px] bg-[#FCE38A] z-0" style={{ clipPath: 'polygon(40% 0%, 100% 0%, 75% 50%, 85% 100%, 0% 100%, 75% 50%)' }}></div>
-               <div className="relative z-10 flex flex-col max-w-[55%] pl-6 mb-0 justify-center h-full">
-                 <div className="relative w-[170px] h-[120px] mt-0">
-                   <Image 
-                     src="/prices.png" 
-                     alt="Prices That Slay Everyday" 
-                     fill 
-                     className="object-contain object-left"
-                     priority
-                     unoptimized
-                   />
+               {/* HIDDEN OLD BANNER
+                 <div className="absolute right-[0%] top-[-10px] w-[65%] h-[200px] bg-[#FCE38A] z-0" style={{ clipPath: 'polygon(40% 0%, 100% 0%, 75% 50%, 85% 100%, 0% 100%, 75% 50%)' }}></div>
+                 <div className="relative z-10 flex flex-col max-w-[55%] pl-6 mb-0 justify-center h-full">
+                   <div className="relative w-[170px] h-[120px] mt-0">
+                     <Image 
+                       src="/prices.png" 
+                       alt="Prices That Slay Everyday" 
+                       fill 
+                       className="object-contain object-left"
+                       priority
+                       unoptimized
+                     />
+                   </div>
+                   <Link href="/lowest-prices">
+                      <button className="bg-[#FF007F] text-white font-black text-[13px] px-6 py-2.5 rounded-full w-fit uppercase tracking-wide mt-1 relative z-20 ml-0 hover:scale-105 transition-transform">
+                        ORDER NOW
+                      </button>
+                   </Link>
                  </div>
-                 <Link href="/lowest-prices">
-                    <button className="bg-[#FF007F] text-white font-black text-[13px] px-6 py-2.5 rounded-full w-fit uppercase tracking-wide mt-1 relative z-20 ml-0 hover:scale-105 transition-transform">
-                      ORDER NOW
-                    </button>
-                 </Link>
-               </div>
+*/}
+                 <div className="absolute right-[0%] top-[-10px] w-[65%] h-[200px] bg-[#FCE38A] z-0" style={{ clipPath: 'polygon(40% 0%, 100% 0%, 75% 50%, 85% 100%, 0% 100%, 75% 50%)' }}></div>
+                 <div className="relative z-10 flex flex-col max-w-[60%] pl-5 mb-0 justify-center h-full">
+                   <div className="flex flex-col mt-2 mb-2">
+                     <h3 className="font-black text-[#FF007F] text-[22px] uppercase leading-tight drop-shadow-sm" style={{ WebkitTextStroke: '0.5px white' }}>Chicken Special</h3>
+                     <h4 className="font-black text-white text-[18px] uppercase leading-tight drop-shadow-md">Sunday offer</h4>
+                     <p className="font-black text-yellow-300 text-[12px] mt-1 bg-black/20 w-fit px-2 py-0.5 rounded-md backdrop-blur-sm">50rs off + Free delivery</p>
+                   </div>
+                   <button onClick={() => router.push('/stall?id=40')} className="bg-[#FF007F] text-white font-black text-[13px] px-6 py-2.5 rounded-full w-fit uppercase tracking-wide mt-1 relative z-20 ml-0 hover:scale-105 transition-transform shadow-md">
+                     ORDER NOW
+                   </button>
+                 </div>
                  <div className="absolute right-[5px] top-[-5px] w-[145px] h-[145px] rounded-full z-10">
                    <AnimatePresence mode="wait">
                      <motion.div
@@ -711,13 +724,13 @@ export default function Home() {
 
       {/* Store Highlight Banner (Subway) */}
       <div className="w-full px-4 mt-2">
-        <div onClick={() => router.push('/stall/40')} className="relative w-full h-[110px] bg-white rounded-2xl shadow-[0_4px_15px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center overflow-visible cursor-pointer">
+        <div onClick={() => router.push('/stall?id=40')} className="relative w-full h-[110px] bg-white rounded-2xl shadow-[0_4px_15px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center overflow-visible cursor-pointer">
           
           {/* Left Text Content */}
           <div className="pl-4 flex flex-col justify-center z-10 w-[60%] h-full">
             <h3 className="font-black text-[#FF007F] text-[18px] tracking-tight leading-tight">Cravings at &#8377;159*</h3>
             <p className="text-gray-500 text-[14px] font-medium mt-0.5 tracking-tight">From Don't Stop</p>
-            <button onClick={() => router.push('/stall/40')} className="flex items-center gap-1.5 text-[#00A14F] font-black text-[13px] mt-2 tracking-wide uppercase">
+            <button onClick={() => router.push('/stall?id=40')} className="flex items-center gap-1.5 text-[#00A14F] font-black text-[13px] mt-2 tracking-wide uppercase">
               ORDER NOW 
               <div className="bg-[#00A14F] text-white rounded-full flex items-center justify-center w-[18px] h-[18px]">
                 <ChevronRight size={14} strokeWidth={4} className="ml-[1px]" />
