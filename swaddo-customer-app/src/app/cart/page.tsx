@@ -276,6 +276,7 @@ export default function Cart() {
             setStallOfferDiscount(res.data.active_offer_discount ? parseFloat(res.data.active_offer_discount) : 0);
             setStallOfferMin(res.data.active_offer_min ? parseFloat(res.data.active_offer_min) : 0);
             setStallOfferMax(res.data.active_offer_max ? parseFloat(res.data.active_offer_max) : 0);
+            setStallOffers(res.data.offers || []);
             if (res.data.latitude && res.data.longitude) {
               setStallCoords({
                 lat: parseFloat(res.data.latitude),
@@ -317,6 +318,8 @@ export default function Cart() {
   const [stallOfferDiscount, setStallOfferDiscount] = useState(0);
   const [stallOfferMin, setStallOfferMin] = useState(0);
   const [stallOfferMax, setStallOfferMax] = useState(0);
+  const [stallOffers, setStallOffers] = useState<any[]>([]);
+  const [appliedOfferDiscount, setAppliedOfferDiscount] = useState(0);
 
   // Delivery Fee Calculation
   useEffect(() => {
@@ -1441,7 +1444,7 @@ export default function Cart() {
                       <div className="w-full border-t border-dashed border-gray-200"></div>
                       <div className="flex items-center justify-between text-[14px]">
                         <span className="text-[#00A14F] font-bold">
-                          Discount ({stallOfferDiscount}%)
+                          Discount ({activeDiscountPct}%)
                         </span>
                         <span className="text-[#00A14F] font-bold">
                           -₹{discountAmount.toFixed(2)}
