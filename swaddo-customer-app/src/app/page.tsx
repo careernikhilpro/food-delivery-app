@@ -711,7 +711,7 @@ export default function Home() {
 
       {/* Store Highlight Banner (Subway) */}
       <div className="w-full px-4 mt-2">
-        <div className="relative w-full h-[110px] bg-white rounded-2xl shadow-[0_4px_15px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center overflow-visible">
+        <div onClick={() => router.push('/stall/40')} className="relative w-full h-[110px] bg-white rounded-2xl shadow-[0_4px_15px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center overflow-visible cursor-pointer">
           
           {/* Left Text Content */}
           <div className="pl-4 flex flex-col justify-center z-10 w-[60%] h-full">
