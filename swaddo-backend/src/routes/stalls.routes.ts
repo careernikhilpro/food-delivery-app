@@ -524,8 +524,9 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       active_offer_min: stall.active_offer_min,
       active_offer_max: stall.active_offer_max,
       active_offer_is_active: stall.active_offer_is_active,
-      is_cutlery_enabled: stall.is_cutlery_enabled
-    });
+      is_cutlery_enabled: stall.is_cutlery_enabled,
+        is_free_delivery: stall.is_free_delivery
+      });
   } catch (err) {
     next(err);
   }
