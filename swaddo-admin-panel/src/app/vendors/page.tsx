@@ -44,7 +44,9 @@ export default function Vendors() {
     discount_percentage: "",
     is_veg: true,
     is_available: true,
-    addons: [{ name: "", price: "" }] as {name: string, price: string}[]
+    addons: [{ name: "", price: "" }] as {name: string, price: string}[],
+    is_highlighted_offer: false,
+    offer_price: ""
   });
 
   useEffect(() => {
@@ -152,7 +154,8 @@ export default function Vendors() {
     setFormData({ 
       name: "", category: "Main Course", price: "", 
       variants: [{ name: "", price: "" }], prep_time_minutes: "", 
-      discount_percentage: "", is_veg: true, is_available: true, addons: [{ name: "", price: "" }]
+      discount_percentage: "", is_veg: true, is_available: true, addons: [{ name: "", price: "" }],
+      is_highlighted_offer: false, offer_price: ""
     });
     setHasSizes(false);
     setHasAddons(false);
@@ -205,6 +208,8 @@ export default function Vendors() {
         addons: cleanAddons,
         prep_time_minutes: formData.prep_time_minutes ? Number(formData.prep_time_minutes) : 15,
         discount_percentage: hasDiscount && formData.discount_percentage ? Number(formData.discount_percentage) : 0,
+        is_highlighted_offer: formData.is_highlighted_offer,
+        offer_price: formData.offer_price ? Number(formData.offer_price) : null,
       };
 
       if (editingItem) {
@@ -597,7 +602,9 @@ export default function Vendors() {
                                             discount_percentage: item.discount_percentage || "",
                                             is_veg: item.is_veg,
                                             is_available: item.is_available,
-                                            addons: itemAddons.length > 0 ? itemAddons : [{name: "", price: ""}]
+                                            addons: itemAddons.length > 0 ? itemAddons : [{name: "", price: ""}],
+                                            is_highlighted_offer: item.is_highlighted_offer || false,
+                                            offer_price: item.offer_price || ""
                                           });
                                           setHasSizes(itemVariants.length > 0);
                                           setHasAddons(itemAddons.length > 0);

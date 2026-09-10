@@ -1,1 +1,7 @@
-const { pool } = require('./src/db'); pool.query('SELECT column_name FROM information_schema.columns WHERE table_name = ''stalls'';').then(res => { console.log(res.rows); process.exit(0); }).catch(e => { console.error(e); process.exit(1); });
+require('dotenv').config();
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+pool.query("SELECT id, name, variants FROM menu_items WHERE name ILIKE '%Crispy Chicken%'").then(res => { 
+  console.log(JSON.stringify(res.rows, null, 2)); 
+  pool.end(); 
+}).catch(e => console.error(e));
