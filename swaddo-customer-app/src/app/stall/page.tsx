@@ -136,8 +136,16 @@ function StallDetailContent() {
         addons: item.addons,
           is_highlighted_offer: item.is_highlighted_offer,
           offer_price: item.offer_price
-        }));
-  }, [rawMenuData]);
+          }));
+          
+          return mapped.sort((a, b) => {
+            if (a.is_highlighted_offer && !b.is_highlighted_offer) return -1;
+            if (!a.is_highlighted_offer && b.is_highlighted_offer) return 1;
+            if (a.offer_price && !b.offer_price) return -1;
+            if (!a.offer_price && b.offer_price) return 1;
+            return 0;
+          });
+    }, [rawMenuData]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [itemFavorites, setItemFavorites] = useState<string[]>([]);
   const [isVegMode, setIsVegMode] = useState(searchParams.get('veg') === 'true');
