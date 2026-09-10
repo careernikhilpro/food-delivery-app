@@ -483,13 +483,6 @@ export default function Home() {
                   parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
                 }
                 const hasOffer = parsedPrice < basePrice;
-                let parsedPrice = basePrice;
-                if (item.offer_price) {
-                  parsedPrice = Number(item.offer_price);
-                } else if (item.discount_percentage) {
-                  parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
-                }
-                const hasOffer = parsedPrice < basePrice;
               let quantity = 0;
               if (cart.stallId === item.stall_id) {
                 if (item.has_variants) {
