@@ -541,7 +541,13 @@ export default function Vendors() {
                               <p className="p-6 text-center text-text-muted text-sm">No items added to this stall.</p>
                             ) : (
                               <ul className="divide-y divide-border-subtle">
-                                {stall.menu_items.map((item: any) => {
+                                {(() => {
+                                    const sortedItems = [...stall.menu_items].sort((a, b) => {
+                                      if (a.is_highlighted_offer && !b.is_highlighted_offer) return -1;
+                                      if (!a.is_highlighted_offer && b.is_highlighted_offer) return 1;
+                                      return 0;
+                                    });
+                                    return sortedItems.map((item: any) => {
                                   const itemVariants = typeof item.variants === 'string' ? JSON.parse(item.variants) : (item.variants || []);
                                   const itemAddons = typeof item.addons === 'string' ? JSON.parse(item.addons) : (item.addons || []);
                                   return (
@@ -553,6 +559,11 @@ export default function Vendors() {
                                       <div>
                                         <p className="font-semibold text-text-primary flex items-center gap-2">
                                           {item.name}
+                                            {item.is_highlighted_offer && (
+                                              <span className="text-[9px] text-pink-700 bg-pink-100 border border-pink-200 px-1.5 py-0.5 rounded flex items-center gap-0.5 font-black uppercase tracking-wider shadow-sm">
+                                                Top Offer
+                                              </span>
+                                            )}
                                           {Number(item.discount_percentage) > 0 && (
                                             <span className="text-[10px] text-green-700 bg-green-100 px-1.5 py-0.5 rounded flex items-center gap-0.5 font-bold">
                                               <Percent className="w-2.5 h-2.5" /> {item.discount_percentage}% OFF
@@ -573,7 +584,14 @@ export default function Vendors() {
                                         </div>
 
                                         <div className="flex gap-3 mt-1 items-center">
-                                          <span className="font-bold text-primary text-sm">₹{item.price}</span>
+                                          {item.is_highlighted_offer ? (
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="font-bold text-pink-600 text-sm">₹{item.offer_price || (item.discount_percentage ? item.price * (1 - item.discount_percentage/100) : item.price)}</span>
+                                                {item.offer_price && <span className="font-medium text-text-muted text-[11px] line-through">₹{item.price}</span>}
+                                              </div>
+                                            ) : (
+                                              <span className="font-bold text-primary text-sm">₹{item.price}</span>
+                                            )}
                                           {item.is_available ? (
                                             <span className="text-[10px] uppercase font-bold text-green-600 tracking-wider">In Stock</span>
                                           ) : (
@@ -624,8 +642,8 @@ export default function Vendors() {
                                       </button>
                                     </div>
                                   </li>
-                                )})}
-                              </ul>
+                                )})})()}
+                                </ul>
                             )}
                           </div>
                         </div>
