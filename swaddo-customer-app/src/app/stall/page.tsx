@@ -121,7 +121,7 @@ function StallDetailContent() {
 
   const items = useMemo(() => {
     if (!Array.isArray(rawMenuData)) return [];
-    return rawMenuData.map((item) => ({
+    const mapped = rawMenuData.map((item) => ({
       id: item.id?.toString(),
       name: item.name,
       description: item.description || "",
@@ -362,14 +362,17 @@ function StallDetailContent() {
   const renderMenuItem = (item: any) => {
     const variantsInCart = cart.stallId === stallId ? cart.items.filter(i => i.id === item.id.toString() || i.id.startsWith(`${item.id}_`)) : [];
       const qty = variantsInCart.reduce((sum, i) => sum + i.quantity, 0);
-    const originalBasePrice = Number(item.price) + itemMarkup;
-      let basePrice = originalBasePrice;
+    const merchantPrice = Number(item.price);
+      let basePrice = merchantPrice + itemMarkup;
+      
+      // Calculate 20% markup on original merchant price as the display original price
+      const originalPrice = Math.floor(merchantPrice * 1.2);
+      
       if (item.offer_price) {
-        basePrice = Number(item.offer_price) + itemMarkup;
+        basePrice = Number(item.offer_price); // exact offer price
       } else if (item.discount_percentage) {
-        basePrice = Math.floor(originalBasePrice * (1 - Number(item.discount_percentage)/100));
+        basePrice = Math.floor(merchantPrice * (1 - Number(item.discount_percentage)/100));
       }
-      const originalPrice = (item.offer_price || item.discount_percentage) ? originalBasePrice : Math.floor(originalBasePrice * 1.3);
       const hasOffer = !!(item.offer_price || item.discount_percentage);
       const otherAppPrice = `${Math.floor(basePrice * 1.4)}-${Math.floor(basePrice * 1.5)}`;
     
