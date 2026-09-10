@@ -475,7 +475,21 @@ export default function Home() {
           </div>
           <div className="flex overflow-x-auto hide-scrollbar gap-3 px-4 pb-4 snap-x">
             {categoryItems.slice(0, 12).map((item) => {
-              const parsedPrice = Math.round(parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, '')) || 0);
+                const basePrice = Math.round(parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, '')) || 0);
+                let parsedPrice = basePrice;
+                if (item.offer_price) {
+                  parsedPrice = Number(item.offer_price);
+                } else if (item.discount_percentage) {
+                  parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
+                }
+                const hasOffer = parsedPrice < basePrice;
+                let parsedPrice = basePrice;
+                if (item.offer_price) {
+                  parsedPrice = Number(item.offer_price);
+                } else if (item.discount_percentage) {
+                  parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
+                }
+                const hasOffer = parsedPrice < basePrice;
               let quantity = 0;
               if (cart.stallId === item.stall_id) {
                 if (item.has_variants) {
@@ -577,8 +591,17 @@ export default function Home() {
                     
                     <div className="flex items-center justify-between mt-auto">
                       <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-400 line-through leading-none mb-0.5">₹{Math.round(parsedPrice * 1.3)}</span>
-                        <span className="font-black text-[13px] text-gray-900 leading-none">₹{parsedPrice}</span>
+                        {hasOffer ? (
+                            <>
+                              <span className="text-[10px] text-gray-400 line-through leading-none mb-0.5">&#8377;{basePrice}</span>
+                              <span className="font-black text-[13px] text-[#FF007F] leading-none">&#8377;{parsedPrice}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] text-gray-400 line-through leading-none mb-0.5">&#8377;{Math.round(basePrice * 1.3)}</span>
+                              <span className="font-black text-[13px] text-gray-900 leading-none">&#8377;{parsedPrice}</span>
+                            </>
+                          )}
                       </div>
                     </div>
                   </div>
