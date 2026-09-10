@@ -445,7 +445,7 @@ router.get('/lowest-prices', async (req: Request, res: Response, next: NextFunct
       WHERE (m.is_highlighted_offer = true OR m.discount_percentage > 0 OR m.offer_price IS NOT NULL)
           AND m.is_available = true
           AND s.is_active = true
-      ORDER BY m.is_highlighted_offer DESC, m.updated_at DESC
+      ORDER BY m.is_highlighted_offer DESC, m.id DESC
     `);
     res.json({ data: itemsRes.rows });
   } catch (err) {
