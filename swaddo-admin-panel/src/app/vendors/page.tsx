@@ -638,7 +638,7 @@ export default function Vendors() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 20 }}
-                          className="absolute inset-x-0 bottom-0 bg-bg-alt border border-border-subtle shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 rounded-t-3xl z-30 max-h-[80vh] overflow-y-auto"
+                          className="fixed bottom-0 right-0 w-full md:w-[600px] bg-bg-alt border border-border-subtle shadow-[0_-20px_60px_rgba(0,0,0,0.2)] p-6 rounded-t-3xl z-[100] max-h-[85vh] overflow-y-auto"
                         >
                           <div className="flex justify-between items-center mb-4 sticky top-0 bg-bg-alt/90 backdrop-blur-sm z-10 py-2 border-b border-border-subtle">
                             <h3 className="text-lg font-heading font-bold text-text-primary">
