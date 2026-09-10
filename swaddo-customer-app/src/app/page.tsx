@@ -367,7 +367,7 @@ export default function Home() {
                  <div className="relative z-10 flex flex-col max-w-[60%] pl-5 mb-0 justify-center h-full">
                    <div className="relative w-[210px] h-[130px] -mt-4 mb-1 scale-105 origin-left">
                      <Image 
-                       src="/chicken_special.png" 
+                       src="/chicken_biryani_offer.png" 
                        alt="Chicken Special Sunday Offer" 
                        fill 
                        className="object-contain object-left"
@@ -375,7 +375,7 @@ export default function Home() {
                        unoptimized
                      />
                    </div>
-                   <button onClick={() => router.push('/stall?id=40')} className="bg-[#FF007F] text-white font-black text-[13px] px-6 py-2.5 rounded-full w-fit uppercase tracking-wide mt-1 relative z-20 ml-0 hover:scale-105 transition-transform shadow-md">
+                   <button onClick={() => router.push('/lowest-prices')} className="bg-[#FF007F] text-white font-black text-[13px] px-6 py-2.5 rounded-full w-fit uppercase tracking-wide mt-1 relative z-20 ml-0 hover:scale-105 transition-transform shadow-md">
                      ORDER NOW
                    </button>
                  </div>
