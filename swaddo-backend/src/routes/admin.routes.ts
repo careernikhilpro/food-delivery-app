@@ -313,32 +313,55 @@ router.patch('/vendors/menu/:itemId/free-delivery', async (req: Request, res: Re
 router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
   try {
     const { stallId } = req.params;
-    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_highlighted_offer, offer_price } = req.body;
+    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons } = req.body;
     
+    if (!name || !price) return res.status(400).json({ message: 'Name and price are required' });
+
     const result = await pool.query(
-      `UPDATE menu_items 
-       SET name = COALESCE($1, name), 
-           description = COALESCE($2, description), 
-           price = COALESCE($3, price), 
-           is_veg = COALESCE($4, is_veg), 
-           is_available = COALESCE($5, is_available), 
-           category = COALESCE($6, category),
-           variants = $7,
-           prep_time_minutes = COALESCE($8, prep_time_minutes),
-           discount_percentage = COALESCE($9, discount_percentage),
-           addons = COALESCE($10, addons),
-           is_highlighted_offer = COALESCE($12, is_highlighted_offer),
-           offer_price = $13
-       WHERE id = $11 RETURNING *`,
+      'INSERT INTO menu_items (stall_id, name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
       [
-        name, description, price, is_veg, is_available, category, 
-        variants ? JSON.stringify(variants) : null, prep_time_minutes, discount_percentage, 
-        addons ? JSON.stringify(addons) : null, 
-        itemId,
-        is_highlighted_offer !== undefined ? is_highlighted_offer : null,
-        offer_price !== undefined ? offer_price : null
+        stallId, name, description || null, price, is_veg ?? true, is_available ?? true, category || 'Main Course',
+        variants ? JSON.stringify(variants) : '[]', prep_time_minutes || 15, discount_percentage || 0,
+        addons ? JSON.stringify(addons) : '[]'
       ]
     );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    logger.error('Error adding admin menu item', error);
+    res.status(500).json({ message: 'Error adding menu item' });
+  }
+});
+
+// Update Menu Item
+router.put('/vendors/menu/:itemId', async (req: Request, res: Response) => {
+    try {
+      const { itemId } = req.params;
+      const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_highlighted_offer, offer_price } = req.body;
+      
+      const result = await pool.query(
+        `UPDATE menu_items 
+         SET name = COALESCE($1, name), 
+             description = COALESCE($2, description), 
+             price = COALESCE($3, price), 
+             is_veg = COALESCE($4, is_veg), 
+             is_available = COALESCE($5, is_available), 
+             category = COALESCE($6, category),
+             variants = $7,
+             prep_time_minutes = COALESCE($8, prep_time_minutes),
+             discount_percentage = COALESCE($9, discount_percentage),
+             addons = COALESCE($10, addons),
+             is_highlighted_offer = COALESCE($12, is_highlighted_offer),
+             offer_price = $13
+         WHERE id = $11 RETURNING *`,
+        [
+          name, description, price, is_veg, is_available, category, 
+          variants ? JSON.stringify(variants) : null, prep_time_minutes, discount_percentage, 
+          addons ? JSON.stringify(addons) : null, 
+          itemId,
+          is_highlighted_offer !== undefined ? is_highlighted_offer : null,
+          offer_price !== undefined ? offer_price : null
+        ]
+      );
     
     if (result.rows.length === 0) return res.status(404).json({ message: 'Item not found' });
     res.json(result.rows[0]);
