@@ -460,7 +460,8 @@ router.get('/meals-under-99', async (req: Request, res: Response, next: NextFunc
       SELECT 
         m.id, m.stall_id, m.name, m.description, m.price, m.image_url, 
         m.category, m.is_veg, m.is_available, m.has_variants, m.variants, m.is_free_delivery,
-        s.name as stall_name, s.rating as stall_rating, s.location as stall_address, s.is_pure_veg as stall_is_pure_veg, s.is_open
+          m.offer_price, m.discount_percentage, m.is_highlighted_offer,
+          s.name as stall_name, s.rating as stall_rating, s.location as stall_address, s.is_pure_veg as stall_is_pure_veg, s.is_open
       FROM menu_items m
       JOIN stalls s ON m.stall_id = s.id
       WHERE (CAST(m.price as numeric) <= 99 OR CAST(m.offer_price as numeric) <= 99 OR (m.discount_percentage > 0 AND CAST(m.price as numeric) * (1 - m.discount_percentage/100) <= 99))
