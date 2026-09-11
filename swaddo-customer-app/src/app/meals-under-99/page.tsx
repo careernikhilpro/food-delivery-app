@@ -656,8 +656,14 @@ export default function MealsUnder99Page() {
                 }
                 
                 return gridFilteredItems.map((item) => {
-                const parsedPrice = typeof item.price === 'number' ? item.price : parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, ''));
-                const originalPrice = Math.round(parsedPrice * 1.2);
+                const merchantPrice = typeof item.price === 'number' ? item.price : parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, ''));
+                let parsedPrice = merchantPrice;
+                if (item.offer_price) {
+                  parsedPrice = Number(item.offer_price);
+                } else if (item.discount_percentage) {
+                  parsedPrice = Math.round(merchantPrice * (1 - Number(item.discount_percentage)/100));
+                }
+                const originalPrice = parsedPrice < merchantPrice ? merchantPrice : Math.round(merchantPrice * 1.3);
                 let quantity = 0;
                 if (cart.stallId === item.stall_id?.toString()) {
                   if (item.has_variants) {
@@ -682,7 +688,7 @@ export default function MealsUnder99Page() {
                     </div>
                     
                     {/* Add Button */}
-                    {quantity > 0 ? (
+                    {item.is_open === false ? null : quantity > 0 ? (
                       <div className="absolute bottom-2 right-2 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
                           onClick={(e) => { 

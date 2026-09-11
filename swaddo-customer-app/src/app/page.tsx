@@ -511,7 +511,7 @@ export default function Home() {
                     </div>
                     
                     {/* Plus Button */}
-                    {quantity > 0 ? (
+                    {item.is_open === false ? null : quantity > 0 ? (
                       <div className="absolute -bottom-4 right-3 h-7 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
                           onClick={(e) => { 

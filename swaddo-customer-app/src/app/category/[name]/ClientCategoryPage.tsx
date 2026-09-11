@@ -144,8 +144,15 @@ export default function CategoryPage() {
         {/* Item Grid */}
         <div className="grid grid-cols-2 gap-4">
           {items.map((item) => {
-            const parsedPrice = typeof item.price === 'number' ? item.price : parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, ''));
-            const originalPrice = Math.round(parsedPrice * 1.2);
+            const merchantPrice = typeof item.price === 'number' ? item.price : parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, ''));
+            let parsedPrice = merchantPrice;
+            if (item.offer_price) {
+              parsedPrice = Number(item.offer_price);
+            } else if (item.discount_percentage) {
+              parsedPrice = Math.round(merchantPrice * (1 - Number(item.discount_percentage)/100));
+            }
+            const hasOffer = parsedPrice < merchantPrice;
+            const originalPrice = hasOffer ? merchantPrice : Math.round(merchantPrice * 1.3);
             let quantity = 0;
             if (String(cart.stallId) === String(item.stall_id)) {
               if (item.has_variants) {
@@ -174,7 +181,7 @@ export default function CategoryPage() {
                     </div>
                     
                     {/* Plus Button */}
-                    {quantity > 0 ? (
+                    {item.is_open === false ? null : quantity > 0 ? (
                       <div className="absolute -bottom-4 right-3 h-8 bg-white rounded-lg flex items-center justify-between shadow-md border border-gray-100 px-1 overflow-hidden z-20">
                         <button 
                           onClick={(e) => { 
@@ -243,8 +250,17 @@ export default function CategoryPage() {
                     
                     <div className="flex items-center justify-between mt-auto">
                       <div className="flex flex-col">
-                        <span className="text-[11px] text-gray-400 line-through leading-none mb-1">₹{Math.round(parsedPrice * 1.3)}</span>
-                        <span className="font-black text-[15px] text-gray-900 leading-none">₹{parsedPrice}</span>
+                        {hasOffer ? (
+                          <>
+                            <span className="text-[11px] text-gray-400 line-through leading-none mb-1">&#8377;{originalPrice}</span>
+                            <span className="font-black text-[15px] text-[#FF007F] leading-none">&#8377;{parsedPrice}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[11px] text-gray-400 line-through leading-none mb-1">&#8377;{Math.round(merchantPrice * 1.3)}</span>
+                            <span className="font-black text-[15px] text-gray-900 leading-none">&#8377;{parsedPrice}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

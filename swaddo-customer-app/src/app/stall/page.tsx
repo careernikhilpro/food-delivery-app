@@ -373,16 +373,14 @@ function StallDetailContent() {
     const merchantPrice = Number(item.price);
       let basePrice = merchantPrice + itemMarkup;
       
-      // Calculate 20% markup on original merchant price as the display original price
-      const originalPrice = Math.floor(merchantPrice * 1.2);
-      
       if (item.offer_price) {
         basePrice = Number(item.offer_price); // exact offer price
       } else if (item.discount_percentage) {
         basePrice = Math.floor(merchantPrice * (1 - Number(item.discount_percentage)/100));
       }
       const hasOffer = !!(item.offer_price || item.discount_percentage);
-      const otherAppPrice = `${Math.floor(basePrice * 1.4)}-${Math.floor(basePrice * 1.5)}`;
+      const originalPrice = hasOffer ? merchantPrice : Math.floor(merchantPrice * 1.3);
+      const otherAppPrice = `${Math.floor(merchantPrice * 1.2)}-${Math.floor(merchantPrice * 1.2) + 10}`;
     
     return (
       <motion.div 
