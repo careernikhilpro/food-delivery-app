@@ -459,9 +459,17 @@ export default function Checkout() {
       fee = Math.round(fee * 100) / 100;
         
         const hasFreeDeliveryItem = cart.items.some((item: any) => {
-          const liveItem = liveMenu.find((m: any) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
-          return liveItem?.is_free_delivery === true || item.is_free_delivery === true;
-        });
+            const liveItem = liveMenu.find((m: any) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
+            const checkItem = liveItem || item;
+            if (checkItem?.is_free_delivery === true) {
+              const minAmt = Number(checkItem.free_delivery_min_amount) || 0;
+              const maxKm = checkItem.free_delivery_max_km ? Number(checkItem.free_delivery_max_km) : Infinity;
+              if (cartTotal >= minAmt && dist <= maxKm) {
+                return true;
+              }
+            }
+            return false;
+          });
         const isFreeDeliveryStore = stallInfo?.is_free_delivery === true;
 
         if (isFreeDeliveryStore || hasFreeDeliveryItem) {
