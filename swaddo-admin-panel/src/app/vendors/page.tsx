@@ -46,7 +46,10 @@ export default function Vendors() {
     is_available: true,
     addons: [{ name: "", price: "" }] as {name: string, price: string}[],
     is_highlighted_offer: false,
-    offer_price: ""
+      offer_price: "",
+      is_free_delivery: false,
+      free_delivery_min_amount: "",
+      free_delivery_max_km: ""
   });
 
   useEffect(() => {
@@ -155,7 +158,11 @@ export default function Vendors() {
       name: "", category: "Main Course", price: "", 
       variants: [{ name: "", price: "" }], prep_time_minutes: "", 
       discount_percentage: "", is_veg: true, is_available: true, addons: [{ name: "", price: "" }],
-      is_highlighted_offer: false, offer_price: ""
+      is_highlighted_offer: false,
+      offer_price: "",
+      is_free_delivery: false,
+      free_delivery_min_amount: "",
+      free_delivery_max_km: ""
     });
     setHasSizes(false);
     setHasAddons(false);
@@ -210,6 +217,9 @@ export default function Vendors() {
         discount_percentage: hasDiscount && formData.discount_percentage ? Number(formData.discount_percentage) : 0,
         is_highlighted_offer: formData.is_highlighted_offer,
         offer_price: formData.offer_price ? Number(formData.offer_price) : null,
+          is_free_delivery: formData.is_free_delivery,
+          free_delivery_min_amount: formData.free_delivery_min_amount ? Number(formData.free_delivery_min_amount) : 0,
+          free_delivery_max_km: formData.free_delivery_max_km ? Number(formData.free_delivery_max_km) : null,
       };
 
       if (editingItem) {
@@ -622,7 +632,10 @@ export default function Vendors() {
                                             is_available: item.is_available,
                                             addons: itemAddons.length > 0 ? itemAddons : [{name: "", price: ""}],
                                             is_highlighted_offer: item.is_highlighted_offer || false,
-                                            offer_price: item.offer_price || ""
+                                            offer_price: item.offer_price || "",
+                                            is_free_delivery: item.is_free_delivery || false,
+                                            free_delivery_min_amount: item.free_delivery_min_amount || "",
+                                            free_delivery_max_km: item.free_delivery_max_km || ""
                                           });
                                           setHasSizes(itemVariants.length > 0);
                                           setHasAddons(itemAddons.length > 0);
@@ -756,7 +769,52 @@ export default function Vendors() {
                               )}
                             </div>
 
+
+                            {/* Free Delivery Options */}
+                            <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
+                              <div className="flex items-center justify-between mb-3">
+                                <label className="text-xs font-bold text-blue-700 uppercase flex items-center gap-1.5">
+                                  Enable Free Delivery <span className="text-[10px] lowercase text-blue-500 font-medium tracking-wide">(Set rules)</span>
+                                </label>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={formData.is_free_delivery}
+                                    onChange={(e) => setFormData({...formData, is_free_delivery: e.target.checked})}
+                                  />
+                                  <div className="w-9 h-5 bg-blue-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                                </label>
+                              </div>
+                              
+                              {formData.is_free_delivery && (
+                                <div className="grid grid-cols-2 gap-3 mb-1">
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-blue-700 uppercase mb-1">Min Order Amt (₹)</label>
+                                    <input 
+                                      type="number"
+                                      value={formData.free_delivery_min_amount}
+                                      onChange={(e) => setFormData({...formData, free_delivery_min_amount: e.target.value})}
+                                      className="w-full px-4 py-2.5 rounded-xl border border-blue-200 bg-white focus:outline-none focus:border-blue-500 text-sm font-medium text-blue-700"
+                                      placeholder="0 for all"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-blue-700 uppercase mb-1">Max Distance (km)</label>
+                                    <input 
+                                      type="number"
+                                      value={formData.free_delivery_max_km}
+                                      onChange={(e) => setFormData({...formData, free_delivery_max_km: e.target.value})}
+                                      className="w-full px-4 py-2.5 rounded-xl border border-blue-200 bg-white focus:outline-none focus:border-blue-500 text-sm font-medium text-blue-700"
+                                      placeholder="Blank for any"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
                             <div className="border border-border-subtle rounded-2xl overflow-hidden bg-bg-main">
+
                               <button 
                                 onClick={() => setShowAdvanced(!showAdvanced)}
                                 className="w-full p-4 flex items-center justify-between bg-white hover:bg-bg-alt transition-colors"
