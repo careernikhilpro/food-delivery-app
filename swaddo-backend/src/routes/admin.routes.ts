@@ -313,16 +313,18 @@ router.patch('/vendors/menu/:itemId/free-delivery', async (req: Request, res: Re
 router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
   try {
     const { stallId } = req.params;
-    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons } = req.body;
-    
+    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_free_delivery, free_delivery_min_amount, free_delivery_max_km } = req.body;
     if (!name || !price) return res.status(400).json({ message: 'Name and price are required' });
 
     const result = await pool.query(
-      'INSERT INTO menu_items (stall_id, name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+      'INSERT INTO menu_items (stall_id, name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_free_delivery, free_delivery_min_amount, free_delivery_max_km) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *',
       [
         stallId, name, description || null, price, is_veg ?? true, is_available ?? true, category || 'Main Course',
         variants ? JSON.stringify(variants) : '[]', prep_time_minutes || 15, discount_percentage || 0,
-        addons ? JSON.stringify(addons) : '[]'
+        addons ? JSON.stringify(addons) : '[]',
+        is_free_delivery || false,
+        free_delivery_min_amount || 0,
+        free_delivery_max_km || null
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -336,7 +338,7 @@ router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
 router.put('/vendors/menu/:itemId', async (req: Request, res: Response) => {
     try {
       const { itemId } = req.params;
-      const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_highlighted_offer, offer_price } = req.body;
+      const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_highlighted_offer, offer_price, is_free_delivery, free_delivery_min_amount, free_delivery_max_km } = req.body;
       
       const result = await pool.query(
         `UPDATE menu_items 
@@ -351,7 +353,10 @@ router.put('/vendors/menu/:itemId', async (req: Request, res: Response) => {
              discount_percentage = COALESCE($9, discount_percentage),
              addons = COALESCE($10, addons),
              is_highlighted_offer = COALESCE($12, is_highlighted_offer),
-             offer_price = $13
+             offer_price = $13,
+             is_free_delivery = COALESCE($14, is_free_delivery),
+             free_delivery_min_amount = COALESCE($15, free_delivery_min_amount),
+             free_delivery_max_km = COALESCE($16, free_delivery_max_km)
          WHERE id = $11 RETURNING *`,
         [
           name, description, price, is_veg, is_available, category, 
@@ -359,7 +364,10 @@ router.put('/vendors/menu/:itemId', async (req: Request, res: Response) => {
           addons ? JSON.stringify(addons) : null, 
           itemId,
           is_highlighted_offer !== undefined ? is_highlighted_offer : null,
-          offer_price !== undefined ? offer_price : null
+          offer_price !== undefined ? offer_price : null,
+          is_free_delivery !== undefined ? is_free_delivery : null,
+          free_delivery_min_amount !== undefined ? free_delivery_min_amount : null,
+          free_delivery_max_km !== undefined ? free_delivery_max_km : null
         ]
       );
     
