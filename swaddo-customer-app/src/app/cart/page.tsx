@@ -560,6 +560,12 @@ export default function Cart() {
     fetchAddresses();
   }, []);
 
+  useEffect(() => {
+    if (isMapOpen && !mapSearchQuery && mapLat && mapLng) {
+      handleMapDragEnd(mapLat, mapLng);
+    }
+  }, [isMapOpen]);
+
   const baseItemTotal = cartTotal + foodMarkup * cartItemCount;
 
   useEffect(() => {
@@ -1946,7 +1952,7 @@ export default function Cart() {
                   type="text"
                   value={houseNumber}
                   onChange={(e) => setHouseNumber(e.target.value)}
-                  placeholder="House / Flat / Block No."
+                  placeholder="Full Address"
                   className="w-full bg-bg-main border border-border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
                 />
               </div>

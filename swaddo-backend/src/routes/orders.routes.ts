@@ -381,8 +381,8 @@ router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response
       const itemCount = parseInt(orderMetaRes.rows[0]?.item_count || '0');
       const itemsSummary = orderMetaRes.rows[0]?.items_summary || '';
       
-      let dropoffDistance = 3.5; // fallback
-      let dropoffText = "3.5 km";
+      let dropoffDistance = 1.0; // fallback
+      let dropoffText = "1.0 km";
       if (stall && stall.latitude && stall.longitude && order.delivery_lat && order.delivery_lng) {
         try {
           const googleRes = await routeETA(stall.latitude, stall.longitude, order.delivery_lat, order.delivery_lng);

@@ -176,7 +176,7 @@ export default function Addresses() {
 
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Address Details</label>
-                  <input type="text" value={houseNumber} onChange={e => setHouseNumber(e.target.value)} placeholder="House / Flat / Block No." className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-[15px] font-medium outline-none focus:border-primary mb-2" />
+                  <input type="text" value={houseNumber} onChange={e => setHouseNumber(e.target.value)} placeholder="Full Address" className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-[15px] font-medium outline-none focus:border-primary mb-2" />
                   <textarea value={fullAddress} onChange={e => setFullAddress(e.target.value)} placeholder="Full Street Address / Area" rows={3} className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-[15px] font-medium outline-none focus:border-primary resize-none" />
                 </div>
               </div>
