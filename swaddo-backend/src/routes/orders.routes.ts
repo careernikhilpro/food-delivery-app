@@ -112,15 +112,16 @@ router.post('/', authenticate, orderLimiter, async (req: AuthRequest, res: Respo
     const initialStatus = isCod ? 'pending' : 'payment_pending';
     
     // Haversine Distance Check and Open Status
-    const stallRes = await client.query('SELECT latitude, longitude, is_open FROM stalls WHERE id = $1', [stallId]);
-    if (stallRes.rows.length === 0) {
-      return res.status(404).json({ message: `Stall not found for ID: ${stallId}. Please check your cart or database.` });
-    }
-    const stallLoc = stallRes.rows[0];
-    
-    if (!stallLoc.is_open) {
-      return res.status(400).json({ message: 'Stall is currently not accepting orders' });
-    }
+    const stallRes = await client.query('SELECT latitude, longitude, is_open, opening_time FROM stalls WHERE id = $1', [stallId]);
+      if (stallRes.rows.length === 0) {
+        return res.status(404).json({ message: `Stall not found for ID: ${stallId}. Please check your cart or database.` });
+      }
+      const stallLoc = stallRes.rows[0];
+      
+      if (!stallLoc.is_open) {
+        const openTime = stallLoc.opening_time || 'later';
+        return res.status(400).json({ message: `Store closed, come at ${openTime}` });
+      }
 
     // Validate Menu Items Availability
     if (items && items.length > 0) {
