@@ -768,8 +768,17 @@ export default function MealsUnder99Page() {
                     </div>
                     
                     <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-[11px] text-gray-400 line-through">₹{originalPrice}</span>
-                      <span className="text-[13px] font-bold text-[#FF007F]">₹{parsedPrice}</span>
+                      {parsedPrice < merchantPrice ? (
+                        <>
+                          <span className="text-[11px] text-gray-400 line-through">&#8377;{merchantPrice}</span>
+                          <span className="text-[13px] font-bold text-[#FF007F]">&#8377;{parsedPrice}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[11px] text-gray-400 line-through">&#8377;{Math.round(merchantPrice * 1.3)}</span>
+                          <span className="text-[13px] font-bold text-gray-900">&#8377;{parsedPrice}</span>
+                        </>
+                      )}
                     </div>
 
                     <p className="text-[10px] font-bold text-[#FF007F] mt-1 flex items-center gap-1">

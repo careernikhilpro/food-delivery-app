@@ -474,7 +474,7 @@ function StallDetailContent() {
                 ) : (
                   <>
                     <span className="text-gray-400 text-[12px] font-semibold line-through decoration-gray-300">&#8377;{originalPrice}</span>
-                    <span className="bg-pink-100 text-[#C2185B] text-[11px] font-black px-1.5 py-0.5 rounded">&#8377;{basePrice}</span>
+                    <span className="text-gray-900 text-[13px] font-black leading-none">&#8377;{basePrice}</span>
                   </>
                 )}
             </div>
