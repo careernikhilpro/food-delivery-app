@@ -175,8 +175,21 @@ export default function Home() {
     
     api.get(`/stalls/search/all?q=${searchTerm}`).then((res) => {
       if (res.data && Array.isArray(res.data.dishes)) {
-        const parsePrice = (price: any) => typeof price === 'number' ? price : parseFloat((price || "0").toString().replace(/[^0-9.]/g, ''));
-        const sortedDishes = res.data.dishes.sort((a: any, b: any) => parsePrice(a.price) - parsePrice(b.price));
+        const getFinalPrice = (item: any) => {
+            if (item.offer_price) return Number(item.offer_price);
+            const merchantPrice = typeof item.price === 'number' ? item.price : parseFloat((item.price || "0").toString().replace(/[^0-9.]/g, ''));
+            if (item.discount_percentage) return Math.round(merchantPrice * (1 - Number(item.discount_percentage)/100));
+            return merchantPrice;
+          };
+          const sortedDishes = res.data.dishes.sort((a: any, b: any) => {
+            // First sort by offer
+            const aHasOffer = !!a.offer_price;
+            const bHasOffer = !!b.offer_price;
+            if (aHasOffer && !bHasOffer) return -1;
+            if (!aHasOffer && bHasOffer) return 1;
+            // Then by final price
+            return getFinalPrice(a) - getFinalPrice(b);
+          });
         setCategoryItems(sortedDishes);
         categoryCache.current[activeCategory] = sortedDishes;
       }
@@ -467,7 +480,7 @@ export default function Home() {
         <div className="w-full mt-4 mb-2">
           <div className="flex justify-between items-center mb-3 px-4">
             <h2 className="text-[18px] font-black text-gray-800 tracking-tight">
-              {activeCategory.endsWith('s') ? activeCategory.slice(0, -1) : activeCategory} from ₹{categoryItems[0]?.price ? parseInt(categoryItems[0].price.toString()) : '49'}
+              {activeCategory.endsWith('s') ? activeCategory.slice(0, -1) : activeCategory} from ₹{categoryItems[0] ? Math.round(categoryItems[0].offer_price ? Number(categoryItems[0].offer_price) : (categoryItems[0].discount_percentage ? Number(categoryItems[0].price) * (1 - Number(categoryItems[0].discount_percentage)/100) : Number(categoryItems[0].price))) : '49'}
             </h2>
             <Link href={`/category/${activeCategory}`}>
               <button className="text-[13px] font-bold text-gray-600 flex items-center hover:text-gray-900 transition-colors">See All <ChevronRight size={16} className="ml-0.5" /></button>
