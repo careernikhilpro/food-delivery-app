@@ -368,8 +368,11 @@ function StallDetailContent() {
       name: item.name, 
       price: finalPrice, 
       markup: markup, 
-      isVeg: item.isVeg ?? true 
-    }, delta);
+      isVeg: item.isVeg ?? true,
+        is_free_delivery: item.is_free_delivery,
+        free_delivery_min_amount: item.free_delivery_min_amount,
+        free_delivery_max_km: item.free_delivery_max_km
+      }, delta);
   };
 
   const dynamicCategories = ["All", ...Array.from(new Set(items.map(i => i.category)))];
@@ -842,7 +845,10 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
     updateQuantity(stallId, stallName, { 
       id: variantId, 
       name: `${item.name} (${selectedVariant.name})`, 
-      price: getVariantPrice(selectedVariant.price), 
+      price: getVariantPrice(selectedVariant.price),
+      is_free_delivery: item.is_free_delivery,
+      free_delivery_min_amount: item.free_delivery_min_amount,
+      free_delivery_max_km: item.free_delivery_max_km, 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
   };
@@ -884,7 +890,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
                   <span className="font-bold text-[15px] text-gray-800">{v.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-[14px] text-gray-600">&#8377;{v.price}</span>
+                  <span className="font-medium text-[14px] text-gray-600">&#8377;{getVariantPrice(v.price)}</span>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedIndex === i ? 'border-[#00A14F]' : 'border-gray-300'}`}>
                     {selectedIndex === i && <div className="w-2.5 h-2.5 bg-[#00A14F] rounded-full"></div>}
                   </div>

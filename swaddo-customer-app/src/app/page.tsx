@@ -1322,7 +1322,10 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
     updateQuantity(stallId, stallName, { 
       id: variantId, 
       name: `${item.name} (${selectedVariant.name})`, 
-      price: getVariantPrice(selectedVariant.price), 
+      price: getVariantPrice(selectedVariant.price),
+      is_free_delivery: item.is_free_delivery,
+      free_delivery_min_amount: item.free_delivery_min_amount,
+      free_delivery_max_km: item.free_delivery_max_km, 
       image: item.image 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
@@ -1393,7 +1396,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
             onClick={handleAdd}
             className="flex-1 h-[48px] bg-[#00A14F] text-white font-extrabold rounded-full text-[15px] shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           >
-            Add Item | ₹{(selectedVariant?.price || 0) * modalQty}
+            Add Item | ₹{getVariantPrice(selectedVariant?.price || 0) * modalQty}
           </button>
         </div>
 
