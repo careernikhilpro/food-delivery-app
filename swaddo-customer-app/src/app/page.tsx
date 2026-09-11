@@ -510,7 +510,12 @@ export default function Home() {
               const fallbackImg = categories.find(c => c.name === activeCategory)?.image || "/categories/burger.png";
 
               return (
-                <div key={item.id} className="flex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2">
+                <div key={item.id} className={`flex flex-col bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] overflow-visible relative border border-gray-100/50 shrink-0 w-[150px] snap-start mb-2 ${item.is_open === false ? 'grayscale opacity-80 pointer-events-none' : ''}`}>
+                    {item.is_open === false && (
+                      <div className="absolute inset-0 bg-black/5 z-[60] flex items-center justify-center rounded-2xl">
+                        <span className="bg-black/80 text-white font-black text-[11px] px-2 py-1 border border-white rounded -rotate-12 shadow-sm">CLOSED</span>
+                      </div>
+                    )}
                  
                   {/* Image Area */}
                   <div className="relative w-full h-[110px] bg-blue-50/50 rounded-t-2xl overflow-visible">

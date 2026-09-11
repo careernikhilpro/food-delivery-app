@@ -107,12 +107,16 @@ export default function LowestPricesPage() {
                             ><Plus size={16} /></button>
                           </div>
                       ) : (
-                         <button 
-                           onClick={() => updateQuantity(stallIdStr, item.stall_name, { id: itemIdStr, name: item.name, price: finalPrice, markup: 0, isVeg: item.is_veg }, 1)}
-                           className="bg-white border border-red-500 text-red-600 font-black text-[13px] px-6 py-1.5 rounded-lg shadow-sm hover:bg-red-50"
-                         >
-                           + ADD
-                         </button>
+                         {item.is_open === false ? (
+                            <div className="bg-gray-100 text-gray-500 text-[11px] font-black px-4 py-1.5 rounded-lg border border-gray-200">CLOSED</div>
+                          ) : (
+                            <button 
+                              onClick={() => updateQuantity(stallIdStr, item.stall_name, { id: itemIdStr, name: item.name, price: finalPrice, markup: 0, isVeg: item.is_veg }, 1)}
+                              className="bg-white border border-red-500 text-red-600 font-black text-[13px] px-6 py-1.5 rounded-lg shadow-sm hover:bg-red-50"
+                            >
+                              + ADD
+                            </button>
+                          )}
                       )}
                     </div>
                   </div>
@@ -204,12 +208,18 @@ export default function LowestPricesPage() {
                         ><Plus size={14} /></button>
                       </div>
                     ) : (
-                      <button 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(stallIdStr, item.stall_name, { id: itemIdStr, name: item.name, price: finalPrice, markup: 0, isVeg: item.is_veg }, 1); }}
-                        className="absolute bottom-2 right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-100 active:bg-gray-50"
-                      >
-                        <Plus size={16} className="text-[#FF007F]" />
-                      </button>
+                      {item.is_open === false ? (
+                          <div className="absolute bottom-2 right-2 bg-gray-100 rounded px-1.5 py-0.5 shadow-sm border border-gray-200">
+                            <span className="text-gray-500 font-black text-[8px]">CLOSED</span>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(stallIdStr, item.stall_name, { id: itemIdStr, name: item.name, price: finalPrice, markup: 0, isVeg: item.is_veg }, 1); }}
+                            className="absolute bottom-2 right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-100 active:bg-gray-50"
+                          >
+                            <Plus size={16} className="text-[#FF007F]" />
+                          </button>
+                        )}
                     )}
                   </div>
                   
