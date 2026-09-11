@@ -412,7 +412,8 @@ export default function Cart() {
             const checkItem = liveItem || item;
             if (checkItem?.is_free_delivery === true) {
               const minAmt = Number(checkItem.free_delivery_min_amount) || 0;
-              const maxKm = checkItem.free_delivery_max_km ? Number(checkItem.free_delivery_max_km) : Infinity;
+              const rawMaxKm = checkItem.free_delivery_max_km;
+              const maxKm = (!rawMaxKm || Number(rawMaxKm) === 0) ? Infinity : Number(rawMaxKm);
               if (cartTotal >= minAmt && actualDist <= maxKm) {
                 return true;
               }

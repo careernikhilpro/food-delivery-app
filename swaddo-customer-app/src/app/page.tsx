@@ -1078,8 +1078,9 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
             id: item.id?.toString() || Math.random().toString(),
             name: item.name,
             image: (item.image_url && !item.image_url.includes('unsplash.com') && !item.image_url.includes('picsum.photos')) ? item.image_url : "/categories/burger.png",
-            newPrice: "₹" + Math.round(item.price),
+            newPrice: "₹" + Math.round(item.offer_price ? item.offer_price : (item.discount_percentage ? item.price * (1 - item.discount_percentage/100) : item.price)),
             originalPrice: "₹" + Math.round(item.price * 1.2),
+            hasOffer: !!(item.offer_price || item.discount_percentage),
             isPopular: true,
             lowerPriceApp: true,
             lowerPriceText: "Our app: 20% lower",
@@ -1245,7 +1246,11 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
                        {item.originalPrice ? (
                          <div className="flex items-center gap-1.5">
                             <span className="text-[12px] font-medium text-gray-400 line-through">{item.originalPrice}</span>
-                            <span className="text-[11px] font-black text-[#FF007F] bg-[#FFF0F5] px-1.5 py-0.5 rounded-md">{item.newPrice}</span>
+                            {item.hasOffer ? (
+                              <span className="text-[11px] font-black text-[#FF007F] bg-[#FFF0F5] px-1.5 py-0.5 rounded-md">{item.newPrice}</span>
+                            ) : (
+                              <span className="text-[13px] font-bold text-gray-800">{item.newPrice}</span>
+                            )}
                          </div>
                        ) : (
                          <span className="text-[13px] font-bold text-gray-800">{item.newPrice}</span>
