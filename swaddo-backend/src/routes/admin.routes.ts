@@ -313,7 +313,7 @@ router.patch('/vendors/menu/:itemId/free-delivery', async (req: Request, res: Re
 router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
   try {
     const { stallId } = req.params;
-    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_free_delivery, free_delivery_min_amount, free_delivery_max_km } = req.body;
+    const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_free_delivery, free_delivery_min_amount, free_delivery_max_km, coupon_applicable } = req.body;
     if (!name || !price) return res.status(400).json({ message: 'Name and price are required' });
 
     const result = await pool.query(
@@ -324,8 +324,9 @@ router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
         addons ? JSON.stringify(addons) : '[]',
         is_free_delivery || false,
         free_delivery_min_amount || 0,
-        free_delivery_max_km || null
-      ]
+        free_delivery_max_km || null,
+          coupon_applicable ?? true
+        ]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -338,7 +339,7 @@ router.post('/vendors/:stallId/menu', async (req: Request, res: Response) => {
 router.put('/vendors/menu/:itemId', async (req: Request, res: Response) => {
     try {
       const { itemId } = req.params;
-      const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_highlighted_offer, offer_price, is_free_delivery, free_delivery_min_amount, free_delivery_max_km } = req.body;
+      const { name, description, price, is_veg, is_available, category, variants, prep_time_minutes, discount_percentage, addons, is_highlighted_offer, offer_price, is_free_delivery, free_delivery_min_amount, free_delivery_max_km, coupon_applicable } = req.body;
       
       const result = await pool.query(
         `UPDATE menu_items 

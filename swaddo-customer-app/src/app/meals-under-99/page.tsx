@@ -914,7 +914,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
       price: getVariantPrice(selectedVariant.price),
       is_free_delivery: item.is_free_delivery,
       free_delivery_min_amount: item.free_delivery_min_amount,
-      free_delivery_max_km: item.free_delivery_max_km, 
+      free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable, 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
   };

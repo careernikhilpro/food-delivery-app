@@ -508,6 +508,17 @@ export default function Checkout() {
 
   const taxAndFees = Math.round(cartTotal * 0.05);
   
+  let couponApplicableTotal = 0;
+  cart.items.forEach((item) => {
+    // Note: in checkout, cart.items are the raw items from context. 
+    // They don't have the fresh stallMenu, but we mapped coupon_applicable into the cart items in the updated VariantModalComponent?
+    // Wait! I didn't map coupon_applicable into cart items in VariantModalComponent or RestaurantCard!
+    // I need to map it in RestaurantCard, Stall page mapping, Meals Under 99 mapping, and Category mapping!
+    if (item.coupon_applicable !== false) {
+      couponApplicableTotal += item.price * item.quantity;
+    }
+  });
+  
   // Offer Logic Calculation (Support Multiple Offers)
   let discountAmount = 0;
   

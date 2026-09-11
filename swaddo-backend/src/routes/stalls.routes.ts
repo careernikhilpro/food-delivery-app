@@ -394,7 +394,7 @@ router.get('/search/all', async (req: Request, res: Response, next: NextFunction
     );
 
     const dishesRes = await pool.query(
-      "SELECT m.id, m.name, m.price, m.image_url, m.is_veg, m.description, m.has_variants, m.variants, m.is_free_delivery, m.free_delivery_min_amount, m.free_delivery_max_km, m.offer_price, m.discount_percentage, m.is_highlighted_offer, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 AND m.is_available = true ORDER BY m.is_highlighted_offer DESC NULLS LAST LIMIT 30",
+      "SELECT m.id, m.name, m.price, m.image_url, m.is_veg, m.description, m.has_variants, m.variants, m.is_free_delivery, m.free_delivery_min_amount, m.free_delivery_max_km, m.offer_price, m.discount_percentage, m.coupon_applicable, m.is_highlighted_offer, m.stall_id, s.name as stall_name, s.cover_image as stall_image, s.location, s.rating, s.rating_count, s.is_open FROM menu_items m JOIN stalls s ON m.stall_id = s.id WHERE LOWER(m.name) LIKE $1 AND m.is_available = true ORDER BY m.is_highlighted_offer DESC NULLS LAST LIMIT 30",
       [`%${q}%`]
     );
 

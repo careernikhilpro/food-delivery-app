@@ -599,7 +599,7 @@ export default function Cart() {
     });
     discountAmount = Math.round(bestDiscount);
   } else if (stallOfferIsActive && stallOfferDiscount > 0 && baseItemTotal >= stallOfferMin) {
-    discountAmount = Math.round(baseItemTotal * (stallOfferDiscount / 100));
+            discountAmount = Math.round(couponApplicableTotal * (stallOfferDiscount / 100));
     if (stallOfferMax > 0 && discountAmount > stallOfferMax) {
       discountAmount = stallOfferMax;
     }

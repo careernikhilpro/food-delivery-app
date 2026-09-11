@@ -133,6 +133,8 @@ function StallDetailContent() {
         variants: item.variants,
         discount_percentage: item.discount_percentage,
         is_free_delivery: item.is_free_delivery,
+          free_delivery_min_amount: item.free_delivery_min_amount,
+          free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable,
         addons: item.addons,
           is_highlighted_offer: item.is_highlighted_offer,
           offer_price: item.offer_price
@@ -370,6 +372,8 @@ function StallDetailContent() {
       markup: markup, 
       isVeg: item.isVeg ?? true,
         is_free_delivery: item.is_free_delivery,
+          free_delivery_min_amount: item.free_delivery_min_amount,
+          free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable,
         free_delivery_min_amount: item.free_delivery_min_amount,
         free_delivery_max_km: item.free_delivery_max_km
       }, delta);
@@ -847,8 +851,10 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
       name: `${item.name} (${selectedVariant.name})`, 
       price: getVariantPrice(selectedVariant.price),
       is_free_delivery: item.is_free_delivery,
+          free_delivery_min_amount: item.free_delivery_min_amount,
+          free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable,
       free_delivery_min_amount: item.free_delivery_min_amount,
-      free_delivery_max_km: item.free_delivery_max_km, 
+      free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable, 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
   };

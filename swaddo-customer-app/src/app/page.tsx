@@ -1089,7 +1089,7 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
               is_veg: item.is_veg,
               is_free_delivery: item.is_free_delivery,
               free_delivery_min_amount: item.free_delivery_min_amount,
-              free_delivery_max_km: item.free_delivery_max_km,
+              free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable,
               raw_price: item.price,
               offer_price: item.offer_price,
               discount_percentage: item.discount_percentage,
@@ -1325,7 +1325,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
       price: getVariantPrice(selectedVariant.price),
       is_free_delivery: item.is_free_delivery,
       free_delivery_min_amount: item.free_delivery_min_amount,
-      free_delivery_max_km: item.free_delivery_max_km, 
+      free_delivery_max_km: item.free_delivery_max_km, coupon_applicable: item.coupon_applicable, 
       image: item.image 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
