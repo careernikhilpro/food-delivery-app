@@ -893,11 +893,25 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
   const selectedVariant = variantsList[selectedIndex];
   const variantId = `${item.id}_${selectedVariant?.name}`;
   
+  const getVariantPrice = (vPrice: any) => {
+    let baseItemPrice = Number(item.raw_price || item.price || vPrice);
+    if (!baseItemPrice || baseItemPrice <= 0) return Number(vPrice);
+    
+    let effectiveDiscount = 0;
+    if (item.offer_price) {
+      effectiveDiscount = 1 - (Number(item.offer_price) / baseItemPrice);
+    } else if (item.discount_percentage) {
+      effectiveDiscount = Number(item.discount_percentage) / 100;
+    }
+    
+    return Math.round(Number(vPrice) * (1 - effectiveDiscount));
+  };
+
   const handleAdd = () => {
     updateQuantity(stallId, stallName, { 
       id: variantId, 
       name: `${item.name} (${selectedVariant.name})`, 
-      price: Number(selectedVariant.price), 
+      price: getVariantPrice(selectedVariant.price), 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
   };
@@ -939,7 +953,7 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
                   <span className="font-bold text-[15px] text-gray-800">{v.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-[14px] text-gray-600">₹{v.price}</span>
+                  <span className="font-medium text-[14px] text-gray-600">₹{getVariantPrice(v.price)}</span>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedIndex === i ? 'border-[#00A14F]' : 'border-gray-300'}`}>
                     {selectedIndex === i && <div className="w-2.5 h-2.5 bg-[#00A14F] rounded-full"></div>}
                   </div>

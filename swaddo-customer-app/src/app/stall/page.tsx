@@ -824,11 +824,25 @@ function VariantModalComponent({ modalState, setModalState, updateQuantity }: an
   const selectedVariant = variantsList[selectedIndex];
   const variantId = `${item.id}_${selectedVariant?.name}`;
   
+  const getVariantPrice = (vPrice: any) => {
+    let baseItemPrice = Number(item.price || vPrice);
+    if (!baseItemPrice || baseItemPrice <= 0) return Number(vPrice);
+    
+    let effectiveDiscount = 0;
+    if (item.offer_price) {
+      effectiveDiscount = 1 - (Number(item.offer_price) / baseItemPrice);
+    } else if (item.discount_percentage) {
+      effectiveDiscount = Number(item.discount_percentage) / 100;
+    }
+    
+    return Math.round(Number(vPrice) * (1 - effectiveDiscount));
+  };
+
   const handleAdd = () => {
     updateQuantity(stallId, stallName, { 
       id: variantId, 
       name: `${item.name} (${selectedVariant.name})`, 
-      price: Number(selectedVariant.price), 
+      price: getVariantPrice(selectedVariant.price), 
     }, modalQty);
     setModalState({ isOpen: false, stallId: '', stallName: '', item: null });
   };

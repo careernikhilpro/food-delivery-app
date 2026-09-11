@@ -299,7 +299,18 @@ export default function CategoryPage() {
                 const vId = `${variantModal.item.id}_${idx}`;
                 const isAdded = cart.items.find((i: any) => i.id === vId);
                 const qty = isAdded ? isAdded.quantity : 0;
-                const vPrice = Number((v.price || "0").toString().replace(/[^0-9.]/g, ''));
+                const rawVPrice = Number((v.price || "0").toString().replace(/[^0-9.]/g, ''));
+                let baseItemPrice = Number(variantModal.item.price || rawVPrice);
+                let vPrice = rawVPrice;
+                if (baseItemPrice > 0) {
+                  let effectiveDiscount = 0;
+                  if (variantModal.item.offer_price) {
+                    effectiveDiscount = 1 - (Number(variantModal.item.offer_price) / baseItemPrice);
+                  } else if (variantModal.item.discount_percentage) {
+                    effectiveDiscount = Number(variantModal.item.discount_percentage) / 100;
+                  }
+                  vPrice = Math.round(rawVPrice * (1 - effectiveDiscount));
+                }
 
                 return (
                   <div key={idx} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
