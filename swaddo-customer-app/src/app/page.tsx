@@ -1086,7 +1086,10 @@ function RestaurantCard({ data, onOpenVariantModal }: { data: any, onOpenVariant
             lowerPriceText: "Our app: 20% lower",
             has_variants: item.has_variants,
             variants: item.variants,
-            is_veg: item.is_veg,
+              is_veg: item.is_veg,
+              is_free_delivery: item.is_free_delivery,
+              free_delivery_min_amount: item.free_delivery_min_amount,
+              free_delivery_max_km: item.free_delivery_max_km,
           }));
           setItems(menuItems);
         }
