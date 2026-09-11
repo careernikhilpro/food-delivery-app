@@ -1,33 +1,17 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/app/page.tsx', 'utf8');
+let code = fs.readFileSync('src/app/lowest-prices/page.tsx', 'utf8');
 
-const badBlock = `                let parsedPrice = basePrice;
-                if (item.offer_price) {
-                  parsedPrice = Number(item.offer_price);
-                } else if (item.discount_percentage) {
-                  parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
-                }
-                const hasOffer = parsedPrice < basePrice;
-                let parsedPrice = basePrice;
-                if (item.offer_price) {
-                  parsedPrice = Number(item.offer_price);
-                } else if (item.discount_percentage) {
-                  parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
-                }
-                const hasOffer = parsedPrice < basePrice;`;
+const regex1 = /\{\s*item\.is_open === false \? \(/g;
+const replacement1 = `item.is_open === false ? (`;
 
-const goodBlock = `                let parsedPrice = basePrice;
-                if (item.offer_price) {
-                  parsedPrice = Number(item.offer_price);
-                } else if (item.discount_percentage) {
-                  parsedPrice = Math.round(basePrice * (1 - Number(item.discount_percentage)/100));
-                }
-                const hasOffer = parsedPrice < basePrice;`;
+const regex2 = /\s*\)\}\s*\)\}/g;
+const replacement2 = `))}`;
 
-if (code.includes(badBlock)) {
-  code = code.replace(badBlock, goodBlock);
-  fs.writeFileSync('src/app/page.tsx', code);
-  console.log('Fixed syntax error in page.tsx');
-} else {
-  console.log('Could not find bad block');
-}
+// Wait, doing this generally might break something else. 
+// Let's replace the EXACT occurrences.
+code = code.replace(/\( \s*\{\s*item\.is_open/g, '( item.is_open');
+// Also the closing bracket.
+code = code.replace(/<\/button>\s*\}\s*\)\}/g, '</button>\n) )}');
+
+fs.writeFileSync('src/app/lowest-prices/page.tsx', code);
+console.log('Fixed syntax error');
