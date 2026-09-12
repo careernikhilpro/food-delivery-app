@@ -1071,6 +1071,41 @@ export default function Cart() {
                 </button>
               </div>
             )}
+
+            {(() => {
+              if (isFreeDeliveryStore) return null;
+              
+              const freeDeliveryItemInCart = cart.items.find((item) => {
+                const liveItem = stallMenu.find((m) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
+                const checkItem = liveItem || item;
+                return checkItem?.is_free_delivery === true;
+              });
+
+              if (freeDeliveryItemInCart) {
+                const liveItem = stallMenu.find((m) => m.id.toString() === freeDeliveryItemInCart.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === freeDeliveryItemInCart.id.toString());
+                const checkItem = liveItem || freeDeliveryItemInCart;
+                const minAmt = Number(checkItem.free_delivery_min_amount) || 0;
+                
+                if (baseItemTotal > 0 && baseItemTotal < minAmt) {
+                  return (
+                    <div className="mt-3 bg-[#F0FAF4] border border-[#00A14F]/20 rounded-[12px] p-2.5 flex items-center justify-center gap-2 text-[#00A14F]">
+                      <span className="text-[13px] font-bold">Add ₹{(minAmt - baseItemTotal).toFixed(0)} more to get free delivery</span>
+                    </div>
+                  );
+                }
+                return null;
+              }
+
+              if (baseItemTotal > 0 && baseItemTotal < 199) {
+                return (
+                  <div className="mt-3 bg-[#F0FAF4] border border-[#00A14F]/20 rounded-[12px] p-2.5 flex items-center justify-center gap-2 text-[#00A14F]">
+                    <span className="text-[13px] font-bold">Add ₹{(199 - baseItemTotal).toFixed(0)} more to get free delivery (upto 2km)</span>
+                  </div>
+                );
+              }
+              
+              return null;
+            })()}
           </div>
 
 
