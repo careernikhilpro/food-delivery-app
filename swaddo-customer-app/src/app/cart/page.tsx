@@ -1072,40 +1072,7 @@ export default function Cart() {
               </div>
             )}
 
-            {(() => {
-              if (isFreeDeliveryStore) return null;
-              
-              const freeDeliveryItemInCart = cart.items.find((item) => {
-                const liveItem = stallMenu.find((m) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
-                const checkItem = liveItem || item;
-                return checkItem?.is_free_delivery === true;
-              });
 
-              if (freeDeliveryItemInCart) {
-                const liveItem = stallMenu.find((m) => m.id.toString() === freeDeliveryItemInCart.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === freeDeliveryItemInCart.id.toString());
-                const checkItem = liveItem || freeDeliveryItemInCart;
-                const minAmt = Number(checkItem.free_delivery_min_amount) || 0;
-                
-                if (baseItemTotal > 0 && baseItemTotal < minAmt) {
-                  return (
-                    <div className="mt-3 bg-[#F0FAF4] border border-[#00A14F]/20 rounded-[12px] p-2.5 flex items-center justify-center gap-2 text-[#00A14F]">
-                      <span className="text-[13px] font-bold">Add ₹{(minAmt - baseItemTotal).toFixed(0)} more to get free delivery</span>
-                    </div>
-                  );
-                }
-                return null;
-              }
-
-              if (baseItemTotal > 0 && baseItemTotal < 199) {
-                return (
-                  <div className="mt-3 bg-[#F0FAF4] border border-[#00A14F]/20 rounded-[12px] p-2.5 flex items-center justify-center gap-2 text-[#00A14F]">
-                    <span className="text-[13px] font-bold">Add ₹{(199 - baseItemTotal).toFixed(0)} more to get free delivery (upto 2km)</span>
-                  </div>
-                );
-              }
-              
-              return null;
-            })()}
           </div>
 
 
@@ -1356,7 +1323,7 @@ export default function Cart() {
           </div>
 
           {/* Applied Offer */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-green-700 text-white rounded-[10px] flex items-center justify-center">
                 <svg
@@ -1385,6 +1352,60 @@ export default function Cart() {
               <Check size={14} strokeWidth={3} /> Applied
             </span>
           </div>
+
+          {(() => {
+            if (isFreeDeliveryStore) {
+              return (
+                <div className="bg-[#F0FAF4] border border-[#00A14F]/20 rounded-2xl p-4 flex items-center justify-center gap-2 text-[#00A14F] mb-4 shadow-sm">
+                  <span className="text-[14px] font-bold">Free Delivery Unlocked! 🎉</span>
+                </div>
+              );
+            }
+            
+            const freeDeliveryItemInCart = cart.items.find((item) => {
+              const liveItem = stallMenu.find((m) => m.id.toString() === item.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === item.id.toString());
+              const checkItem = liveItem || item;
+              return checkItem?.is_free_delivery === true;
+            });
+
+            if (freeDeliveryItemInCart) {
+              const liveItem = stallMenu.find((m) => m.id.toString() === freeDeliveryItemInCart.id.toString() || `item-${m.name.replace(/\s+/g, '-').toLowerCase()}` === freeDeliveryItemInCart.id.toString());
+              const checkItem = liveItem || freeDeliveryItemInCart;
+              const minAmt = Number(checkItem.free_delivery_min_amount) || 0;
+              
+              if (baseItemTotal > 0 && baseItemTotal < minAmt) {
+                return (
+                  <div className="bg-[#F0FAF4] border border-[#00A14F]/20 rounded-2xl p-4 flex items-center justify-center gap-2 text-[#00A14F] mb-4 shadow-sm">
+                    <span className="text-[14px] font-bold">Add ₹{(minAmt - baseItemTotal).toFixed(0)} more to get free delivery</span>
+                  </div>
+                );
+              } else if (baseItemTotal >= minAmt) {
+                return (
+                  <div className="bg-[#F0FAF4] border border-[#00A14F]/20 rounded-2xl p-4 flex items-center justify-center gap-2 text-[#00A14F] mb-4 shadow-sm">
+                    <span className="text-[14px] font-bold">Free Delivery Unlocked! 🎉</span>
+                  </div>
+                );
+              }
+            }
+
+            if (baseItemTotal > 0) {
+              if (baseItemTotal < 199) {
+                return (
+                  <div className="bg-[#F0FAF4] border border-[#00A14F]/20 rounded-2xl p-4 flex items-center justify-center gap-2 text-[#00A14F] mb-4 shadow-sm">
+                    <span className="text-[14px] font-bold">Add ₹{(199 - baseItemTotal).toFixed(0)} more to get free delivery (upto 2km)</span>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="bg-[#F0FAF4] border border-[#00A14F]/20 rounded-2xl p-4 flex items-center justify-center gap-2 text-[#00A14F] mb-4 shadow-sm">
+                    <span className="text-[14px] font-bold">Free Delivery Unlocked (upto 2km)! 🎉</span>
+                  </div>
+                );
+              }
+            }
+            
+            return null;
+          })()}
 
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4 flex flex-col gap-4">
             <h3 className="font-bold text-[15px] text-gray-800">
